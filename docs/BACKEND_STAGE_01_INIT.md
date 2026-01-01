@@ -17,7 +17,7 @@
 |------|------|----------|
 | Node.js | >= v22.18.0 | [官网下载](https://nodejs.org/) |
 | pnpm | >= 8.x | `npm install -g pnpm` |
-| PostgreSQL | 16.x | 本地安装或 Docker |
+| PostgreSQL | 16.x | Docker |
 
 ---
 
