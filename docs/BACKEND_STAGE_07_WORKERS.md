@@ -1,13 +1,14 @@
 # WhiteNote 2.5 后端开发指南 - Stage 7: 后台任务队列
 
 > **前置文档**: [Stage 6: AI 集成](file:///d:/Code/WhiteNote/docs/BACKEND_STAGE_06_AI.md)  
-> **下一步**: [API 测试指南](file:///d:/Code/WhiteNote/docs/API_TESTING_GUIDE.md)
+> **下一步**: [Stage 8: 实时多端同步](file:///d:/Code/WhiteNote/docs/BACKEND_STAGE_08_REALTIME_SYNC.md)
 
 ---
 
 ## 目标
 
 使用 BullMQ + Redis 实现后台任务队列，处理自动打标签、RAGFlow 同步、每日晨报等异步任务。
+
 
 ---
 

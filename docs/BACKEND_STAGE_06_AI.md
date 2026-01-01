@@ -1,4 +1,4 @@
-# WhiteNote 2.5 后端开发指南 - Stage 6: AI 集成
+# WhiteNote 2.5 后端开发指南 - Stage 6: AI 集成 (热更新配置)
 
 > **前置文档**: [Stage 5: Tags/Comments/Templates API](file:///d:/Code/WhiteNote/docs/BACKEND_STAGE_05_OTHER_API.md)  
 > **下一步**: [Stage 7: 后台任务队列](file:///d:/Code/WhiteNote/docs/BACKEND_STAGE_07_WORKERS.md)
@@ -7,40 +7,99 @@
 
 ## 目标
 
-实现 AI 功能集成，包括标准模式（直接调用 LLM）和 RAG 模式（RAGFlow 知识库检索）。
+实现 AI 功能集成，包括标准模式和 RAG 模式，**支持配置热更新**（无需重启服务即可生效）。
 
 ---
 
-## RAGFlow 配置信息
+## 配置热更新原则
 
-> **RAGFlow 服务地址**: `http://localhost:4154`  
-> **API Key**: `ragflow-61LVcg1JlwvJPHPmDLEHiw5NWfG6-QUvWShJ6gcbQSc`  
-> **Chat ID**: `1c4db240e66011f09080b2cef1c18441`  
-> **Dataset ID**: `96b74969e65411f09f5fb2cef1c18441`
+> [!IMPORTANT]
+> **RAGFlow 和 AI 配置支持实时热更新**
+> - 每次 AI 调用都从数据库读取最新配置
+> - 更新配置 API 后立即生效
+> - 不需要重启服务器
 
 ---
 
-## Step 1: 创建 AI 服务封装
+## RAGFlow 配置信息示例
 
-### 创建 `src/lib/ai/openai.ts`：
+```
+RAGFlow 服务地址: http://localhost:4154
+API Key: ragflow-61LVcg1JlwvJPHPmDLEHiw5NWfG6-QUvWShJ6gcbQSc
+Chat ID: 1c4db240e66011f09080b2cef1c18441
+Dataset ID: 96b74969e65411f09f5fb2cef1c18441
+```
+
+---
+
+## Step 1: 更新数据库 Schema
+
+确保 `prisma/schema.prisma` 中的 `AiConfig` 包含 RAGFlow 字段：
+
+```prisma
+model AiConfig {
+  id String @id @default("global_config")
+
+  // --- 基础 OpenAI 连接 ---
+  openaiBaseUrl String @default("http://localhost:4000")
+  openaiApiKey  String @default("")
+  openaiModel   String @default("gpt-3.5-turbo")
+
+  // --- RAG 模式 ---
+  enableRag          Boolean   @default(false)
+  ragTimeFilterStart DateTime?
+  ragTimeFilterEnd   DateTime?
+
+  // --- RAGFlow 配置 (热更新) ---
+  ragflowBaseUrl  String @default("http://localhost:4154")
+  ragflowApiKey   String @default("")
+  ragflowChatId   String @default("")
+  ragflowDatasetId String @default("")
+
+  // --- 自动化 ---
+  enableAutoTag  Boolean @default(true)
+  enableBriefing Boolean @default(true)
+  briefingTime   String  @default("08:00")
+
+  // --- AI 人设 ---
+  aiPersonality String  @default("friendly")
+  aiExpertise   String?
+
+  enableLinkSuggestion Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+}
+```
+
+运行迁移：
+```bash
+pnpm prisma migrate dev --name add_ragflow_config
+```
+
+---
+
+## Step 2: 创建配置服务（热更新核心）
+
+创建 `src/lib/ai/config.ts`：
 
 ```typescript
 import { prisma } from "@/lib/prisma"
 
-interface ChatMessage {
-  role: "system" | "user" | "assistant"
-  content: string
+// 配置缓存 (短时间缓存，减少数据库查询)
+let configCache: {
+  data: Awaited<ReturnType<typeof getAiConfigFromDb>> | null
+  timestamp: number
+} = {
+  data: null,
+  timestamp: 0,
 }
 
-interface ChatOptions {
-  messages: ChatMessage[]
-  stream?: boolean
-}
+const CACHE_TTL = 5000 // 5 秒缓存，保证热更新响应速度
 
 /**
- * 获取 AI 配置
+ * 从数据库获取 AI 配置
  */
-async function getAiConfig() {
+async function getAiConfigFromDb() {
   let config = await prisma.aiConfig.findUnique({
     where: { id: "global_config" },
   })
@@ -55,9 +114,93 @@ async function getAiConfig() {
 }
 
 /**
+ * 获取 AI 配置 (带短时缓存)
+ * 每次调用都会检查缓存是否过期，确保配置更新后快速生效
+ */
+export async function getAiConfig() {
+  const now = Date.now()
+  
+  // 缓存有效，直接返回
+  if (configCache.data && now - configCache.timestamp < CACHE_TTL) {
+    return configCache.data
+  }
+
+  // 缓存过期，从数据库获取
+  const config = await getAiConfigFromDb()
+  configCache = {
+    data: config,
+    timestamp: now,
+  }
+
+  return config
+}
+
+/**
+ * 清除配置缓存 (配置更新后调用)
+ */
+export function invalidateConfigCache() {
+  configCache = {
+    data: null,
+    timestamp: 0,
+  }
+}
+
+/**
+ * 更新 AI 配置
+ */
+export async function updateAiConfig(data: Partial<{
+  openaiBaseUrl: string
+  openaiApiKey: string
+  openaiModel: string
+  enableRag: boolean
+  ragflowBaseUrl: string
+  ragflowApiKey: string
+  ragflowChatId: string
+  ragflowDatasetId: string
+  enableAutoTag: boolean
+  enableBriefing: boolean
+  briefingTime: string
+  aiPersonality: string
+  aiExpertise: string | null
+}>) {
+  const config = await prisma.aiConfig.upsert({
+    where: { id: "global_config" },
+    update: data,
+    create: { id: "global_config", ...data },
+  })
+
+  // 清除缓存，确保下次调用获取最新配置
+  invalidateConfigCache()
+
+  return config
+}
+```
+
+---
+
+## Step 3: 创建 OpenAI 服务
+
+创建 `src/lib/ai/openai.ts`：
+
+```typescript
+import { getAiConfig } from "./config"
+
+interface ChatMessage {
+  role: "system" | "user" | "assistant"
+  content: string
+}
+
+interface ChatOptions {
+  messages: ChatMessage[]
+  stream?: boolean
+}
+
+/**
  * 调用 OpenAI 兼容接口 (标准模式)
+ * 每次调用都读取最新配置 (热更新)
  */
 export async function callOpenAI(options: ChatOptions): Promise<string> {
+  // 每次调用获取最新配置
   const config = await getAiConfig()
 
   if (!config.openaiApiKey) {
@@ -87,7 +230,7 @@ export async function callOpenAI(options: ChatOptions): Promise<string> {
 }
 
 /**
- * 构建 AI 人设系统提示词
+ * 构建 AI 人设系统提示词 (热更新)
  */
 export async function buildSystemPrompt(): Promise<string> {
   const config = await getAiConfig()
@@ -111,12 +254,12 @@ export async function buildSystemPrompt(): Promise<string> {
 
 ---
 
-## Step 2: 创建 RAGFlow 服务封装
+## Step 4: 创建 RAGFlow 服务 (热更新)
 
-### 创建 `src/lib/ai/ragflow.ts`：
+创建 `src/lib/ai/ragflow.ts`：
 
 ```typescript
-import { prisma } from "@/lib/prisma"
+import { getAiConfig } from "./config"
 
 interface RAGFlowMessage {
   role: "user" | "assistant"
@@ -140,25 +283,29 @@ interface RAGFlowResponse {
 
 /**
  * 调用 RAGFlow OpenAI 兼容接口
+ * 配置从数据库实时读取 (热更新)
  */
 export async function callRAGFlow(
-  chatId: string,
   messages: RAGFlowMessage[]
 ): Promise<{ content: string; references?: Array<{ content: string; source: string }> }> {
-  const ragflowBaseUrl = process.env.RAGFLOW_BASE_URL || "http://localhost:4154"
-  const ragflowApiKey = process.env.RAGFLOW_API_KEY || ""
+  // 每次调用获取最新配置 (热更新核心)
+  const config = await getAiConfig()
 
-  if (!ragflowApiKey) {
+  if (!config.ragflowApiKey) {
     throw new Error("RAGFlow API key not configured")
   }
 
+  if (!config.ragflowChatId) {
+    throw new Error("RAGFlow Chat ID not configured")
+  }
+
   const response = await fetch(
-    `${ragflowBaseUrl}/api/v1/chats_openai/${chatId}/chat/completions`,
+    `${config.ragflowBaseUrl}/api/v1/chats_openai/${config.ragflowChatId}/chat/completions`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${ragflowApiKey}`,
+        "Authorization": `Bearer ${config.ragflowApiKey}`,
       },
       body: JSON.stringify({
         model: "model",
@@ -179,7 +326,6 @@ export async function callRAGFlow(
   const data: RAGFlowResponse = await response.json()
   const message = data.choices[0]?.message
 
-  // 提取参考来源
   const references = message?.reference?.chunks
     ? Object.values(message.reference.chunks).map((chunk) => ({
         content: chunk.content,
@@ -194,27 +340,24 @@ export async function callRAGFlow(
 }
 
 /**
- * 同步消息到 RAGFlow 知识库
+ * 同步消息到 RAGFlow 知识库 (热更新)
  */
 export async function syncToRAGFlow(messageId: string, content: string) {
-  const ragflowBaseUrl = process.env.RAGFLOW_BASE_URL || "http://localhost:4154"
-  const ragflowApiKey = process.env.RAGFLOW_API_KEY || ""
-  const datasetId = process.env.RAGFLOW_DATASET_ID || ""
+  const config = await getAiConfig()
 
-  if (!ragflowApiKey || !datasetId) {
+  if (!config.ragflowApiKey || !config.ragflowDatasetId) {
     console.warn("RAGFlow not configured, skipping sync")
     return
   }
 
   try {
-    // 创建文档到知识库
     const response = await fetch(
-      `${ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
+      `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/documents`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${ragflowApiKey}`,
+          "Authorization": `Bearer ${config.ragflowApiKey}`,
         },
         body: JSON.stringify({
           name: `message_${messageId}.md`,
@@ -234,20 +377,152 @@ export async function syncToRAGFlow(messageId: string, content: string) {
 
 ---
 
-## Step 3: 创建 AI 聊天 API
+## Step 5: 更新配置 API (支持热更新)
 
-### 创建 `src/app/api/ai/chat/route.ts`：
+创建 `src/app/api/config/route.ts`：
+
+```typescript
+import { auth } from "@/lib/auth"
+import { getAiConfig, updateAiConfig, invalidateConfigCache } from "@/lib/ai/config"
+import { NextRequest } from "next/server"
+
+/**
+ * GET /api/config
+ * 获取 AI 配置
+ */
+export async function GET() {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const config = await getAiConfig()
+
+  // 隐藏敏感字段
+  return Response.json({
+    data: {
+      ...config,
+      openaiApiKey: config.openaiApiKey ? "***" : "",
+      ragflowApiKey: config.ragflowApiKey ? "***" : "",
+    },
+  })
+}
+
+/**
+ * PUT /api/config
+ * 更新 AI 配置 (立即生效，无需重启)
+ */
+export async function PUT(request: NextRequest) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  try {
+    const body = await request.json()
+
+    // 允许更新的字段
+    const allowedFields = [
+      "openaiBaseUrl",
+      "openaiApiKey",
+      "openaiModel",
+      "enableRag",
+      "ragflowBaseUrl",
+      "ragflowApiKey",
+      "ragflowChatId",
+      "ragflowDatasetId",
+      "enableAutoTag",
+      "enableBriefing",
+      "briefingTime",
+      "aiPersonality",
+      "aiExpertise",
+      "enableLinkSuggestion",
+    ]
+
+    const updateData: Record<string, unknown> = {}
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field]
+      }
+    }
+
+    const config = await updateAiConfig(updateData)
+
+    return Response.json({
+      data: {
+        ...config,
+        openaiApiKey: config.openaiApiKey ? "***" : "",
+        ragflowApiKey: config.ragflowApiKey ? "***" : "",
+      },
+      message: "Configuration updated successfully. Changes take effect immediately.",
+    })
+  } catch (error) {
+    console.error("Failed to update config:", error)
+    return Response.json({ error: "Failed to update config" }, { status: 500 })
+  }
+}
+
+/**
+ * POST /api/config/test
+ * 测试 RAGFlow 连接
+ */
+export async function POST(request: NextRequest) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const config = await getAiConfig()
+
+  try {
+    // 测试 RAGFlow 连接
+    const response = await fetch(
+      `${config.ragflowBaseUrl}/api/v1/datasets`,
+      {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${config.ragflowApiKey}`,
+        },
+      }
+    )
+
+    if (response.ok) {
+      return Response.json({
+        success: true,
+        message: "RAGFlow connection successful",
+      })
+    } else {
+      return Response.json({
+        success: false,
+        error: `RAGFlow returned status ${response.status}`,
+      })
+    }
+  } catch (error) {
+    return Response.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Connection failed",
+    })
+  }
+}
+```
+
+---
+
+## Step 6: AI 聊天 API
+
+创建 `src/app/api/ai/chat/route.ts`：
 
 ```typescript
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getAiConfig } from "@/lib/ai/config"
 import { buildSystemPrompt, callOpenAI } from "@/lib/ai/openai"
 import { callRAGFlow } from "@/lib/ai/ragflow"
 import { NextRequest } from "next/server"
 
 /**
  * POST /api/ai/chat
- * AI 聊天接口 (支持标准模式和 RAG 模式)
+ * AI 聊天接口 (配置热更新)
  */
 export async function POST(request: NextRequest) {
   const session = await auth()
@@ -268,11 +543,11 @@ export async function POST(request: NextRequest) {
 
     // 获取消息上下文
     const message = await prisma.message.findUnique({
-      where: { id: messageId },
+      where: { id: messageId, authorId: session.user.id },  // 数据隔离
       include: {
         comments: {
           orderBy: { createdAt: "asc" },
-          take: 20, // 最近 20 条评论作为上下文
+          take: 20,
         },
       },
     })
@@ -281,38 +556,29 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Message not found" }, { status: 404 })
     }
 
-    // 获取配置
-    const config = await prisma.aiConfig.findUnique({
-      where: { id: "global_config" },
-    })
+    // 获取最新配置 (热更新)
+    const config = await getAiConfig()
 
     let aiResponse: string
     let references: Array<{ content: string; source: string }> | undefined
 
-    if (config?.enableRag) {
-      // RAG 模式 - 调用 RAGFlow
-      const chatId = process.env.RAGFLOW_CHAT_ID || ""
-      
-      const messages = [
-        { role: "user" as const, content },
-      ]
-
-      const result = await callRAGFlow(chatId, messages)
+    if (config.enableRag && config.ragflowApiKey && config.ragflowChatId) {
+      // RAG 模式
+      const messages = [{ role: "user" as const, content }]
+      const result = await callRAGFlow(messages)
       aiResponse = result.content
       references = result.references
     } else {
-      // 标准模式 - 直接调用 OpenAI
+      // 标准模式
       const systemPrompt = await buildSystemPrompt()
-
       const messages = [
         { role: "system" as const, content: systemPrompt },
         { role: "user" as const, content: `原文：${message.content}\n\n用户问题：${content}` },
       ]
-
       aiResponse = await callOpenAI({ messages })
     }
 
-    // 保存 AI 回复为评论
+    // 保存 AI 回复
     const comment = await prisma.comment.create({
       data: {
         content: aiResponse,
@@ -322,10 +588,7 @@ export async function POST(request: NextRequest) {
     })
 
     return Response.json({
-      data: {
-        comment,
-        references,
-      },
+      data: { comment, references },
     })
   } catch (error) {
     console.error("AI chat error:", error)
@@ -339,9 +602,9 @@ export async function POST(request: NextRequest) {
 
 ---
 
-## Step 4: 创建 AI 增强功能 API
+## Step 7: AI 增强功能 API
 
-### 创建 `src/app/api/ai/enhance/route.ts`：
+创建 `src/app/api/ai/enhance/route.ts`：
 
 ```typescript
 import { auth } from "@/lib/auth"
@@ -361,10 +624,6 @@ const prompts: Record<EnhanceAction, (content: string, target?: string) => strin
     `请润色以下内容，使其更加流畅和专业，保持原意：\n\n${content}`,
 }
 
-/**
- * POST /api/ai/enhance
- * AI 文本增强 (摘要、翻译、扩写、润色)
- */
 export async function POST(request: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) {
@@ -384,7 +643,7 @@ export async function POST(request: NextRequest) {
 
     if (!prompts[action as EnhanceAction]) {
       return Response.json(
-        { error: "Invalid action. Supported: summarize, translate, expand, polish" },
+        { error: "Invalid action" },
         { status: 400 }
       )
     }
@@ -411,107 +670,26 @@ export async function POST(request: NextRequest) {
 
 ---
 
-## Step 5: 自动打标签服务
-
-### 创建 `src/lib/ai/auto-tag.ts`：
-
-```typescript
-import { prisma } from "@/lib/prisma"
-import { callOpenAI } from "./openai"
-
-/**
- * 自动为消息生成标签
- */
-export async function generateTags(content: string): Promise<string[]> {
-  const prompt = `分析以下文本内容，提取 1-3 个最相关的标签/关键词。
-要求：
-1. 标签应该是简短的词语（1-3个词）
-2. 可以是中文或英文
-3. 只返回 JSON 数组格式，例如 ["React", "学习笔记", "Bug"]
-
-文本内容：
-${content}
-
-返回格式（只返回 JSON 数组，不要其他内容）：`
-
-  try {
-    const result = await callOpenAI({
-      messages: [
-        { role: "system", content: "你是一个标签提取助手，只返回 JSON 数组格式的标签。" },
-        { role: "user", content: prompt },
-      ],
-    })
-
-    // 解析 JSON 响应
-    const tags = JSON.parse(result.trim())
-    
-    if (Array.isArray(tags)) {
-      return tags.slice(0, 3).map((t) => String(t).trim())
-    }
-    
-    return []
-  } catch (error) {
-    console.error("Failed to generate tags:", error)
-    return []
-  }
-}
-
-/**
- * 为消息应用自动生成的标签
- */
-export async function applyAutoTags(messageId: string) {
-  const message = await prisma.message.findUnique({
-    where: { id: messageId },
-    select: { content: true },
-  })
-
-  if (!message) return
-
-  const tagNames = await generateTags(message.content)
-
-  for (const name of tagNames) {
-    const tag = await prisma.tag.upsert({
-      where: { name },
-      create: { name },
-      update: {},
-    })
-
-    await prisma.messageTag.upsert({
-      where: {
-        messageId_tagId: { messageId, tagId: tag.id },
-      },
-      create: { messageId, tagId: tag.id },
-      update: {},
-    })
-  }
-}
-```
-
----
-
-## API 端点汇总
-
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/ai/chat` | POST | AI 聊天 (标准/RAG 模式) |
-| `/api/ai/enhance` | POST | 文本增强 (摘要/翻译/扩写/润色) |
-
----
-
-## 验证检查点
+## 验证热更新
 
 ```bash
-# 测试 AI 聊天
+# 1. 更新 RAGFlow 配置
+curl -X PUT http://localhost:3000/api/config \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "ragflowBaseUrl": "http://localhost:4154",
+    "ragflowApiKey": "ragflow-61LVcg1JlwvJPHPmDLEHiw5NWfG6-QUvWShJ6gcbQSc",
+    "ragflowChatId": "1c4db240e66011f09080b2cef1c18441",
+    "ragflowDatasetId": "96b74969e65411f09f5fb2cef1c18441",
+    "enableRag": true
+  }'
+
+# 2. 立即测试 (无需重启)
 curl -X POST http://localhost:3000/api/ai/chat \
   -H "Content-Type: application/json" \
-  -H "Cookie: <session-cookie>" \
-  -d '{"messageId":"<id>","content":"帮我总结这条笔记"}'
-
-# 测试文本增强
-curl -X POST http://localhost:3000/api/ai/enhance \
-  -H "Content-Type: application/json" \
-  -H "Cookie: <session-cookie>" \
-  -d '{"action":"summarize","content":"这是一段很长的文字..."}'
+  -b cookies.txt \
+  -d '{"messageId":"<id>","content":"测试 RAG 模式"}'
 ```
 
 ---
