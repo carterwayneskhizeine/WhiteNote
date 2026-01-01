@@ -42,7 +42,7 @@ WhiteNote 2.5 是一座完全属于用户的数字城池。
 
 | **模块** | **技术选型** | **说明** |
 |----------|--------------|----------|
-| **前端框架** | **Next.js 16** | App Router, Server Actions |
+| **前端框架** | **Next.js v22.18.0** | App Router, Server Actions |
 | **UI 系统** | **Tailwind + Shadcn/ui** | 极简主义设计，黑白灰主色调 |
 | **富文本引擎** | **Tiptap** | 支持 Slash Command 菜单 (`/`)，支持 Markdown，支持双向链接 |
 | **图谱可视化** | **D3.js / Force Graph** | 知识图谱交互式可视化 |

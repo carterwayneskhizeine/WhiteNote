@@ -1,0 +1,452 @@
+# WhiteNote 2.5 后端开发指南 - Stage 7: 后台任务队列
+
+> **前置文档**: [Stage 6: AI 集成](file:///d:/Code/WhiteNote/docs/BACKEND_STAGE_06_AI.md)  
+> **下一步**: [API 测试指南](file:///d:/Code/WhiteNote/docs/API_TESTING_GUIDE.md)
+
+---
+
+## 目标
+
+使用 BullMQ + Redis 实现后台任务队列，处理自动打标签、RAGFlow 同步、每日晨报等异步任务。
+
+---
+
+## Step 1: 安装依赖
+
+```bash
+pnpm add bullmq ioredis
+pnpm add -D @types/ioredis
+```
+
+---
+
+## Step 2: 创建 Redis 连接
+
+### 创建 `src/lib/redis.ts`：
+
+```typescript
+import { Redis } from "ioredis"
+
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  maxRetriesPerRequest: null,
+})
+
+export default redis
+```
+
+更新 `.env`：
+
+```env
+# Redis
+REDIS_URL="redis://localhost:6379"
+```
+
+---
+
+## Step 3: 创建任务队列配置
+
+### 创建 `src/lib/queue/index.ts`：
+
+```typescript
+import { Queue, Worker, Job } from "bullmq"
+import redis from "@/lib/redis"
+
+// 任务类型
+export type JobType = "auto-tag" | "sync-ragflow" | "daily-briefing" | "cleanup-versions"
+
+// 队列名称
+const QUEUE_NAME = "whitenote-tasks"
+
+// 创建队列
+export const taskQueue = new Queue(QUEUE_NAME, {
+  connection: redis,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 1000,
+    },
+    removeOnComplete: 100,
+    removeOnFail: 50,
+  },
+})
+
+/**
+ * 添加任务到队列
+ */
+export async function addTask<T>(
+  type: JobType,
+  data: T,
+  options?: {
+    delay?: number
+    priority?: number
+    jobId?: string
+  }
+) {
+  return taskQueue.add(type, data, {
+    ...options,
+    jobId: options?.jobId || `${type}-${Date.now()}`,
+  })
+}
+
+/**
+ * 添加定时任务 (Cron)
+ */
+export async function addCronTask<T>(
+  type: JobType,
+  data: T,
+  cronPattern: string
+) {
+  return taskQueue.add(type, data, {
+    repeat: {
+      pattern: cronPattern,
+    },
+  })
+}
+```
+
+---
+
+## Step 4: 创建任务处理器
+
+### 创建 `src/lib/queue/processors/auto-tag.ts`：
+
+```typescript
+import { Job } from "bullmq"
+import { applyAutoTags } from "@/lib/ai/auto-tag"
+
+interface AutoTagJobData {
+  messageId: string
+}
+
+export async function processAutoTag(job: Job<AutoTagJobData>) {
+  const { messageId } = job.data
+  
+  console.log(`[AutoTag] Processing message: ${messageId}`)
+  
+  await applyAutoTags(messageId)
+  
+  console.log(`[AutoTag] Completed for message: ${messageId}`)
+}
+```
+
+### 创建 `src/lib/queue/processors/sync-ragflow.ts`：
+
+```typescript
+import { Job } from "bullmq"
+import { prisma } from "@/lib/prisma"
+import { syncToRAGFlow } from "@/lib/ai/ragflow"
+
+interface SyncRAGFlowJobData {
+  messageId: string
+}
+
+export async function processSyncRAGFlow(job: Job<SyncRAGFlowJobData>) {
+  const { messageId } = job.data
+  
+  console.log(`[SyncRAGFlow] Processing message: ${messageId}`)
+  
+  const message = await prisma.message.findUnique({
+    where: { id: messageId },
+    select: { id: true, content: true },
+  })
+  
+  if (message) {
+    await syncToRAGFlow(message.id, message.content)
+  }
+  
+  console.log(`[SyncRAGFlow] Completed for message: ${messageId}`)
+}
+```
+
+### 创建 `src/lib/queue/processors/daily-briefing.ts`：
+
+```typescript
+import { Job } from "bullmq"
+import { prisma } from "@/lib/prisma"
+import { callOpenAI, buildSystemPrompt } from "@/lib/ai/openai"
+
+export async function processDailyBriefing(job: Job) {
+  console.log(`[DailyBriefing] Starting daily briefing generation`)
+  
+  // 获取 AI 配置
+  const config = await prisma.aiConfig.findUnique({
+    where: { id: "global_config" },
+  })
+  
+  if (!config?.enableBriefing) {
+    console.log(`[DailyBriefing] Briefing disabled, skipping`)
+    return
+  }
+  
+  // 获取昨天的笔记
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  yesterday.setHours(0, 0, 0, 0)
+  
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  const messages = await prisma.message.findMany({
+    where: {
+      createdAt: {
+        gte: yesterday,
+        lt: today,
+      },
+      // 排除 AI 生成的内容
+      author: {
+        email: { not: "ai@whitenote.local" },
+      },
+    },
+    select: { content: true },
+    orderBy: { createdAt: "asc" },
+  })
+  
+  if (messages.length === 0) {
+    console.log(`[DailyBriefing] No messages yesterday, skipping`)
+    return
+  }
+  
+  // 获取第一个用户作为晨报作者
+  const owner = await prisma.user.findFirst({
+    orderBy: { createdAt: "asc" },
+  })
+  
+  if (!owner) {
+    console.log(`[DailyBriefing] No owner found, skipping`)
+    return
+  }
+  
+  // 生成晨报
+  const systemPrompt = await buildSystemPrompt()
+  const contentSummary = messages.map((m) => m.content).join("\n---\n")
+  
+  const briefingPrompt = `作为用户的第二大脑，请根据用户昨天的笔记内容生成一份简短的晨报。
+
+昨日笔记内容：
+${contentSummary}
+
+请包含以下部分：
+1. 📝 昨日回顾：总结昨天记录的主要内容和想法
+2. 💡 关键洞察：从笔记中提取的重要观点或学习
+3. 🎯 今日建议：基于昨日内容，给出今天可以做的事情
+
+保持简洁，使用 markdown 格式。`
+
+  const briefingContent = await callOpenAI({
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: briefingPrompt },
+    ],
+  })
+  
+  // 创建晨报消息
+  const briefing = await prisma.message.create({
+    data: {
+      content: `# ☀️ 每日晨报 - ${yesterday.toLocaleDateString("zh-CN")}\n\n${briefingContent}`,
+      authorId: owner.id,
+      isPinned: true,
+    },
+  })
+  
+  // 添加 DailyReview 标签
+  const tag = await prisma.tag.upsert({
+    where: { name: "DailyReview" },
+    create: { name: "DailyReview", color: "#FFD700" },
+    update: {},
+  })
+  
+  await prisma.messageTag.create({
+    data: { messageId: briefing.id, tagId: tag.id },
+  })
+  
+  console.log(`[DailyBriefing] Created briefing: ${briefing.id}`)
+}
+```
+
+---
+
+## Step 5: 创建 Worker 主进程
+
+### 创建 `src/lib/queue/worker.ts`：
+
+```typescript
+import { Worker, Job } from "bullmq"
+import redis from "@/lib/redis"
+import { processAutoTag } from "./processors/auto-tag"
+import { processSyncRAGFlow } from "./processors/sync-ragflow"
+import { processDailyBriefing } from "./processors/daily-briefing"
+
+const QUEUE_NAME = "whitenote-tasks"
+
+/**
+ * 创建并启动 Worker
+ */
+export function startWorker() {
+  const worker = new Worker(
+    QUEUE_NAME,
+    async (job: Job) => {
+      console.log(`[Worker] Processing job: ${job.name} (${job.id})`)
+      
+      switch (job.name) {
+        case "auto-tag":
+          await processAutoTag(job)
+          break
+        case "sync-ragflow":
+          await processSyncRAGFlow(job)
+          break
+        case "daily-briefing":
+          await processDailyBriefing(job)
+          break
+        default:
+          console.warn(`[Worker] Unknown job type: ${job.name}`)
+      }
+    },
+    {
+      connection: redis,
+      concurrency: 5,
+    }
+  )
+  
+  worker.on("completed", (job) => {
+    console.log(`[Worker] Job completed: ${job.name} (${job.id})`)
+  })
+  
+  worker.on("failed", (job, err) => {
+    console.error(`[Worker] Job failed: ${job?.name} (${job?.id})`, err)
+  })
+  
+  return worker
+}
+```
+
+---
+
+## Step 6: 启动脚本
+
+### 创建 `scripts/worker.ts`：
+
+```typescript
+import "dotenv/config"
+import { startWorker } from "@/lib/queue/worker"
+import { addCronTask } from "@/lib/queue"
+
+async function main() {
+  console.log("Starting WhiteNote Worker...")
+  
+  // 启动 Worker
+  const worker = startWorker()
+  
+  // 注册每日晨报定时任务 (每天早上 8:00)
+  await addCronTask("daily-briefing", {}, "0 8 * * *")
+  console.log("Registered daily briefing cron job")
+  
+  // 优雅退出
+  process.on("SIGTERM", async () => {
+    console.log("Shutting down worker...")
+    await worker.close()
+    process.exit(0)
+  })
+  
+  console.log("Worker is running. Press Ctrl+C to exit.")
+}
+
+main().catch(console.error)
+```
+
+更新 `package.json`：
+
+```json
+{
+  "scripts": {
+    "worker": "tsx scripts/worker.ts"
+  }
+}
+```
+
+---
+
+## Step 7: 集成到消息创建流程
+
+更新 `src/app/api/messages/route.ts` 的 POST 方法，添加任务调度：
+
+```typescript
+import { addTask } from "@/lib/queue"
+
+// ... 在消息创建成功后添加：
+
+// 添加自动打标签任务
+const config = await prisma.aiConfig.findUnique({
+  where: { id: "global_config" },
+})
+
+if (config?.enableAutoTag) {
+  await addTask("auto-tag", { messageId: message.id })
+}
+
+// 添加 RAGFlow 同步任务 (始终保持同步)
+await addTask("sync-ragflow", { messageId: message.id })
+```
+
+---
+
+## 运行指南
+
+需要同时运行两个进程：
+
+```bash
+# 终端 1: 启动 Next.js 开发服务器
+pnpm dev
+
+# 终端 2: 启动 Worker 进程
+pnpm worker
+```
+
+---
+
+## 任务类型汇总
+
+| 任务类型 | 触发方式 | 说明 |
+|----------|----------|------|
+| `auto-tag` | 消息创建时 | 自动为新消息生成标签 |
+| `sync-ragflow` | 消息创建/更新时 | 同步消息到 RAGFlow 知识库 |
+| `daily-briefing` | 每日 08:00 Cron | 生成每日晨报 |
+| `cleanup-versions` | 可手动触发 | 清理过多的版本历史 |
+
+---
+
+## 验证检查点
+
+```bash
+# 1. 确保 Redis 运行中
+redis-cli ping
+# 应返回 PONG
+
+# 2. 启动 Worker
+pnpm worker
+
+# 3. 创建消息后检查 Worker 日志
+# 应看到 [AutoTag] 和 [SyncRAGFlow] 的日志输出
+```
+
+---
+
+## 后端开发完成 🎉
+
+恭喜！你已完成 WhiteNote 2.5 的全部后端开发。
+
+### 总结
+
+| Stage | 内容 |
+|-------|------|
+| 1 | 项目初始化、环境配置 |
+| 2 | 数据库 Schema、Prisma 迁移 |
+| 3 | NextAuth.js 认证系统 |
+| 4 | Messages CRUD API |
+| 5 | Tags/Comments/Templates/Search/Config API |
+| 6 | AI 集成 (OpenAI + RAGFlow) |
+| 7 | 后台任务队列 (BullMQ) |
+
+### 下一步
+
+继续 [API 测试指南](file:///d:/Code/WhiteNote/docs/API_TESTING_GUIDE.md) 验证所有 API 端点。
