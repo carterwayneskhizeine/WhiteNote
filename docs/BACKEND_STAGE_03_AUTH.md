@@ -23,7 +23,12 @@
 
 ## Step 1: 安装依赖
 
+> **⚠️ NextAuth 版本选择**
+> - 文档使用 **NextAuth v5 beta** (5.0.0-beta.30)，与 Next.js 16 兼容性更好
+> - 如果你遇到 edge runtime 错误，请确保所有 API routes 都设置了 `export const runtime = 'nodejs'`
+
 ```bash
+# 安装 NextAuth v5 beta
 pnpm add next-auth@beta @auth/prisma-adapter bcryptjs
 pnpm add -D @types/bcryptjs
 ```
@@ -46,7 +51,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
-    newUser: "/register",  // 新增：注册页面
   },
   providers: [
     Credentials({
@@ -111,8 +115,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
 ```typescript
 import { hash } from "bcryptjs"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
+
+// Force Node.js runtime for bcryptjs compatibility
+export const runtime = 'nodejs'
 
 /**
  * POST /api/auth/register
@@ -175,8 +182,21 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // 为新用户创建默认 AI 配置 (可选：每用户独立配置)
-    // 如果使用全局配置则跳过此步骤
+    // 为新用户创建默认 AI 配置
+    await prisma.aiConfig.create({
+      data: {
+        userId: user.id,
+        openaiBaseUrl: process.env.OPENAI_BASE_URL || "http://localhost:4000",
+        openaiApiKey: process.env.OPENAI_API_KEY || "",
+        openaiModel: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
+        autoTagModel: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
+        briefingModel: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
+        ragflowBaseUrl: process.env.RAGFLOW_BASE_URL || "http://localhost:4154",
+        ragflowApiKey: process.env.RAGFLOW_API_KEY || "",
+        ragflowChatId: process.env.RAGFLOW_CHAT_ID || "",
+        ragflowDatasetId: process.env.RAGFLOW_DATASET_ID || "",
+      },
+    })
 
     return Response.json({ data: user }, { status: 201 })
   } catch (error) {
@@ -198,8 +218,14 @@ export async function POST(request: NextRequest) {
 ```typescript
 import { handlers } from "@/lib/auth"
 
+// Force Node.js runtime for bcryptjs compatibility
+export const runtime = 'nodejs'
+
 export const { GET, POST } = handlers
 ```
+
+> **⚠️ Runtime 配置说明**
+> 由于 bcryptjs 依赖 Node.js 的 crypto 模块，必须在所有使用 NextAuth 的 API routes 中设置 `export const runtime = 'nodejs'`，否则会遇到 edge runtime 错误。
 
 ---
 
@@ -297,35 +323,41 @@ export async function verifyOwnership(
 
 创建 `src/middleware.ts`：
 
+> **⚠️ 重要：避免 Edge Runtime 问题**
+> Next.js 16 的 middleware 默认运行在 edge runtime 中，而 NextAuth 的 `auth()` 函数会导入依赖 crypto 模块的包。
+> 因此，我们**不**在 middleware 中直接调用 `auth()`，而是检查 cookies 中的 session token。
+
 ```typescript
-import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
-export default auth((req) => {
-  const isLoggedIn = !!req.auth
+export function middleware(request: NextRequest) {
+  // 检查 NextAuth session token cookie
+  const isLoggedIn = request.cookies.get("next-auth.session-token") ||
+                     request.cookies.get("__Secure-next-auth.session-token")
 
-  // 公开路由 (无需登录)
-  const publicRoutes = ["/login", "/register"]
-  const isPublicRoute = publicRoutes.some((route) =>
-    req.nextUrl.pathname.startsWith(route)
-  )
+  const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
+                      request.nextUrl.pathname.startsWith("/register")
 
-  // API 路由单独处理
-  const isApiRoute = req.nextUrl.pathname.startsWith("/api")
-  const isAuthRoute = req.nextUrl.pathname.startsWith("/api/auth")
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api")
+
+  // API 路由不受限制
+  if (isApiRoute) {
+    return NextResponse.next()
+  }
 
   // 已登录用户访问登录/注册页，重定向到首页
-  if (isLoggedIn && isPublicRoute) {
-    return NextResponse.redirect(new URL("/", req.url))
+  if (isLoggedIn && isAuthPage) {
+    return NextResponse.redirect(new URL("/", request.url))
   }
 
   // 未登录用户访问保护页面，重定向到登录页
-  if (!isLoggedIn && !isPublicRoute && !isApiRoute) {
-    return NextResponse.redirect(new URL("/login", req.url))
+  if (!isLoggedIn && !isAuthPage) {
+    return NextResponse.redirect(new URL("/login", request.url))
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
@@ -340,8 +372,11 @@ export const config = {
 
 ```typescript
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
+
+// Force Node.js runtime
+export const runtime = 'nodejs'
 
 /**
  * GET /api/auth/me
@@ -448,12 +483,55 @@ if (message.authorId !== userId) {
 
 ## API 端点汇总
 
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/auth/[...nextauth]` | GET/POST | NextAuth 核心端点 |
-| `/api/auth/register` | POST | 用户注册 |
-| `/api/auth/me` | GET | 获取当前用户 |
-| `/api/auth/me` | PUT | 更新用户资料 |
+| 端点 | 方法 | 说明 | Runtime |
+|------|------|------|---------|
+| `/api/auth/[...nextauth]` | GET/POST | NextAuth 核心端点 | nodejs |
+| `/api/auth/register` | POST | 用户注册 | nodejs |
+| `/api/auth/me` | GET | 获取当前用户 | nodejs |
+| `/api/auth/me` | PUT | 更新用户资料 | nodejs |
+
+> **注意**：所有端点都需要使用 Node.js runtime 以支持 bcryptjs。
+
+---
+
+## 常见问题排查
+
+### 1. Edge Runtime 错误
+
+**错误信息**：
+```
+The edge runtime does not support Node.js 'crypto' module
+```
+
+**解决方案**：
+在所有使用 `bcryptjs` 或 NextAuth 的 API routes 文件顶部添加：
+```typescript
+export const runtime = 'nodejs'
+```
+
+### 2. NextAuth v4 vs v5
+
+如果你使用 NextAuth v4（非 beta），需要调整语法：
+
+**v4 语法**：
+```typescript
+export default NextAuth({
+  // 配置
+})
+```
+
+**v5 语法**：
+```typescript
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  // 配置
+})
+```
+
+### 3. Middleware 错误
+
+如果 middleware 报错 `Cannot read properties of undefined (reading 'custom')`，说明 middleware 在 edge runtime 中无法导入依赖 crypto 的包。
+
+**解决方案**：使用上面的 middleware 实现，通过检查 cookies 而不是调用 `auth()` 函数。
 
 ---
 
@@ -468,14 +546,11 @@ curl -X POST http://localhost:3000/api/auth/register \
 # 预期响应
 # {"data":{"id":"...","email":"test@example.com","name":"Test User"}}
 
-# 2. 测试登录
-curl -X POST http://localhost:3000/api/auth/callback/credentials \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -c cookies.txt \
-  -d "email=test@example.com&password=123456"
+# 2. 验证数据库
+docker exec pg16 psql -U myuser -d whitenote -c "SELECT id, email, name FROM \"User\" ORDER BY \"createdAt\" DESC;"
 
-# 3. 测试获取用户
-curl http://localhost:3000/api/auth/me -b cookies.txt
+# 3. 测试登录（需要前端页面或使用 CSRF token）
+# 登录通常通过前端表单完成，API 端点为 /api/auth/signin
 ```
 
 ---
