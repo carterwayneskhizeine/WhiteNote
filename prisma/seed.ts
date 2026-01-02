@@ -96,7 +96,6 @@ async function main() {
         content: template.content,
       },
       create: {
-        id: template.id,
         authorId: owner.id,
         ...template,
       },

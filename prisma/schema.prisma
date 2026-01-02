@@ -1,57 +1,42 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  // Note: URL is configured in prisma.config.ts (Prisma 7+)
 }
 
-// ============================================
-// 1. 用户模型 (多用户系统)
-// ============================================
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String     @id @default(cuid())
+  email         String     @unique
   passwordHash  String
   name          String?
   avatar        String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // NextAuth 适配器字段
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
   emailVerified DateTime?
   accounts      Account[]
-  sessions      Session[]
-
-  // 业务关系
-  messages      Message[]
+  aiConfig      AiConfig?
   comments      Comment[]
+  messages      Message[]
+  sessions      Session[]
   templates     Template[]
-  aiConfig      AiConfig?  // 每用户独立的 AI 配置
 }
 
-// ============================================
-// 2. NextAuth 相关模型
-// ============================================
 model Account {
   id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -72,84 +57,58 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// ============================================
-// 3. 核心内容模型 - Message
-// ============================================
 model Message {
-  id        String   @id @default(cuid())
-  title     String?  // 笔记标题 (与 Alias 配合使用)
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // 收藏与置顶
-  isStarred Boolean @default(false)
-  isPinned  Boolean @default(false)
-
-  // 作者关系
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId String
-
-  // Thread 模式 (串)
-  parentId String?
-  parent   Message?  @relation("Thread", fields: [parentId], references: [id], onDelete: SetNull)
-  children Message[] @relation("Thread")
-
-  // 标签系统
-  tags MessageTag[]
-
-  // 双向链接系统
-  outgoingLinks MessageLink[] @relation("OutgoingLinks")
-  incomingLinks MessageLink[] @relation("IncomingLinks")
-  aliases       MessageAlias[] // 别名/历史标题
-
-  // 版本历史
-  versions MessageVersion[]
-
-  // 提醒
-  reminders Reminder[]
-
-  // 媒体与评论
-  medias   Media[]
-  comments Comment[]
+  id            String           @id @default(cuid())
+  title         String?
+  content       String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  isStarred     Boolean          @default(false)
+  isPinned      Boolean          @default(false)
+  authorId      String
+  parentId      String?
+  comments      Comment[]
+  medias        Media[]
+  author        User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent        Message?         @relation("Thread", fields: [parentId], references: [id])
+  children      Message[]        @relation("Thread")
+  aliases       MessageAlias[]
+  outgoingLinks MessageLink[]    @relation("OutgoingLinks")
+  incomingLinks MessageLink[]    @relation("IncomingLinks")
+  tags          MessageTag[]
+  versions      MessageVersion[]
+  reminders     Reminder[]
 
   @@index([authorId])
   @@index([createdAt(sort: Desc)])
   @@index([isPinned, createdAt(sort: Desc)])
 }
 
-// ============================================
-// 4. 标签系统
-// ============================================
 model Tag {
-  id        String   @id @default(cuid())
-  name      String   @unique
+  id        String       @id @default(cuid())
+  name      String       @unique
   color     String?
-  createdAt DateTime @default(now())
-
-  messages MessageTag[]
+  createdAt DateTime     @default(now())
+  messages  MessageTag[]
 
   @@index([name])
 }
 
 model MessageTag {
-  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
   messageId String
-  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
   tagId     String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([messageId, tagId])
   @@index([tagId])
 }
 
-// ============================================
-// 5. 双向链接系统
-// ============================================
 model MessageAlias {
-  id        String   @id @default(cuid())
-  alias     String   // 别名/历史标题
+  id        String  @id @default(cuid())
+  alias     String
   messageId String
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@unique([messageId, alias])
   @@index([alias])
@@ -158,145 +117,101 @@ model MessageAlias {
 model MessageLink {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
-
-  sourceId String
-  source   Message @relation("OutgoingLinks", fields: [sourceId], references: [id], onDelete: Cascade)
-
-  targetId String
-  target   Message @relation("IncomingLinks", fields: [targetId], references: [id], onDelete: Cascade)
-
-  context String? // 链接上下文
+  sourceId  String
+  targetId  String
+  context   String?
+  source    Message  @relation("OutgoingLinks", fields: [sourceId], references: [id], onDelete: Cascade)
+  target    Message  @relation("IncomingLinks", fields: [targetId], references: [id], onDelete: Cascade)
 
   @@unique([sourceId, targetId])
   @@index([targetId])
 }
 
-// ============================================
-// 6. 版本历史
-// ============================================
 model MessageVersion {
   id        String   @id @default(cuid())
-  content   String   @db.Text
+  content   String
   createdAt DateTime @default(now())
-
-  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
   messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId, createdAt(sort: Desc)])
 }
 
-// ============================================
-// 7. 模板系统
-// ============================================
 model Template {
   id          String   @id @default(cuid())
   name        String
-  content     String   @db.Text
+  content     String
   description String?
   isBuiltIn   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  author   User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  authorId String?
+  authorId    String?
+  author      User?    @relation(fields: [authorId], references: [id])
 
   @@index([isBuiltIn])
 }
 
-// ============================================
-// 8. 提醒系统
-// ============================================
 model Reminder {
   id          String   @id @default(cuid())
   remindAt    DateTime
   isCompleted Boolean  @default(false)
-  repeatType  String?  // DAILY, WEEKLY, MONTHLY
+  repeatType  String?
   createdAt   DateTime @default(now())
-
-  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  messageId String
+  messageId   String
+  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([remindAt, isCompleted])
 }
 
-// ============================================
-// 9. 评论与 AI 回复
-// ============================================
 model Comment {
   id        String   @id @default(cuid())
-  content   String   @db.Text
+  content   String
   createdAt DateTime @default(now())
-
-  isAIBot Boolean @default(false)
-
-  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  isAIBot   Boolean  @default(false)
   messageId String
-
-  author   User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  authorId String?
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId, createdAt])
 }
 
-// ============================================
-// 10. 媒体资源
-// ============================================
 model Media {
   id          String  @id @default(cuid())
   url         String
-  type        String  // IMAGE, VIDEO, AUDIO
-  description String? // AI 生成的描述
-
-  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  messageId String
+  type        String
+  description String?
+  messageId   String
+  message     Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
 }
 
-// ============================================
-// 11. AI 配置 (每用户独立)
-// ============================================
 model AiConfig {
-  id String @id @default(cuid())
-
-  // 用户关联 (多租户隔离)
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId   String @unique  // 每个用户只有一条配置
-
-  // 基础连接
-  openaiBaseUrl String @default("http://localhost:4000")
-  openaiApiKey  String @default("")
-  openaiModel   String @default("gpt-3.5-turbo")
-
-  // RAG 模式
-  enableRag          Boolean   @default(false)
-  ragflowBaseUrl     String    @default("http://localhost:4154")
-  ragflowApiKey      String    @default("")
-  ragflowChatId      String    @default("")
-  ragflowDatasetId   String    @default("")
-  ragTimeFilterStart DateTime?
-  ragTimeFilterEnd   DateTime?
-
-  // 自动化
-  enableAutoTag  Boolean @default(true)
-  autoTagModel   String  @default("gpt-3.5-turbo")
-  enableBriefing Boolean @default(true)
-  briefingModel  String  @default("gpt-3.5-turbo")
-  briefingTime   String  @default("08:00")
-
-  // AI 人设
-  aiPersonality String  @default("friendly")
-  aiExpertise   String?
-
-  // 链接建议
-  enableLinkSuggestion Boolean @default(true)
-
-  updatedAt DateTime @updatedAt
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  openaiBaseUrl        String    @default("http://localhost:4000")
+  openaiApiKey         String    @default("")
+  openaiModel          String    @default("gpt-3.5-turbo")
+  enableRag            Boolean   @default(false)
+  ragflowBaseUrl       String    @default("http://localhost:4154")
+  ragflowApiKey        String    @default("")
+  ragflowChatId        String    @default("")
+  ragflowDatasetId     String    @default("")
+  ragTimeFilterStart   DateTime?
+  ragTimeFilterEnd     DateTime?
+  enableAutoTag        Boolean   @default(true)
+  autoTagModel         String    @default("gpt-3.5-turbo")
+  enableBriefing       Boolean   @default(true)
+  briefingModel        String    @default("gpt-3.5-turbo")
+  briefingTime         String    @default("08:00")
+  aiPersonality        String    @default("friendly")
+  aiExpertise          String?
+  enableLinkSuggestion Boolean   @default(true)
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// ============================================
-// 12. 搜索历史
-// ============================================
 model SearchHistory {
   id        String   @id @default(cuid())
   query     String
