@@ -21,12 +21,10 @@
 
 ## 1. 项目愿景与核心目标
 
-### 1.1 核心理念：会呼吸的数字围城
+### 1.1 WhiteNote 是一个完全属于用户的第二大脑。
 
-WhiteNote 2.5 是一座完全属于用户的数字城池。
-
-- **城内 (Private)**: 这里只有你 (Owner) 和 AI 伴侣 (@goldierill)。所有的想法、吐槽、知识都在此自由流动。
-- **城外 (Public)**: 是一片虚无。外界无法窥探城内，除非你主动抛出一张"字条"（分享链接）。
+- **Private Note** (私有笔记): 仅限你 (Owner) 和 AI 助手 (@goldierill) 访问。所有想法、吐槽和知识均在此自由流动，无需担心隐私泄露。
+- **Public Note** (公开笔记): 可将 Private Note 转换为 Public Note，通过分享链接让任何人查看。
 
 ### 1.2 核心目标
 
@@ -435,7 +433,9 @@ model AiConfig {
 
   // --- 自动化配置 ---
   enableAutoTag  Boolean  @default(true)
+  autoTagModel   String   @default("gpt-3.5-turbo") // 🆕 自动打标专用模型
   enableBriefing Boolean  @default(true)
+  briefingModel  String   @default("gpt-3.5-turbo") // 🆕 晨报专用模型
   briefingTime   String   @default("08:00")
 
   // --- AI 人设 ---
@@ -536,9 +536,9 @@ model SearchHistory {
 ## 8. 未来路线图 🆕
 
 ### Phase 1: 核心增强 (v2.5)
-- [x] Thread 模式
-- [x] 自动打标签
-- [x] 每日晨报
+- [ ] Thread 模式
+- [ ] 自动打标签
+- [ ] 每日晨报
 - [ ] 双向链接系统
 - [ ] 知识图谱可视化
 - [ ] 模板系统

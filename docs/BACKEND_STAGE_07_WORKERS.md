@@ -114,6 +114,7 @@ export async function addCronTask<T>(
 
 ```typescript
 import { Job } from "bullmq"
+import { prisma } from "@/lib/prisma"
 import { applyAutoTags } from "@/lib/ai/auto-tag"
 
 interface AutoTagJobData {
@@ -125,7 +126,25 @@ export async function processAutoTag(job: Job<AutoTagJobData>) {
   
   console.log(`[AutoTag] Processing message: ${messageId}`)
   
-  await applyAutoTags(messageId)
+  const message = await prisma.message.findUnique({
+    where: { id: messageId },
+    select: { authorId: true }
+  })
+
+  if (!message) {
+    console.error(`[AutoTag] Message not found: ${messageId}`)
+    return
+  }
+
+  // 获取用户配置
+  const config = await prisma.aiConfig.findUnique({
+    where: { userId: message.authorId }
+  })
+
+  // 传入配置的 autoTagModel (如果 applyAutoTags 支持)
+  // 这里假设 applyAutoTags 已经被更新为接受 model 参数
+  const model = config?.autoTagModel || "gpt-3.5-turbo"
+  await applyAutoTags(messageId, model)
   
   console.log(`[AutoTag] Completed for message: ${messageId}`)
 }
@@ -170,9 +189,19 @@ import { callOpenAI, buildSystemPrompt } from "@/lib/ai/openai"
 export async function processDailyBriefing(job: Job) {
   console.log(`[DailyBriefing] Starting daily briefing generation`)
   
-  // 获取 AI 配置
+  // 获取第一个用户作为晨报作者 (Owner)
+  const owner = await prisma.user.findFirst({
+    orderBy: { createdAt: "asc" },
+  })
+
+  if (!owner) {
+    console.log(`[DailyBriefing] No owner found, skipping`)
+    return
+  }
+
+  // 获取 AI 配置 (修正为获取 Owner 的配置)
   const config = await prisma.aiConfig.findUnique({
-    where: { id: "global_config" },
+    where: { userId: owner.id },
   })
   
   if (!config?.enableBriefing) {
@@ -190,6 +219,7 @@ export async function processDailyBriefing(job: Job) {
   
   const messages = await prisma.message.findMany({
     where: {
+      authorId: owner.id, // 仅获取 Owner 的笔记
       createdAt: {
         gte: yesterday,
         lt: today,
@@ -208,18 +238,8 @@ export async function processDailyBriefing(job: Job) {
     return
   }
   
-  // 获取第一个用户作为晨报作者
-  const owner = await prisma.user.findFirst({
-    orderBy: { createdAt: "asc" },
-  })
-  
-  if (!owner) {
-    console.log(`[DailyBriefing] No owner found, skipping`)
-    return
-  }
-  
   // 生成晨报
-  const systemPrompt = await buildSystemPrompt()
+  const systemPrompt = await buildSystemPrompt(owner.id) // 传入 userId
   const contentSummary = messages.map((m) => m.content).join("\n---\n")
   
   const briefingPrompt = `作为用户的第二大脑，请根据用户昨天的笔记内容生成一份简短的晨报。
@@ -235,10 +255,12 @@ ${contentSummary}
 保持简洁，使用 markdown 格式。`
 
   const briefingContent = await callOpenAI({
+    userId: owner.id, // 必传
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: briefingPrompt },
     ],
+    model: config.briefingModel, // 🆕 使用配置的晨报专用模型
   })
   
   // 创建晨报消息

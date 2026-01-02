@@ -62,7 +62,9 @@ model AiConfig {
 
   // --- 自动化 ---
   enableAutoTag  Boolean @default(true)
+  autoTagModel   String  @default("gpt-3.5-turbo")
   enableBriefing Boolean @default(true)
+  briefingModel  String  @default("gpt-3.5-turbo")
   briefingTime   String  @default("08:00")
 
   // --- AI 人设 ---
@@ -166,7 +168,9 @@ export async function updateAiConfig(userId: string, data: Partial<{
   ragflowChatId: string
   ragflowDatasetId: string
   enableAutoTag: boolean
+  autoTagModel: string
   enableBriefing: boolean
+  briefingModel: string
   briefingTime: string
   aiPersonality: string
   aiExpertise: string | null
@@ -201,6 +205,7 @@ interface ChatMessage {
 interface ChatOptions {
   userId: string  // 必须传入用户 ID
   messages: ChatMessage[]
+  model?: string // 可选：覆盖默认模型
   stream?: boolean
 }
 
@@ -223,7 +228,7 @@ export async function callOpenAI(options: ChatOptions): Promise<string> {
       "Authorization": `Bearer ${config.openaiApiKey}`,
     },
     body: JSON.stringify({
-      model: config.openaiModel,
+      model: options.model || config.openaiModel,
       messages: options.messages,
       stream: false,
     }),
@@ -442,7 +447,9 @@ export async function PUT(request: NextRequest) {
       "ragflowChatId",
       "ragflowDatasetId",
       "enableAutoTag",
+      "autoTagModel",
       "enableBriefing",
+      "briefingModel",
       "briefingTime",
       "aiPersonality",
       "aiExpertise",

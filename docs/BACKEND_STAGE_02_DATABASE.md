@@ -297,7 +297,9 @@ model AiConfig {
 
   // 自动化
   enableAutoTag  Boolean @default(true)
+  autoTagModel   String  @default("gpt-3.5-turbo")
   enableBriefing Boolean @default(true)
+  briefingModel  String  @default("gpt-3.5-turbo")
   briefingTime   String  @default("08:00")
 
   // AI 人设
@@ -371,6 +373,8 @@ async function main() {
       openaiBaseUrl: process.env.OPENAI_BASE_URL || 'http://localhost:4000',
       openaiApiKey: process.env.OPENAI_API_KEY || '',
       openaiModel: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+      autoTagModel: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+      briefingModel: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
     },
   })
 
