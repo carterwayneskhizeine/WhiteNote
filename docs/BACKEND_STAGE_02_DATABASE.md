@@ -13,8 +13,6 @@
 
 ## Step 1: 编写完整 Prisma Schema
 
-> **⚠️ Prisma 7 重要变更**：Prisma 7 引入了新的配置机制，数据库连接 URL 必须在 `prisma.config.ts` 中配置，**不能**在 `schema.prisma` 中指定 `url` 字段。
-
 编辑 `prisma/schema.prisma`：
 
 ```prisma
@@ -328,9 +326,7 @@ model SearchHistory {
 
 ---
 
-## Step 2: 安装 Prisma 7 驱动适配器
-
-> **⚠️ Prisma 7 破坏性变更**：Prisma 7 不再支持 `new PrismaClient()` 的空构造函数初始化方式，**必须**传入驱动适配器（Driver Adapter）或 `accelerateUrl`。
+## Step 2: 安装 Prisma 驱动适配器
 
 安装 PostgreSQL 驱动适配器：
 
@@ -400,8 +396,6 @@ DATABASE_URL="postgresql://myuser:mypassword@localhost:5925/whitenote?schema=pub
 ## Step 3: 创建种子数据脚本
 
 创建 `prisma/seed.ts`：
-
-> **⚠️ 注意**：种子脚本也需要使用 Prisma 7 的适配器方式初始化。
 
 ```typescript
 import { PrismaClient } from '@prisma/client'
@@ -520,8 +514,6 @@ pnpm add bcryptjs
 pnpm add -D @types/bcryptjs tsx
 ```
 
-> **⚠️ Prisma 7 变更**：种子脚本的配置从 `package.json` 移到了 `prisma.config.ts`。
-
 在 `prisma.config.ts` 中添加种子脚本配置：
 
 ```typescript
@@ -614,47 +606,6 @@ docker exec pg16 psql -U myuser -d whitenote -c "SELECT id, name, \"isBuiltIn\" 
 
 ---
 
-## Prisma 7 重要变更总结
-
-### 1. 配置文件变更
-- **旧方式（Prisma 6）**：在 `schema.prisma` 中指定 `url = env("DATABASE_URL")`
-- **新方式（Prisma 7）**：在 `prisma.config.ts` 的 `datasource.url` 中配置
-
-### 2. 驱动适配器（Driver Adapters）
-- **旧方式**：可以直接使用 `new PrismaClient()`
-- **新方式**：必须传入适配器，例如 `new PrismaClient({ adapter })`
-- **原因**：Prisma 7 默认使用 "client" 引擎类型，移除了对 Rust 二进制文件的依赖
-
-### 3. 种子脚本配置
-- **旧方式**：在 `package.json` 的 `prisma.seed` 字段中配置
-- **新方式**：在 `prisma.config.ts` 的 `migrations.seed` 中配置
-
-### 4. 初始化示例
-
-**应用代码中（src/lib/prisma.ts）**：
-```typescript
-import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
-import { Pool } from 'pg'
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-const adapter = new PrismaPg(pool)
-const prisma = new PrismaClient({ adapter })
-```
-
-**种子脚本中（prisma/seed.ts）**：
-```typescript
-import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
-import { Pool } from 'pg'
-
-const connectionString = process.env.DATABASE_URL!
-const pool = new Pool({ connectionString })
-const adapter = new PrismaPg(pool)
-const prisma = new PrismaClient({ adapter })
-```
-
----
 
 ## 下一步
 

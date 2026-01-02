@@ -11,27 +11,14 @@
 
 ---
 
-## 架构变更说明
-
-> [!IMPORTANT]
-> **从单用户改为多用户系统**
-> - 每个用户拥有独立的数据空间
-> - 用户之间的消息、标签、模板等完全隔离
-> - 支持用户自主注册
-
----
-
 ## Step 1: 安装依赖
 
-> **⚠️ NextAuth 版本选择**
-> - 文档使用 **NextAuth v5 beta** (5.0.0-beta.30)，与 Next.js 16 兼容性更好
-> - 如果你遇到 edge runtime 错误，请确保所有 API routes 都设置了 `export const runtime = 'nodejs'`
-
 ```bash
-# 安装 NextAuth v5 beta
 pnpm add next-auth@beta @auth/prisma-adapter bcryptjs
 pnpm add -D @types/bcryptjs
 ```
+
+> **注意**：由于 bcryptjs 依赖 Node.js crypto 模块，所有使用 NextAuth 的 API routes 必须设置 `export const runtime = 'nodejs'`
 
 ---
 
@@ -118,7 +105,6 @@ import { hash } from "bcryptjs"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
-// Force Node.js runtime for bcryptjs compatibility
 export const runtime = 'nodejs'
 
 /**
@@ -218,14 +204,10 @@ export async function POST(request: NextRequest) {
 ```typescript
 import { handlers } from "@/lib/auth"
 
-// Force Node.js runtime for bcryptjs compatibility
 export const runtime = 'nodejs'
 
 export const { GET, POST } = handlers
 ```
-
-> **⚠️ Runtime 配置说明**
-> 由于 bcryptjs 依赖 Node.js 的 crypto 模块，必须在所有使用 NextAuth 的 API routes 中设置 `export const runtime = 'nodejs'`，否则会遇到 edge runtime 错误。
 
 ---
 
@@ -319,19 +301,15 @@ export async function verifyOwnership(
 
 ---
 
-## Step 7: 创建 Auth 中间件
+## Step 7: 创建 Auth 中间件 (Proxy)
 
-创建 `src/middleware.ts`：
-
-> **⚠️ 重要：避免 Edge Runtime 问题**
-> Next.js 16 的 middleware 默认运行在 edge runtime 中，而 NextAuth 的 `auth()` 函数会导入依赖 crypto 模块的包。
-> 因此，我们**不**在 middleware 中直接调用 `auth()`，而是检查 cookies 中的 session token。
+创建 `src/proxy.ts`：
 
 ```typescript
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // 检查 NextAuth session token cookie
   const isLoggedIn = request.cookies.get("next-auth.session-token") ||
                      request.cookies.get("__Secure-next-auth.session-token")
@@ -375,7 +353,6 @@ import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
-// Force Node.js runtime
 export const runtime = 'nodejs'
 
 /**
@@ -483,14 +460,12 @@ if (message.authorId !== userId) {
 
 ## API 端点汇总
 
-| 端点 | 方法 | 说明 | Runtime |
-|------|------|------|---------|
-| `/api/auth/[...nextauth]` | GET/POST | NextAuth 核心端点 | nodejs |
-| `/api/auth/register` | POST | 用户注册 | nodejs |
-| `/api/auth/me` | GET | 获取当前用户 | nodejs |
-| `/api/auth/me` | PUT | 更新用户资料 | nodejs |
-
-> **注意**：所有端点都需要使用 Node.js runtime 以支持 bcryptjs。
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/auth/[...nextauth]` | GET/POST | NextAuth 核心端点 |
+| `/api/auth/register` | POST | 用户注册 |
+| `/api/auth/me` | GET | 获取当前用户 |
+| `/api/auth/me` | PUT | 更新用户资料 |
 
 ---
 
@@ -509,29 +484,6 @@ The edge runtime does not support Node.js 'crypto' module
 export const runtime = 'nodejs'
 ```
 
-### 2. NextAuth v4 vs v5
-
-如果你使用 NextAuth v4（非 beta），需要调整语法：
-
-**v4 语法**：
-```typescript
-export default NextAuth({
-  // 配置
-})
-```
-
-**v5 语法**：
-```typescript
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  // 配置
-})
-```
-
-### 3. Middleware 错误
-
-如果 middleware 报错 `Cannot read properties of undefined (reading 'custom')`，说明 middleware 在 edge runtime 中无法导入依赖 crypto 的包。
-
-**解决方案**：使用上面的 middleware 实现，通过检查 cookies 而不是调用 `auth()` 函数。
 
 ---
 
