@@ -54,21 +54,6 @@
 -   **Trending Tags**: "热门标签" 或 "最近常访问的标签"。
 -   **Backlinks Panel** (动态): 当在左侧点击某个具体笔记时，这里显示指向该笔记的反向链接。
 
-### 2.2 移动端布局 (Mobile, <640px)
-
-移动端需完全重构为 App 般的体验，核心是 **"Flash Capsule" (闪念胶囊)**。
-
--   **底部导航栏 (Bottom Tab Bar)**: 
-    -   Home (时间线)
-    -   Search (搜索)
-    -   **[+]** (胶囊按钮 - 核心入口)
-    -   Graph (图谱)
-    -   Profile (个人)
--   **顶部导航**: 极简 Header，仅显示 Logo 和当前视图名称。抽屉式菜单 (Sheet) 呼出次要功能。
--   **交互**: 
-    -   下拉刷新 (Pull to refresh).
-    -   点击 (+) 按钮弹出全屏输入层 (Tiptap + 语音/拍照快捷键)。
-
 ---
 
 ## 3. UI 组件系统 (Component System)
@@ -120,7 +105,7 @@
 ## 5. 响应式策略 (Responsive Strategy)
 
 Tailwind Breakpoints:
--   **sm (640px)**: 手机竖屏。隐藏 Sidebar，显示 Bottom Tab。
+-   **sm (640px)**: 手机竖屏。隐藏 Sidebar。
 -   **md (768px)**: 平板竖屏/大手机。
 -   **lg (1024px)**: 平板横屏/小笔记本。显示左侧 Sidebar，隐藏右侧 Context。
 -   **xl (1280px)**: 桌面标准。三栏全开。
