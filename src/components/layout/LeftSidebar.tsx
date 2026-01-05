@@ -46,7 +46,7 @@ export function LeftSidebar({ isMobile }: LeftSidebarProps) {
   return (
     <aside className={cn(
       "sticky top-0 h-screen flex-col justify-between px-2 py-2",
-      isMobile ? "flex w-full overflow-y-auto bg-black" : "hidden lg:flex w-[275px]"
+      isMobile ? "flex w-full overflow-y-auto bg-black" : "hidden desktop:flex w-[275px]"
     )}>
       <div className="flex flex-col gap-2">
         {/* Mobile Header */}
@@ -84,9 +84,11 @@ export function LeftSidebar({ isMobile }: LeftSidebarProps) {
           })}
         </nav>
 
-        <Button size="lg" className="mt-4 rounded-full font-bold text-lg h-14 w-[90%] mx-auto bg-foreground hover:bg-foreground/90 text-background shadow-lg lg:w-full">
-          <span>{isMobile ? "Post" : "Post"}</span>
-        </Button>
+        {!isMobile && (
+          <Button size="lg" className="mt-4 rounded-full font-bold text-lg h-14 w-[90%] mx-auto bg-foreground hover:bg-foreground/90 text-background shadow-lg lg:w-full">
+            <span>Post</span>
+          </Button>
+        )}
       </div>
 
       {/* Desktop User Profile at bottom */}

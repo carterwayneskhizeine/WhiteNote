@@ -27,12 +27,18 @@
 - **Subscribe Card**: 模仿 X Premium 订阅卡片，黑色背景 + 醒目的订阅按钮。
 - **Trends**: "What's happening" 列表，展示热门标签和推文数量。
 
-### 1.4 `MobileNav.tsx` (Mobile Header)
-移动端 (< 1024px) 顶部导航。
-- **Left**: 用户头像，点击触发 `Sheet` 侧滑菜单。
-- **Center**: 居中 Logo。
-- **Right**: 设置/更多图标。
-- **Drawer**: 复用 `LeftSidebar` 组件 (通过 `isMobile` prop)，在侧滑菜单中显示完整的用户信息和导航链接。
+### 1.4 `MobileNav.tsx` (Mobile Navigation System)
+移动端 (< 1024px) 全局导航系统，高度还原 X App 布局。
+- **Top Bar**: 
+  - Left: 用户头像，点击触发 `Sheet` 侧滑菜单。
+  - Center: 居中极简 Logo。
+  - Right: 占位符 (保持平衡)。
+- **Bottom Bar**: 
+  - 底部固定导航栏 (`fixed bottom-0`)。
+  - 包含 Home, Explore, Notifications, Messages 四个核心入口。
+  - 支持 `backdrop-blur` 和 `active` 状态高亮。
+- **FAB**: 右下角悬浮发帖按钮 (`bg-primary` 圆形按钮)。
+- **Drawer**: 复用 `LeftSidebar` 组件，作为个人中心入口。在 Mobile 模式下隐藏了重复的 "Post" 按钮。
 
 ---
 

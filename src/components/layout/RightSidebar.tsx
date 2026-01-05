@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 
 export function RightSidebar() {
   return (
-    <aside className="sticky top-0 h-screen w-[350px] flex-col gap-4 px-4 py-4 hidden xl:flex overflow-y-auto no-scrollbar">
+    <aside className="sticky top-0 h-screen w-[350px] flex-col gap-4 px-4 py-4 hidden desktop:flex overflow-y-auto no-scrollbar">
       {/* Search */}
       <div className="sticky top-0 bg-background z-10 pb-2">
         <div className="relative group">
