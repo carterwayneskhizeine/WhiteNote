@@ -83,5 +83,109 @@ export const config = {
 
 ---
 
-## 4. 总结
+## 4. 解决方案实施记录 (2026-01-06)
+
+### 4.1 问题根因确认
+
+经过排查，确认问题根因为：
+
+1. **NextAuth v5 环境变量变更**（主要原因）
+   - NextAuth v5 (Auth.js) 改用 `AUTH_SECRET` 和 `AUTH_URL`
+   - 项目 `.env` 中仅有旧版本的 `NEXTAUTH_SECRET` 和 `NEXTAUTH_URL`
+   - 缺失 `AUTH_SECRET` 导致 API 路由初始化失败，返回 404
+
+2. **Next.js 16 中间件文件冲突**（次要原因）
+   - Next.js 16 废弃 `middleware.ts`，改用 `proxy.ts`
+   - 项目同时存在 `src/middleware.ts` 和 `src/proxy.ts`
+   - 导致中间件无法正常加载
+
+### 4.2 具体修复步骤
+
+#### 步骤 1: 更新环境变量
+
+在 `.env` 文件中添加 NextAuth v5 必需的环境变量：
+
+```bash
+# ========================================
+# NextAuth 配置
+# ========================================
+AUTH_SECRET="your-super-secret-key-change-this-in-production"
+AUTH_URL="http://localhost:3005"
+# Legacy support (deprecated in NextAuth v5)
+NEXTAUTH_URL="http://localhost:3005"
+NEXTAUTH_SECRET="your-super-secret-key-change-this-in-production"
+```
+
+**关键点**:
+- 必须添加 `AUTH_SECRET`（NextAuth v5 强制要求）
+- 建议添加 `AUTH_URL` 明确指定应用 URL
+- 保留旧版变量以兼容可能的遗留代码
+
+#### 步骤 2: 移除废弃的 middleware.ts
+
+删除 `src/middleware.ts`，仅保留 `src/proxy.ts`：
+
+```bash
+rm src/middleware.ts
+```
+
+**原因**: Next.js 16 不允许同时存在 `middleware.ts` 和 `proxy.ts`，会抛出以下错误：
+```
+Error: Both middleware file "./src\middleware.ts" and proxy file "./src\proxy.ts" are detected.
+```
+
+#### 步骤 3: 重启开发服务器
+
+```bash
+# 停止当前服务器 (Ctrl+C)
+pnpm dev
+```
+
+### 4.3 验证结果
+
+修复后验证步骤：
+
+1. **验证 Auth API**
+   ```bash
+   curl http://localhost:3005/api/auth/session
+   ```
+   ✅ **成功返回**:
+   ```json
+   {
+     "user": {
+       "name": "Owner",
+       "email": "owner@whitenote.local",
+       "image": null,
+       "id": "cmjwop12e0000rwimpsopzi98"
+     },
+     "expires": "2026-02-04T18:29:00.509Z"
+   }
+   ```
+
+2. **验证中间件重定向**
+   - 访问 `http://localhost:3005/`（未登录状态）
+   - ✅ 成功重定向到 `/register`
+
+### 4.4 经验总结
+
+1. **环境变量迁移是 NextAuth v5 升级的关键**
+   - 必须使用 `AUTH_SECRET` 替代 `NEXTAUTH_SECRET`
+   - 必须使用 `AUTH_URL` 替代 `NEXTAUTH_URL`
+   - 参考: [Auth.js Environment Variables](https://authjs.dev/reference/core/modules#env)
+
+2. **Next.js 16 架构变更需要注意**
+   - 中间件文件从 `middleware.ts` 迁移到 `proxy.ts`
+   - 不能同时存在两个文件
+   - 参考: [Next.js 16 Release Notes](https://nextjs.org/docs/messages/middleware-to-proxy)
+
+3. **问题定位优先级**
+   - 先解决基础设施问题（API 404），再处理业务逻辑（重定向）
+   - API 404 往往掩盖了其他问题，修复后业务逻辑可能自动恢复
+
+---
+
+## 5. 总结
+
 目前的 `ClientFetchError` (404) 极有可能是环境变量配置（特别是端口和密钥）导致的 API 路由初始化失败。解决了 API 404 问题后，中间件的重定向问题可能会随之解决，或者更容易调试。
+
+**状态**: ✅ 已解决 (2026-01-06)
