@@ -3,9 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  Home, Search, Bell, Hash, Settings, PenSquare,
-  User as UserIcon, MoreHorizontal, Mail, Users,
-  Bookmark, List, Briefcase, Zap
+  Home, Bell, Tag, Network, Settings,
+  MoreHorizontal
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -18,13 +17,10 @@ interface LeftSidebarProps {
 
 const navItems = [
   { icon: Home, label: "Home", href: "/" },
-  { icon: Search, label: "Explore", href: "/explore" },
   { icon: Bell, label: "Notifications", href: "/notifications" },
-  { icon: Mail, label: "Messages", href: "/messages" },
-  { icon: Users, label: "Communities", href: "/communities" },
-  { icon: Zap, label: "Premium", href: "/premium" },
-  { icon: UserIcon, label: "Profile", href: "/profile" },
-  { icon: MoreHorizontal, label: "More", href: "/more" },
+  { icon: Tag, label: "Tags", href: "/tags" },
+  { icon: Network, label: "Graph", href: "/graph" },
+  { icon: Settings, label: "Settings", href: "/settings" },
 ]
 
 export function LeftSidebar({ isMobile }: LeftSidebarProps) {
