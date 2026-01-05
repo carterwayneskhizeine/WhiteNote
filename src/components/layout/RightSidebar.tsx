@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 
 export function RightSidebar() {
   return (
-    <aside className="sticky top-0 h-screen w-[390px] flex-col gap-4 px-4 pt-0 pb-4 hidden desktop:flex overflow-y-auto no-scrollbar">
+    <aside className="w-[390px] flex flex-col gap-4 px-4 pt-0 pb-4 hidden desktop:flex">
       {/* Search */}
       <div className="sticky top-0 bg-background z-10 pt-[6px] pb-2">
         <div className="relative group">
@@ -36,7 +36,7 @@ export function RightSidebar() {
           <CardTitle className="text-xl font-extrabold">What&apos;s happening</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-0 px-0">
-          {['#ReactJS', '#NextJS', '#AI Revolution', 'Design Systems'].map((tag, i) => (
+          {['#ReactJS', '#NextJS', '#AI Revolution', 'Design Systems', 'Goldie'].map((tag, i) => (
             <div key={tag} className="flex justify-between items-start px-4 py-3 hover:bg-accent/50 cursor-pointer transition-colors">
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs text-muted-foreground">Trending in Tech</span>
