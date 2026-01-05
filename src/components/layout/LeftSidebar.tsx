@@ -46,10 +46,10 @@ export function LeftSidebar({ isMobile, collapsed }: LeftSidebarProps) {
 
   return (
     <aside className={cn(
-      "sticky top-0 h-screen flex flex-col justify-between px-2 py-2",
-      isMobile ? "w-full overflow-y-auto bg-black" :
-        collapsed ? "w-[88px]" :
-          "w-[250px]"
+      "sticky top-0 h-screen flex flex-col justify-between py-2",
+      isMobile ? "w-full overflow-y-auto bg-black px-2" :
+        collapsed ? "w-[88px] px-2" :
+          "w-[300px] pl-[40px] pr-2"
     )}>
       <div className="flex flex-col gap-2">
         {/* Mobile Header */}
