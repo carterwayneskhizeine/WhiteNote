@@ -129,7 +129,7 @@ export function LeftSidebar({ isMobile, collapsed }: LeftSidebarProps) {
 
       {/* Desktop User Profile at bottom */}
       {!isMobile && !collapsed && (
-        <div className="mt-auto mb-4">
+        <div className="mt-auto mb-1">
           <Button variant="ghost" className="w-full justify-between h-16 rounded-full px-4 hover:bg-secondary/50 transition-colors">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
@@ -148,7 +148,7 @@ export function LeftSidebar({ isMobile, collapsed }: LeftSidebarProps) {
 
       {/* Collapsed user avatar */}
       {!isMobile && collapsed && (
-        <div className="mt-auto mb-4">
+        <div className="mt-auto mb-0">
           <Button variant="ghost" className="w-14 h-14 justify-center rounded-full px-0 hover:bg-secondary/50 transition-colors mx-auto">
             <Avatar className="h-10 w-10">
               <AvatarImage src="https://github.com/shadcn.png" />
