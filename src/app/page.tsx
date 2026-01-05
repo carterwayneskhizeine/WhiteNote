@@ -4,9 +4,6 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="px-4 py-3">
-          <h1 className="text-xl font-bold">Home</h1>
-        </div>
         <div className="flex w-full">
           <button className="flex-1 py-4 hover:bg-secondary/50 transition-colors relative flex justify-center items-center">
             <span className="font-bold text-sm">For you</span>

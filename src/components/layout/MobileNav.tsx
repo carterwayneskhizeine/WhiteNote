@@ -1,12 +1,9 @@
 "use client"
 
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Home, Bell, Tag, Network, Settings, PenLine } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { LeftSidebar } from "./LeftSidebar"
 import { cn } from "@/lib/utils"
 
 export function MobileNav() {
@@ -16,33 +13,6 @@ export function MobileNav() {
 
   return (
     <>
-      {/* Top Header */}
-      <div className="desktop:hidden sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md px-4 h-[53px] flex items-center justify-between">
-        <Sheet>
-          <SheetTrigger asChild>
-            <button className="h-8 w-8 rounded-full overflow-hidden">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="https://github.com/shadcn.png" />
-                <AvatarFallback>CN</AvatarFallback>
-              </Avatar>
-            </button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[80%] max-w-[320px] p-0 border-r border-border bg-black">
-            <div className="h-full flex flex-col">
-              <LeftSidebar isMobile />
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        <Link href="/" className="absolute left-1/2 -translate-x-1/2">
-          {/* Logo Placeholder - X uses a small logo in center */}
-          <div className="h-6 w-6 bg-foreground rounded-full" />
-        </Link>
-
-        {/* Spacer for symmetry or Settings/Sparkle icon space */}
-        <div className="w-8" />
-      </div>
-
       {/* Floating Action Button (FAB) */}
       <div className="desktop:hidden fixed bottom-[70px] right-4 z-50">
         <Button
