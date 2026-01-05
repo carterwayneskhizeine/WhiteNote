@@ -91,7 +91,7 @@ export function LeftSidebar({ isMobile, collapsed }: LeftSidebarProps) {
                 variant="ghost"
                 className={cn(
                   "h-14 rounded-full hover:bg-secondary/50 transition-colors",
-                  collapsed ? "justify-center w-14 px-0 mx-auto" : "justify-start gap-3 text-xl px-4 w-min lg:w-full",
+                  collapsed ? "justify-center w-14 px-0 mx-auto" : "justify-start gap-3 text-xl px-4 w-min",
                   isActive && "font-bold",
                   isMobile && "w-full text-lg"
                 )}

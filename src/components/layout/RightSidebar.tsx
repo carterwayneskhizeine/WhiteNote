@@ -9,12 +9,12 @@ export function RightSidebar() {
   return (
     <aside className="sticky top-0 h-screen w-[350px] flex-col gap-4 px-4 pt-0 pb-4 hidden desktop:flex overflow-y-auto no-scrollbar">
       {/* Search */}
-      <div className="sticky top-0 bg-background z-10 pt-[5px] pb-2">
+      <div className="sticky top-0 bg-background z-10 pt-[13px] pb-2">
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary" />
           <Input
             placeholder="Search"
-            className="pl-12 h-12 rounded-full bg-background dark:bg-background border border-border focus-visible:ring-1 focus-visible:ring-primary placeholder:text-muted-foreground"
+            className="pl-12 h-10 rounded-full bg-background dark:bg-background border border-border focus-visible:ring-1 focus-visible:ring-primary placeholder:text-muted-foreground"
           />
         </div>
       </div>
