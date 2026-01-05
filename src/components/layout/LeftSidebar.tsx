@@ -114,7 +114,7 @@ export function LeftSidebar({ isMobile, collapsed }: LeftSidebarProps) {
         </nav>
 
         {!isMobile && !collapsed && (
-          <Button size="lg" className="mt-4 rounded-full font-bold text-lg h-14 w-[90%] mx-auto bg-foreground hover:bg-foreground/90 text-background shadow-lg lg:w-full">
+          <Button size="lg" className="mt-4 rounded-full font-bold text-lg h-14 w-[calc(100%-30px)] mx-auto bg-foreground hover:bg-foreground/90 text-background shadow-lg">
             <span>Post</span>
           </Button>
         )}
