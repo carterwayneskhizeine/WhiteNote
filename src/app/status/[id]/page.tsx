@@ -9,6 +9,7 @@ import { ArrowLeft, MoreHorizontal, MessageCircle, Repeat2, Heart, Share, BarCha
 import { format } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { CommentsList } from "@/components/CommentsList"
+import { TipTapViewer } from "@/components/TipTapViewer"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 
@@ -107,10 +108,9 @@ export default function StatusPage() {
                     </Button>
                 </div>
 
-                <div
-                    className="mt-4 text-[22px] leading-normal whitespace-pre-wrap wrap-break-word prose prose-base dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: message.content }}
-                />
+                <div className="mt-4 text-[22px] leading-normal wrap-break-word">
+                    <TipTapViewer content={message.content} />
+                </div>
 
                 <div className="mt-4 flex flex-wrap gap-1 text-muted-foreground text-[15px]">
                     <span>{format(new Date(message.createdAt), "a h:mm · yyyy'年'M'月'd'日'", { locale: zhCN })}</span>
