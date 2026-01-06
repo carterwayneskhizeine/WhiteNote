@@ -1,6 +1,17 @@
-import { InputMachine } from "@/components/InputMachine";
+"use client"
+
+import { InputMachine } from "@/components/InputMachine"
+import { MessagesList } from "@/components/MessagesList"
+import { useState } from "react"
 
 export default function Home() {
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const handleMessageCreated = () => {
+    // Trigger refresh of messages list
+    setRefreshKey((prev) => prev + 1)
+  }
+
   return (
     <div className="flex flex-col min-h-screen pt-[106px] desktop:pt-0">
       <div className="desktop:block hidden sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border">
@@ -15,22 +26,9 @@ export default function Home() {
         </div>
       </div>
 
-      <InputMachine />
+      <InputMachine onSuccess={handleMessageCreated} />
 
-      { /* Timeline placeholder */}
-      <div className="flex flex-col">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="p-4 border-b hover:bg-muted/20 transition-colors cursor-pointer">
-            <div className="flex gap-3">
-              <div className="h-10 w-10 rounded-full bg-muted animate-pulse shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-1/4 bg-muted animate-pulse rounded" />
-                <div className="h-16 w-full bg-muted animate-pulse rounded" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <MessagesList key={refreshKey} />
     </div>
-  );
+  )
 }
