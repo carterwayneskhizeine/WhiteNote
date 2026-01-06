@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useState, useEffect } from "react"
 import { Plus, Trash2 } from "lucide-react"
+import { templatesApi } from "@/lib/api"
 
 interface Template {
   id: string
@@ -27,47 +28,29 @@ export default function TemplatesPage() {
   }, [])
 
   const fetchTemplates = async () => {
-    try {
-      const res = await fetch('/api/templates')
-      const json = await res.json()
-      setTemplates(json.data || [])
-    } catch (error) {
-      console.error("Failed to fetch templates:", error)
-    } finally {
-      setIsLoading(false)
+    const result = await templatesApi.getTemplates()
+    if (result.data) {
+      setTemplates(result.data)
     }
+    setIsLoading(false)
   }
 
   const handleCreate = async () => {
     if (!newTemplate.name || !newTemplate.content) return
 
-    try {
-      const res = await fetch('/api/templates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTemplate)
-      })
-      const json = await res.json()
-
-      if (json.data) {
-        setIsCreating(false)
-        setNewTemplate({ name: "", content: "", description: "" })
-        fetchTemplates()
-      }
-    } catch (error) {
-      console.error("Failed to create template:", error)
+    const result = await templatesApi.createTemplate(newTemplate)
+    if (result.data) {
+      setIsCreating(false)
+      setNewTemplate({ name: "", content: "", description: "" })
+      fetchTemplates()
     }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("确定要删除这个模板吗？")) return
 
-    try {
-      await fetch(`/api/templates/${id}`, { method: 'DELETE' })
-      fetchTemplates()
-    } catch (error) {
-      console.error("Failed to delete template:", error)
-    }
+    await templatesApi.deleteTemplate(id)
+    fetchTemplates()
   }
 
   if (isLoading) {

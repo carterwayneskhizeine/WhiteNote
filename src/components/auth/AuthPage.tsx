@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { authApi } from "@/lib/api"
 
 type AuthMode = "login" | "register"
 
@@ -56,32 +57,22 @@ export function AuthPage() {
     setError("")
     setLoading(true)
 
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: registerName,
-          email: registerEmail,
-          password: registerPassword,
-        }),
-      })
+    const result = await authApi.register({
+      name: registerName,
+      email: registerEmail,
+      password: registerPassword,
+    })
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || "注册失败")
-      } else {
-        // 注册成功后切换到登录模式
-        setMode("login")
-        setLoginEmail(registerEmail)
-        setError("")
-      }
-    } catch (err) {
-      setError("网络错误，请重试")
-    } finally {
-      setLoading(false)
+    if (result.error) {
+      setError(result.error)
+    } else {
+      // 注册成功后切换到登录模式
+      setMode("login")
+      setLoginEmail(registerEmail)
+      setError("")
     }
+
+    setLoading(false)
   }
 
   return (
