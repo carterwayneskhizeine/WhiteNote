@@ -28,6 +28,24 @@ const XIcon = ({ icon: Icon, filled, size = 26, className }: any) => (
   />
 )
 
+const MobileXHome = ({ isActive, className }: any) => {
+  const solidPath = "M21.591 7.146L12.52 1.157c-.316-.21-.724-.21-1.04 0l-9.071 5.99c-.26.173-.409.456-.409.757v13.183c0 .502.418.913.929.913h6.638c.511 0 .929-.41.929-.913v-7.075h3.008v7.075c0 .502.418.913.929.913h6.639c.51 0 .928-.41.928-.913V7.904c0-.301-.158-.584-.408-.758z"
+  const outlinePath = "M21.591 7.146L12.52 1.157c-.316-.21-.724-.21-1.04 0l-9.071 5.99c-.26.173-.409.456-.409.757v13.183c0 .502.418.913.929.913h6.638c.511 0 .929-.41.929-.913v-7.075h3.008v7.075c0 .502.418.913.929.913h6.639c.51 0 .928-.41.928-.913V7.904c0-.301-.158-.584-.408-.758zM20 20l-4.5.01.011-7.097c0-.502-.418-.913-.928-.913H9.44c-.511 0-.929.41-.929.913L8.5 20H4V8.773l8.011-5.342L20 8.764z"
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className={className}
+      fill="currentColor"
+    >
+      <g>
+        <path d={isActive ? solidPath : outlinePath}></path>
+      </g>
+    </svg>
+  )
+}
+
 export function MobileNav() {
   const pathname = usePathname()
   const { data: session } = useSession()
@@ -207,19 +225,19 @@ export function MobileNav() {
         isVisible ? "translate-y-0" : "translate-y-full"
       )}>
         <Link href="/" className="flex flex-col items-center justify-center w-full h-full">
-          <XIcon icon={Home} filled={isActive("/")} className={cn("h-7 w-7", isActive("/") && "text-primary")} />
+          <MobileXHome isActive={isActive("/")} className={cn("h-7 w-7", isActive("/") && "text-white")} />
         </Link>
 
         <Link href="/tags" className="flex flex-col items-center justify-center w-full h-full">
-          <XIcon icon={Search} filled={isActive("/tags")} className={cn("h-7 w-7", isActive("/tags") && "text-primary")} />
+          <XIcon icon={Search} filled={isActive("/tags")} className={cn("h-7 w-7", isActive("/tags") && "text-white")} />
         </Link>
 
         <Link href="/notifications" className="flex flex-col items-center justify-center w-full h-full">
-          <XIcon icon={Bell} filled={isActive("/notifications")} className={cn("h-7 w-7", isActive("/notifications") && "text-primary")} />
+          <XIcon icon={Bell} filled={isActive("/notifications")} className={cn("h-7 w-7", isActive("/notifications") && "text-white")} />
         </Link>
 
         <Link href="/messages" className="flex flex-col items-center justify-center w-full h-full">
-          <XIcon icon={Mail} filled={isActive("/messages")} className={cn("h-7 w-7", isActive("/messages") && "text-primary")} />
+          <XIcon icon={Mail} filled={isActive("/messages")} className={cn("h-7 w-7", isActive("/messages") && "text-white")} />
         </Link>
       </div>
     </>
