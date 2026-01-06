@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import {
   Bookmark,
   BookmarkCheck,
-  Repeat2,
+  Copy,
   Share,
   MoreVertical,
   Trash2,
@@ -61,22 +61,29 @@ export function MessageCard({
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showReplyDialog, setShowReplyDialog] = useState(false)
+  const [copied, setCopied] = useState(false)
   const router = useRouter()
   const [isExpanded, setIsExpanded] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (contentRef.current) {
-      const el = contentRef.current
-      // Create a temporary hidden clone with line-clamp to check for overflow
-      // Or just check scrollHeight vs a fixed max-height if we use line-clamp
-      // A more reliable way is to check scrollHeight against clientHeight when line-clamp is applied
-      if (el.scrollHeight > el.clientHeight) {
-        setHasMore(true)
-      } else {
-        setHasMore(false)
+    // 检测内容是否需要"显示更多"按钮
+    const checkOverflow = () => {
+      if (contentRef.current) {
+        const el = contentRef.current
+        // 当应用 line-clamp 后，如果 scrollHeight > clientHeight 说明内容被裁剪了
+        setHasMore(el.scrollHeight > el.clientHeight)
       }
+    }
+
+    // 多次检测以确保 TipTapViewer 内容完全渲染
+    const timer1 = setTimeout(checkOverflow, 100)
+    const timer2 = setTimeout(checkOverflow, 300)
+
+    return () => {
+      clearTimeout(timer1)
+      clearTimeout(timer2)
     }
   }, [message.content])
 
@@ -151,6 +158,23 @@ export function MessageCard({
   const handleReply = (e: React.MouseEvent) => {
     e.stopPropagation()
     setShowReplyDialog(true)
+  }
+
+  // Handle copy
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      // Create a temporary div to render the TipTap content
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = message.content
+      const textContent = tempDiv.textContent || tempDiv.innerText || ''
+
+      await navigator.clipboard.writeText(textContent)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      console.error("Failed to copy message:", error)
+    }
   }
 
   return (
@@ -270,10 +294,16 @@ export function MessageCard({
                 )}
               </div>
 
-              {/* 2. Repost (Cycle) */}
-              <div className="group flex items-center">
-                <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
-                  <Repeat2 className="h-[18px] w-[18px] text-muted-foreground group-hover:text-green-500 transition-colors" />
+              {/* 2. Copy */}
+              <div onClick={handleCopy} className="group flex items-center cursor-pointer">
+                <div className={cn(
+                  "p-2 rounded-full transition-colors",
+                  copied ? "bg-green-500/20" : "group-hover:bg-green-500/10"
+                )}>
+                  <Copy className={cn(
+                    "h-[18px] w-[18px] transition-colors",
+                    copied ? "text-green-500" : "text-muted-foreground group-hover:text-green-500"
+                  )} />
                 </div>
               </div>
 
