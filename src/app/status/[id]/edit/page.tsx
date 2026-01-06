@@ -60,8 +60,9 @@ export default function EditMessagePage() {
       })
 
       if (result.data) {
-        // Navigate back to the message detail page
-        router.push(`/status/${message.id}`)
+        // Replace the current edit page in history with the message detail page
+        // This ensures that clicking back from the detail page goes to the previous page (home)
+        router.replace(`/status/${message.id}`)
       }
     } catch (error) {
       console.error("Failed to save message:", error)
@@ -72,7 +73,13 @@ export default function EditMessagePage() {
   }
 
   const handleCancel = () => {
-    router.back()
+    // Replace the current edit page in history with the message detail page
+    // If message is not loaded yet, just go back in history
+    if (message) {
+      router.replace(`/status/${message.id}`)
+    } else {
+      router.back()
+    }
   }
 
   if (isLoading) {
@@ -87,7 +94,7 @@ export default function EditMessagePage() {
     return (
       <div className="p-8 text-center">
         <p className="text-muted-foreground mb-4">{error || "Message not found"}</p>
-        <Button onClick={() => router.back()}>返回</Button>
+        <Button onClick={() => router.replace('/')}>返回首页</Button>
       </div>
     )
   }
