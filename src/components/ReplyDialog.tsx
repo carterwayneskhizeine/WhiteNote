@@ -15,6 +15,7 @@ import { Loader2, Image as ImageIcon, Smile, List, Calendar, MapPin, X } from "l
 import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { useSession } from "next-auth/react"
+import { TipTapViewer } from "@/components/TipTapViewer"
 
 interface ReplyTarget {
     id: string
@@ -144,10 +145,9 @@ export function ReplyDialog({
                                     {formatTime(target.createdAt)}
                                 </span>
                             </div>
-                            <div
-                                className="mt-1 text-[15px] leading-normal whitespace-pre-wrap break-words prose prose-sm dark:prose-invert"
-                                dangerouslySetInnerHTML={{ __html: target.content }}
-                            />
+                            <div className="mt-1 text-[15px] leading-normal">
+                                <TipTapViewer content={target.content} />
+                            </div>
                             <div className="mt-3 text-sm text-muted-foreground">
                                 回复给 <span className="text-primary">@{targetHandle}</span>
                             </div>

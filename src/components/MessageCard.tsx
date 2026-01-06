@@ -39,6 +39,7 @@ import { CommentsList } from "@/components/CommentsList"
 import { ReplyDialog } from "@/components/ReplyDialog"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { TipTapViewer } from "@/components/TipTapViewer"
 
 interface MessageCardProps {
   message: Message
@@ -230,7 +231,7 @@ export function MessageCard({
               <div
                 ref={contentRef}
                 className={cn(
-                  "mt-1 text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none text-foreground leading-normal overflow-hidden",
+                  "mt-1 text-sm break-words text-foreground leading-normal overflow-hidden",
                   !isExpanded && "line-clamp-[9]"
                 )}
                 style={!isExpanded ? {
@@ -238,8 +239,9 @@ export function MessageCard({
                   WebkitLineClamp: 9,
                   WebkitBoxOrient: 'vertical',
                 } : {}}
-                dangerouslySetInnerHTML={{ __html: message.content }}
-              />
+              >
+                <TipTapViewer content={message.content} />
+              </div>
               {hasMore && !isExpanded && (
                 <button
                   onClick={(e) => {

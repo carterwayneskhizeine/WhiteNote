@@ -24,6 +24,7 @@ import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { useSession } from "next-auth/react"
 import { ReplyDialog } from "@/components/ReplyDialog"
+import { TipTapViewer } from "@/components/TipTapViewer"
 
 interface CommentsListProps {
   messageId: string
@@ -215,10 +216,9 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
                       <Bot className="h-3.5 w-3.5 text-primary ml-1" />
                     )}
                   </div>
-                  <div
-                    className="mt-1 text-[15px] leading-normal whitespace-pre-wrap wrap-break-word prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: comment.content }}
-                  />
+                  <div className="mt-1 text-[15px] leading-normal wrap-break-word">
+                    <TipTapViewer content={comment.content} />
+                  </div>
 
                   {/* Action row for comments */}
                   <div className="mt-3 flex items-center justify-between max-w-[300px] text-muted-foreground">
