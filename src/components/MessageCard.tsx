@@ -37,6 +37,7 @@ import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { CommentsList } from "@/components/CommentsList"
 import { ReplyDialog } from "@/components/ReplyDialog"
+import { EditDialog } from "@/components/EditDialog"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 
@@ -59,17 +60,15 @@ export function MessageCard({
   const [starCount, setStarCount] = useState(0) // Mock count or real if available
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
-  const [isUpdating, setIsUpdating] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
   const [showReplyDialog, setShowReplyDialog] = useState(false)
   const router = useRouter()
-  const [editContent, setEditContent] = useState(message.content)
   const [isExpanded, setIsExpanded] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (contentRef.current && !isEditing) {
+    if (contentRef.current) {
       const el = contentRef.current
       // Create a temporary hidden clone with line-clamp to check for overflow
       // Or just check scrollHeight vs a fixed max-height if we use line-clamp
@@ -80,7 +79,7 @@ export function MessageCard({
         setHasMore(false)
       }
     }
-  }, [message.content, isEditing])
+  }, [message.content])
 
   // Get user initials from name or email
   const getInitials = (name: string | null) => {
@@ -106,7 +105,12 @@ export function MessageCard({
   }
 
   // Extract hashtags from content
-  const extractTags = (text: string): string[] => {
+  const extractTags = (html: string): string[] => {
+    // Create a temporary div to extract text from HTML
+    const tmp = document.createElement('div')
+    tmp.innerHTML = html
+    const text = tmp.textContent || tmp.innerText || ''
+
     const matches = text.match(/#[\w\u4e00-\u9fa5]+/g)
     return matches ? matches.map(t => t.slice(1)) : []
   }
@@ -161,24 +165,17 @@ export function MessageCard({
     setShowReplyDialog(true)
   }
 
-  const handleUpdate = async () => {
-    setIsUpdating(true)
-    try {
-      // Extract tags from content
-      const tags = extractTags(editContent)
+  // Handle save from edit dialog
+  const handleSaveFromDialog = async (content: string) => {
+    const tags = extractTags(content)
 
-      const result = await messagesApi.updateMessage(message.id, {
-        content: editContent,
-        tags: tags,
-      })
-      if (result.data) {
-        setIsEditing(false)
-        onUpdate?.()
-      }
-    } catch (error) {
-      console.error("Failed to update message:", error)
-    } finally {
-      setIsUpdating(false)
+    const result = await messagesApi.updateMessage(message.id, {
+      content,
+      tags,
+    })
+
+    if (result.data) {
+      onUpdate?.()
     }
   }
 
@@ -228,89 +225,60 @@ export function MessageCard({
               </div>
               <div className="flex items-center">
                 {message.isPinned && <Pin className="h-4 w-4 text-muted-foreground fill-current mr-2" />}
-                {!isEditing && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-full -mr-2">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
-                        <Edit2 className="h-4 w-4 mr-2" />
-                        编辑
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleTogglePin(); }}>
-                        {message.isPinned ? <PinOff className="h-4 w-4 mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
-                        {message.isPinned ? "取消置顶" : "置顶"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowDeleteDialog(true); }} className="text-destructive">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        删除
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-full -mr-2">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation()
+                      setShowEditDialog(true)
+                    }}>
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      编辑
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleTogglePin(); }}>
+                      {message.isPinned ? <PinOff className="h-4 w-4 mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
+                      {message.isPinned ? "取消置顶" : "置顶"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowDeleteDialog(true); }} className="text-destructive">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      删除
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
-            {/* Message Body / Edit Interface */}
-            {isEditing ? (
-              <div className="mt-2 flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-                <textarea
-                  className="w-full min-h-[100px] p-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  autoFocus
-                />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-full text-xs"
-                    onClick={() => { setIsEditing(false); setEditContent(message.content); }}
-                    disabled={isUpdating}
-                  >
-                    取消
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="rounded-full text-xs bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 border border-border"
-                    onClick={handleUpdate}
-                    disabled={isUpdating || editContent === message.content}
-                  >
-                    {isUpdating ? "保存中..." : "保存"}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col">
-                <div
-                  ref={contentRef}
-                  className={cn(
-                    "mt-1 text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none text-foreground leading-normal overflow-hidden",
-                    !isExpanded && "line-clamp-[9]"
-                  )}
-                  style={!isExpanded ? {
-                    display: '-webkit-box',
-                    WebkitLineClamp: 9,
-                    WebkitBoxOrient: 'vertical',
-                  } : {}}
-                  dangerouslySetInnerHTML={{ __html: message.content }}
-                />
-                {hasMore && !isExpanded && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsExpanded(true);
-                    }}
-                    className="text-primary text-sm font-medium mt-1 hover:underline text-left w-fit"
-                  >
-                    显示更多
-                  </button>
+            {/* Message Body */}
+            <div className="flex flex-col">
+              <div
+                ref={contentRef}
+                className={cn(
+                  "mt-1 text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none text-foreground leading-normal overflow-hidden",
+                  !isExpanded && "line-clamp-[9]"
                 )}
-              </div>
-            )}
+                style={!isExpanded ? {
+                  display: '-webkit-box',
+                  WebkitLineClamp: 9,
+                  WebkitBoxOrient: 'vertical',
+                } : {}}
+                dangerouslySetInnerHTML={{ __html: message.content }}
+              />
+              {hasMore && !isExpanded && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(true);
+                  }}
+                  className="text-primary text-sm font-medium mt-1 hover:underline text-left w-fit"
+                >
+                  显示更多
+                </button>
+              )}
+            </div>
 
             {/* Action Bar (Footer) */}
             <div className="mt-3 flex items-center justify-between max-w-[425px]">
@@ -395,6 +363,15 @@ export function MessageCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Dialog */}
+      <EditDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        initialContent={message.content}
+        onSave={handleSaveFromDialog}
+        title="编辑消息"
+      />
     </>
   )
 }
