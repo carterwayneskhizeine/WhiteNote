@@ -4,6 +4,7 @@ import React from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import { Markdown } from '@tiptap/markdown'
 import { Button } from "@/components/ui/button"
 import {
   Bold,
@@ -45,6 +46,12 @@ export function TipTapEditor({
           levels: [1, 2, 3, 4],
         },
       }),
+      Markdown.configure({
+        markedOptions: {
+          gfm: true,
+          breaks: true,
+        },
+      }),
       Placeholder.configure({
         placeholder,
       }),
@@ -52,6 +59,7 @@ export function TipTapEditor({
     // Set immediatelyRender to false to avoid hydration mismatch
     immediatelyRender: false,
     content,
+    contentType: 'markdown', // Parse content as Markdown
     editorProps: {
       attributes: {
         class: 'prose dark:prose-invert focus:outline-none min-h-[min(300px,100%)] h-full w-full',
@@ -59,7 +67,7 @@ export function TipTapEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML())
+      onChange(editor.getMarkdown())
     },
     onFocus: () => setIsFocused(true),
     onBlur: () => setIsFocused(false),
@@ -67,9 +75,9 @@ export function TipTapEditor({
 
   // Ensure editor content is updated if external content changes markedly (optional, usually handled by editor state, but good for reset)
   React.useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
+    if (editor && content !== editor.getMarkdown()) {
       // We keep the internal state in sync if needed, but avoid loops
-      // editor.commands.setContent(content) 
+      // editor.commands.setContent(content)
     }
   }, [content, editor])
 

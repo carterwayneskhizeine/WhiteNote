@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import { Markdown } from '@tiptap/markdown'
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Image as ImageIcon, Smile, List, Calendar, MapPin, Loader2, FileText } from "lucide-react"
@@ -47,6 +48,12 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
   const editor = useEditor({
     extensions: [
       StarterKit,
+      Markdown.configure({
+        markedOptions: {
+          gfm: true,
+          breaks: true,
+        },
+      }),
       Placeholder.configure({
         placeholder: "发生了什么？",
       }),
@@ -73,7 +80,7 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
   const handlePost = async () => {
     if (!editor || isPosting || !hasContent) return
 
-    const content = editor.getHTML()
+    const content = editor.getMarkdown() // Store as Markdown instead of HTML
     const textContent = editor.getText() // Get plain text for @goldierill detection
 
     setIsPosting(true)
