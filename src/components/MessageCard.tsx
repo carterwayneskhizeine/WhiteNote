@@ -35,7 +35,9 @@ import {
 import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { CommentsList } from "@/components/CommentsList"
+import { ReplyDialog } from "@/components/ReplyDialog"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
 
 interface MessageCardProps {
   message: Message
@@ -57,8 +59,9 @@ export function MessageCard({
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [showComments, setShowComments] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [showReplyDialog, setShowReplyDialog] = useState(false)
+  const router = useRouter()
   const [editContent, setEditContent] = useState(message.content)
   const [isExpanded, setIsExpanded] = useState(false)
   const [hasMore, setHasMore] = useState(false)
@@ -148,8 +151,7 @@ export function MessageCard({
   // Handle reply
   const handleReply = (e: React.MouseEvent) => {
     e.stopPropagation()
-    onReply?.()
-    setShowComments(true)
+    setShowReplyDialog(true)
   }
 
   const handleUpdate = async () => {
@@ -173,7 +175,7 @@ export function MessageCard({
     <>
       <div
         className="p-4 border-b border-border hover:bg-muted/10 transition-colors cursor-pointer"
-        onClick={() => { if (!isEditing) { /* Navigate to detail */ } }}
+        onClick={() => { if (!isEditing) { router.push(`/status/${message.id}`) } }}
       >
         <div className="flex gap-3">
           {/* Avatar Column - h-8 to match reply as standard */}
@@ -354,15 +356,15 @@ export function MessageCard({
         </div>
       </div>
 
-      {/* Inline Comments */}
-      {showComments && (
-        <CommentsList
-          messageId={message.id}
-          onCommentAdded={() => {
-            onUpdate?.()
-          }}
-        />
-      )}
+      {/* Reply Dialog */}
+      <ReplyDialog
+        open={showReplyDialog}
+        onOpenChange={setShowReplyDialog}
+        message={message}
+        onSuccess={() => {
+          onUpdate?.()
+        }}
+      />
 
       {/* Delete Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

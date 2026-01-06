@@ -12,6 +12,7 @@ export interface Message {
     id: string
     name: string | null
     avatar: string | null
+    email: string | null
   }
   tags: Array<{
     tag: {

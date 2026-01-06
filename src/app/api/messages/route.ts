@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         author: {
-          select: { id: true, name: true, avatar: true },
+          select: { id: true, name: true, avatar: true, email: true },
         },
         tags: {
           include: {
@@ -126,22 +126,22 @@ export async function POST(request: NextRequest) {
         // 创建或关联标签
         tags: tags?.length
           ? {
-              create: await Promise.all(
-                tags.map(async (tagName: string) => {
-                  const tag = await prisma.tag.upsert({
-                    where: { name: tagName },
-                    create: { name: tagName },
-                    update: {},
-                  })
-                  return { tagId: tag.id }
+            create: await Promise.all(
+              tags.map(async (tagName: string) => {
+                const tag = await prisma.tag.upsert({
+                  where: { name: tagName },
+                  create: { name: tagName },
+                  update: {},
                 })
-              ),
-            }
+                return { tagId: tag.id }
+              })
+            ),
+          }
           : undefined,
       },
       include: {
         author: {
-          select: { id: true, name: true, avatar: true },
+          select: { id: true, name: true, avatar: true, email: true },
         },
         tags: {
           include: {

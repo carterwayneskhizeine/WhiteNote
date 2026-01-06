@@ -3,12 +3,26 @@
 import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Loader2, Send, Bot } from "lucide-react"
+import {
+  Loader2,
+  Send,
+  Bot,
+  Image as ImageIcon,
+  Smile,
+  List,
+  Calendar,
+  MapPin,
+  MessageCircle,
+  Repeat2,
+  Heart,
+  BarChart2,
+  Share
+} from "lucide-react"
 import { commentsApi, aiApi } from "@/lib/api"
 import { Comment } from "@/types/api"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
+import { useSession } from "next-auth/react"
 
 interface CommentsListProps {
   messageId: string
@@ -20,6 +34,7 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
   const [loading, setLoading] = useState(true)
   const [posting, setPosting] = useState(false)
   const [newComment, setNewComment] = useState("")
+  const { data: session } = useSession()
 
   // Fetch comments
   const fetchComments = async () => {
@@ -69,7 +84,6 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
             }
           } catch (aiError) {
             console.error("Failed to get AI reply:", aiError)
-            // Don't fail the comment if AI fails
           }
         }
 
@@ -84,7 +98,7 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
   }
 
   // Get user initials
-  const getInitials = (name: string | null) => {
+  const getInitials = (name: string | null | undefined) => {
     if (!name) return "U"
     return name
       .split(" ")
@@ -115,19 +129,66 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
   }
 
   return (
-    <div className="border-t">
+    <div className="flex flex-col">
+      {/* Comment input - Twitter Style */}
+      <div className="p-4 border-b">
+        <div className="flex gap-3">
+          <Avatar className="h-9 w-9 shrink-0">
+            <AvatarImage src={session?.user?.image || undefined} />
+            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+              {getInitials(session?.user?.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 flex flex-col gap-2">
+            <textarea
+              placeholder="发布你的回复"
+              className="w-full bg-transparent border-none focus:outline-none text-lg resize-none min-h-[40px] py-1 placeholder:text-muted-foreground"
+              value={newComment}
+              onChange={(e) => {
+                setNewComment(e.target.value)
+                e.target.style.height = 'auto'
+                e.target.style.height = e.target.scrollHeight + 'px'
+              }}
+              disabled={posting}
+              rows={1}
+            />
+            <div className="flex justify-between items-center mt-2">
+              <div className="flex gap-1 text-primary">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-primary hover:bg-primary/10">
+                  <ImageIcon className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-primary hover:bg-primary/10">
+                  <Smile className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button
+                className="rounded-full px-5 font-bold h-9 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+                disabled={!newComment.trim() || posting}
+                onClick={handlePostComment}
+              >
+                {posting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "回复"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Comments list */}
-      <div className="max-h-96 overflow-y-auto">
+      <div className="flex flex-col">
         {comments.length === 0 ? (
-          <div className="p-4 text-center text-muted-foreground text-sm">
+          <div className="p-8 text-center text-muted-foreground text-sm">
             暂无评论，来说点什么吧
           </div>
         ) : (
           comments.map((comment) => (
-            <div key={comment.id} className="p-4 border-b last:border-b-0">
+            <div key={comment.id} className="p-4 border-b hover:bg-muted/5 transition-colors cursor-pointer">
               <div className="flex gap-3">
                 {/* Avatar */}
-                <Avatar className="h-8 w-8 shrink-0">
+                <Avatar className="h-9 w-9 shrink-0">
                   <AvatarImage src={comment.author?.avatar || undefined} />
                   <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                     {getInitials(comment.author?.name)}
@@ -136,59 +197,59 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-sm">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="font-bold text-sm hover:underline">
                       {comment.author?.name || "Anonymous"}
                     </span>
-                    {comment.isAIBot && (
-                      <Bot className="h-3.5 w-3.5 text-primary" />
-                    )}
-                    <span className="text-muted-foreground text-xs">
+                    <span className="text-muted-foreground text-sm">
+                      @{comment.author?.email?.split('@')[0] || "user"}
+                    </span>
+                    <span className="text-muted-foreground text-sm">·</span>
+                    <span className="text-muted-foreground text-sm hover:underline">
                       {formatTime(comment.createdAt)}
                     </span>
+                    {comment.isAIBot && (
+                      <Bot className="h-3.5 w-3.5 text-primary ml-1" />
+                    )}
                   </div>
                   <div
-                    className="mt-1 text-sm whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none"
+                    className="mt-1 text-[15px] leading-normal whitespace-pre-wrap wrap-break-word prose prose-sm dark:prose-invert max-w-none"
                     dangerouslySetInnerHTML={{ __html: comment.content }}
                   />
+
+                  {/* Action row for comments */}
+                  <div className="mt-3 flex items-center justify-between max-w-[300px] text-muted-foreground">
+                    <div className="group flex items-center cursor-pointer">
+                      <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">
+                        <MessageCircle className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div className="group flex items-center cursor-pointer">
+                      <div className="p-2 rounded-full group-hover:bg-green-500/10 group-hover:text-green-500 transition-colors">
+                        <Repeat2 className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div className="group flex items-center cursor-pointer">
+                      <div className="p-2 rounded-full group-hover:bg-pink-500/10 group-hover:text-pink-500 transition-colors">
+                        <Heart className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div className="group flex items-center cursor-pointer">
+                      <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">
+                        <BarChart2 className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div className="group flex items-center cursor-pointer">
+                      <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors text-right">
+                        <Share className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           ))
         )}
-      </div>
-
-      {/* Comment input */}
-      <div className="p-4 border-t">
-        <div className="flex gap-2">
-          <Input
-            placeholder="写评论... 输入 @goldierill 让 AI 回复"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault()
-                handlePostComment()
-              }
-            }}
-            disabled={posting}
-            className="flex-1"
-          />
-          <Button
-            size="icon"
-            variant="ghost"
-            className="shrink-0"
-            disabled={!newComment.trim() || posting}
-            onClick={handlePostComment}
-            title="发送评论"
-          >
-            {posting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
       </div>
     </div>
   )

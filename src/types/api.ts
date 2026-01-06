@@ -55,6 +55,7 @@ export interface MessageWithRelations {
     id: string
     name: string | null
     avatar: string | null
+    email: string | null
   }
   tags: Array<{
     tag: {
@@ -104,6 +105,7 @@ export interface Comment {
     id: string
     name: string | null
     avatar: string | null
+    email: string | null
   }
 }
 
