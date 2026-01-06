@@ -31,8 +31,8 @@ export function MessagesList({ filters }: MessagesListProps) {
 
     try {
       const result = await messagesApi.getMessages({
+        rootOnly: true, // Default to true, but allow override
         ...filters,
-        rootOnly: true, // Only show root messages on timeline
       })
 
       if (result.error) {
