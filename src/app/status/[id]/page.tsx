@@ -71,7 +71,7 @@ export default function StatusPage() {
     return (
         <div className="flex flex-col min-h-screen">
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border flex items-center px-4 h-[53px]">
+            <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border flex items-center px-4 h-[53px]">
                 <Button
                     variant="ghost"
                     size="icon"

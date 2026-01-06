@@ -93,7 +93,7 @@ export default function EditMessagePage() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-background">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-background fixed inset-0 z-50">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border bg-background/95 backdrop-blur px-4 h-[53px] shrink-0">
         <div className="flex items-center gap-2">

@@ -4,6 +4,12 @@ import React from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from '@tiptap/markdown'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableCell } from '@tiptap/extension-table-cell'
+import { TableHeader } from '@tiptap/extension-table-header'
+import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
+import { common, createLowlight } from 'lowlight'
 import { cn } from "@/lib/utils"
 
 interface TipTapViewerProps {
@@ -16,13 +22,25 @@ interface TipTapViewerProps {
  * Use this to display message content with proper Markdown formatting.
  */
 export function TipTapViewer({ content, className }: TipTapViewerProps) {
+  // Create lowlight instance for syntax highlighting
+  const lowlight = createLowlight(common)
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3, 4, 5, 6],
         },
-        codeBlock: false,
+        codeBlock: false, // Disable default code block, use CodeBlockLowlight instead
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      CodeBlockLowlight.configure({
+        lowlight,
       }),
       Markdown.configure({
         markedOptions: {
@@ -98,24 +116,175 @@ export function TipTapViewer({ content, className }: TipTapViewerProps) {
 
         /* Code blocks */
         .tipTap-viewer .ProseMirror pre {
-          background-color: var(--muted);
-          border-radius: 0.375rem;
-          padding: 0.75rem;
-          margin-top: 0.5rem;
-          margin-bottom: 0.5rem;
+          background-color: hsl(var(--muted) / 0.5);
+          border-radius: 0.5rem;
+          padding: 0.875rem 1rem;
+          margin-top: 0.75rem;
+          margin-bottom: 0.75rem;
           overflow-x: auto;
-        }
-
-        .tipTap-viewer .ProseMirror code {
-          background-color: var(--muted);
-          padding: 0.125rem 0.25rem;
-          border-radius: 0.25rem;
-          font-size: 0.875em;
+          border: 1px solid hsl(var(--border));
         }
 
         .tipTap-viewer .ProseMirror pre code {
           background-color: transparent;
           padding: 0;
+          font-size: 0.875em;
+          color: inherit;
+          font-family: 'JetBrainsMono', 'Fira Code', Consolas, Monaco, monospace;
+        }
+
+        .tipTap-viewer .ProseMirror code {
+          background-color: hsl(var(--muted) / 0.5);
+          padding: 0.125rem 0.375rem;
+          border-radius: 0.25rem;
+          font-size: 0.875em;
+          font-family: 'JetBrainsMono', 'Fira Code', Consolas, Monaco, monospace;
+        }
+
+        /* Code block with language label */
+        .tipTap-viewer .ProseMirror pre[data-language] {
+          position: relative;
+        }
+
+        /* Tables */
+        .tipTap-viewer .ProseMirror table {
+          border-collapse: collapse;
+          table-layout: fixed;
+          width: 100%;
+          margin: 1rem 0;
+          overflow: hidden;
+          border-radius: 0.5rem;
+          border: 1px solid hsl(var(--border));
+        }
+
+        .tipTap-viewer .ProseMirror table td,
+        .tipTap-viewer .ProseMirror table th {
+          min-width: 1em;
+          border: 1px solid hsl(var(--border));
+          padding: 0.5rem 0.75rem;
+          vertical-align: top;
+          box-sizing: border-box;
+          position: relative;
+          background-color: hsl(var(--background));
+        }
+
+        .tipTap-viewer .ProseMirror table th {
+          font-weight: 600;
+          text-align: left;
+          background-color: hsl(var(--muted) / 0.3);
+        }
+
+        .tipTap-viewer .ProseMirror table .selectedCell:after {
+          z-index: 2;
+          position: absolute;
+          content: "";
+          left: 0;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          background: hsl(var(--primary) / 0.1);
+          pointer-events: none;
+        }
+
+        .tipTap-viewer .ProseMirror table .column-resize-handle {
+          position: absolute;
+          right: -2px;
+          top: 0;
+          bottom: -2px;
+          width: 4px;
+          background-color: hsl(var(--primary));
+          pointer-events: none;
+        }
+
+        /* Table wrapper for overflow */
+        .tipTap-viewer .ProseMirror .tableWrapper {
+          overflow-x: auto;
+          margin: 1rem 0;
+        }
+
+        /* Syntax highlighting colors */
+        .tipTap-viewer .ProseMirror .hljs {
+          background: transparent;
+          color: inherit;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-comment,
+        .tipTap-viewer .ProseMirror .hljs-quote {
+          color: hsl(var(--muted-foreground));
+          font-style: italic;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-keyword,
+        .tipTap-viewer .ProseMirror .hljs-selector-tag,
+        .tipTap-viewer .ProseMirror .hljs-subst {
+          color: #d73a49;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-number,
+        .tipTap-viewer .ProseMirror .hljs-literal,
+        .tipTap-viewer .ProseMirror .hljs-variable,
+        .tipTap-viewer .ProseMirror .hljs-template-variable,
+        .tipTap-viewer .ProseMirror .hljs-tag .hljs-attr {
+          color: #005cc5;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-string,
+        .tipTap-viewer .ProseMirror .hljs-doctag {
+          color: #032f62;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-title,
+        .tipTap-viewer .ProseMirror .hljs-section,
+        .tipTap-viewer .ProseMirror .hljs-selector-id {
+          color: #6f42c1;
+          font-weight: bold;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-type,
+        .tipTap-viewer .ProseMirror .hljs-class .hljs-title {
+          color: #6f42c1;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-tag,
+        .tipTap-viewer .ProseMirror .hljs-name,
+        .tipTap-viewer .ProseMirror .hljs-attribute {
+          color: #22863a;
+          font-weight: normal;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-regexp,
+        .tipTap-viewer .ProseMirror .hljs-link {
+          color: #e36209;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-symbol,
+        .tipTap-viewer .ProseMirror .hljs-bullet {
+          color: #005cc5;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-built_in,
+        .tipTap-viewer .ProseMirror .hljs-builtin-name {
+          color: #005cc5;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-meta {
+          color: #22863a;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-deletion {
+          background: #ffeef0;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-addition {
+          background: #e6ffed;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-emphasis {
+          font-style: italic;
+        }
+
+        .tipTap-viewer .ProseMirror .hljs-strong {
+          font-weight: bold;
         }
 
         /* Blockquotes */

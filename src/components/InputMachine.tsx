@@ -5,6 +5,12 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Markdown } from '@tiptap/markdown'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableCell } from '@tiptap/extension-table-cell'
+import { TableHeader } from '@tiptap/extension-table-header'
+import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
+import { common, createLowlight } from 'lowlight'
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Image as ImageIcon, Smile, List, Calendar, MapPin, Loader2, FileText } from "lucide-react"
@@ -45,9 +51,23 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
     fetchTemplates()
   }, [])
 
+  // Create lowlight instance for syntax highlighting
+  const lowlight = createLowlight(common)
+
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        codeBlock: false, // Disable default code block, use CodeBlockLowlight instead
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      CodeBlockLowlight.configure({
+        lowlight,
+      }),
       Markdown.configure({
         markedOptions: {
           gfm: true,
