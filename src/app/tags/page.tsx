@@ -6,15 +6,12 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Tag as TagIcon, Plus, Search, Hash, Trash2 } from "lucide-react"
+import { Plus, Search, Hash, Trash2 } from "lucide-react"
 import { tagsApi } from "@/lib/api/tags"
 import { Tag } from "@/types/api"
-import { formatDistanceToNow } from "date-fns"
-import { zhCN } from "date-fns/locale"
 
 export default function TagsPage() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const router = useRouter()
   const [tags, setTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(true)
@@ -81,7 +78,7 @@ export default function TagsPage() {
   const handleCleanupUnusedTags = async () => {
     if (cleaning) return
 
-    const unusedCount = tags.filter((tag) => tag.count === 0).length
+    const unusedCount = tags.filter((tag) => (tag.count ?? 0) === 0).length
     if (unusedCount === 0) {
       alert("没有需要清理的标签")
       return
@@ -96,7 +93,7 @@ export default function TagsPage() {
       const result = await tagsApi.cleanupUnusedTags()
       if (result.data) {
         // Remove tags with 0 count from the list
-        setTags(tags.filter((tag) => tag.count > 0))
+        setTags(tags.filter((tag) => (tag.count ?? 0) > 0))
         alert(`已清理 ${result.data.deletedCount} 个未使用的标签`)
       }
     } catch (error) {
@@ -113,7 +110,7 @@ export default function TagsPage() {
   )
 
   // Count unused tags
-  const unusedTagsCount = tags.filter((tag) => tag.count === 0).length
+  const unusedTagsCount = tags.filter((tag) => (tag.count ?? 0) === 0).length
 
   if (status === "loading" || loading) {
     return (
@@ -260,7 +257,7 @@ export default function TagsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-sm">#{tag.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {tag.count || 0} 条消息
+                      {tag.count ?? 0} 条消息
                     </div>
                   </div>
                 </div>

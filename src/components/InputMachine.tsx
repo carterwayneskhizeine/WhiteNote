@@ -137,7 +137,7 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
     editable: !isProcessingAI,
     editorProps: {
       attributes: {
-        class: `prose prose-sm dark:prose-invert focus:outline-none min-h-[50px] w-full bg-transparent text-lg leading-6 placeholder:text-muted-foreground/60 ${isProcessingAI ? 'opacity-50 cursor-wait' : ''}`,
+        class: `prose prose-sm dark:prose-invert focus:outline-none min-h-[50px] w-full bg-transparent text-lg leading-6 placeholder:text-muted-foreground/60 whitespace-normal break-words overflow-wrap-anywhere ${isProcessingAI ? 'opacity-50 cursor-wait' : ''}`,
       },
     },
     onUpdate: ({ editor }) => {
