@@ -22,6 +22,12 @@ export async function processAutoTag(job: Job<AutoTagJobData>) {
     return
   }
 
+  // 晨报等系统生成的消息没有 authorId，跳过自动打标签
+  if (!message.authorId) {
+    console.log(`[AutoTag] Message has no author (system message), skipping: ${messageId}`)
+    return
+  }
+
   // 获取用户配置
   const config = await prisma.aiConfig.findUnique({
     where: { userId: message.authorId },

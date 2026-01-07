@@ -16,7 +16,7 @@ interface QuotedMessage {
     name: string | null
     avatar: string | null
     email: string | null
-  }
+  } | null
 }
 
 interface QuotedMessageCardProps {
@@ -64,17 +64,38 @@ export function QuotedMessageCard({ message, className }: QuotedMessageCardProps
       {/* Header: Author info */}
       <div className="flex items-center gap-2 text-sm mb-2">
         <Avatar className="h-5 w-5">
-          <AvatarImage src={message.author.avatar || undefined} />
-          <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
-            {getInitials(message.author.name)}
-          </AvatarFallback>
+          {message.author ? (
+            <>
+              <AvatarImage src={message.author.avatar || undefined} />
+              <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
+                {getInitials(message.author.name)}
+              </AvatarFallback>
+            </>
+          ) : (
+            <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white text-[10px] font-semibold">
+              AI
+            </AvatarFallback>
+          )}
         </Avatar>
-        <span className="font-bold text-foreground">
-          {message.author.name || "Anonymous"}
-        </span>
-        <span className="text-muted-foreground">
-          @{message.author.email?.split('@')[0] || "user"}
-        </span>
+        {message.author ? (
+          <>
+            <span className="font-bold text-foreground">
+              {message.author.name || "Anonymous"}
+            </span>
+            <span className="text-muted-foreground">
+              @{message.author.email?.split('@')[0] || "user"}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="font-bold text-purple-600">
+              AI 助手
+            </span>
+            <span className="text-muted-foreground">
+              @assistant
+            </span>
+          </>
+        )}
         <span className="text-muted-foreground">·</span>
         <span className="text-muted-foreground">
           {formatTime(message.createdAt)}

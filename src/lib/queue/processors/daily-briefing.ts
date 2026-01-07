@@ -90,7 +90,7 @@ ${contentSummary}
       if (dailyReviewTag) {
         await prisma.message.updateMany({
           where: {
-            authorId: user.id,
+            authorId: null,  // 晨报的 authorId 为 null
             isPinned: true,
             tags: {
               some: { tagId: dailyReviewTag.id },
@@ -101,12 +101,12 @@ ${contentSummary}
         console.log(`[DailyBriefing] Unpinned previous briefings for user: ${user.email}`)
       }
 
-      // 创建晨报消息
+      // 创建晨报消息（authorId 为 null，表示由系统生成）
       const yesterdayStr = yesterday.toLocaleDateString("zh-CN")
       const briefing = await prisma.message.create({
         data: {
           content: `# ☀️ 每日晨报 - ${yesterdayStr}\n\n${briefingContent}`,
-          authorId: user.id,
+          authorId: null,  // 系统生成，没有作者
           isPinned: true,
         },
       })

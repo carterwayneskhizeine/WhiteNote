@@ -49,14 +49,14 @@ export interface MessageWithRelations {
   updatedAt: Date
   isStarred: boolean
   isPinned: boolean
-  authorId: string
+  authorId: string | null
   parentId: string | null
   author: {
     id: string
     name: string | null
     avatar: string | null
     email: string | null
-  }
+  } | null
   tags: Array<{
     tag: {
       id: string

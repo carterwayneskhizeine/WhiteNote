@@ -130,12 +130,25 @@ export default function StatusPage() {
             <div className="p-4">
                 <div className="flex items-start justify-between">
                     <div className="flex flex-col">
-                        <span className="font-bold text-foreground leading-tight hover:underline cursor-pointer">
-                            {message.author.name || "Anonymous"}
-                        </span>
-                        <span className="text-muted-foreground text-sm leading-tight">
-                            @{message.author.email?.split('@')[0] || "user"}
-                        </span>
+                        {message.author ? (
+                            <>
+                                <span className="font-bold text-foreground leading-tight hover:underline cursor-pointer">
+                                    {message.author.name || "Anonymous"}
+                                </span>
+                                <span className="text-muted-foreground text-sm leading-tight">
+                                    @{message.author.email?.split('@')[0] || "user"}
+                                </span>
+                            </>
+                        ) : (
+                            <>
+                                <span className="font-bold text-purple-600 leading-tight hover:underline cursor-pointer">
+                                    AI 助手
+                                </span>
+                                <span className="text-muted-foreground text-sm leading-tight">
+                                    @assistant
+                                </span>
+                            </>
+                        )}
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

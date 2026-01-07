@@ -196,10 +196,18 @@ export function MessageCard({
           {/* Avatar Column - h-8 to match reply as standard */}
           <div className="shrink-0">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={message.author.avatar || undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                {getInitials(message.author.name)}
-              </AvatarFallback>
+              {message.author ? (
+                <>
+                  <AvatarImage src={message.author.avatar || undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                    {getInitials(message.author.name)}
+                  </AvatarFallback>
+                </>
+              ) : (
+                <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs font-semibold">
+                  AI
+                </AvatarFallback>
+              )}
             </Avatar>
           </div>
 
@@ -208,12 +216,25 @@ export function MessageCard({
             {/* Header: Name @handle · Time #Tags */}
             <div className="flex items-start justify-between gap-2">
               <div className="flex flex-wrap items-baseline gap-x-1 gap-y-0.5 text-sm leading-5">
-                <span className="font-bold text-foreground hover:underline">
-                  {message.author.name || "Anonymous"}
-                </span>
-                <span className="text-muted-foreground">
-                  @{message.author.email?.split('@')[0] || "user"}
-                </span>
+                {message.author ? (
+                  <>
+                    <span className="font-bold text-foreground hover:underline">
+                      {message.author.name || "Anonymous"}
+                    </span>
+                    <span className="text-muted-foreground">
+                      @{message.author.email?.split('@')[0] || "user"}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-bold text-purple-600 hover:underline">
+                      AI 助手
+                    </span>
+                    <span className="text-muted-foreground">
+                      @assistant
+                    </span>
+                  </>
+                )}
                 <span className="text-muted-foreground px-1">·</span>
                 <span className="text-muted-foreground hover:underline">
                   {formatTime(message.createdAt)}
