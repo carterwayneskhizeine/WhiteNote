@@ -314,7 +314,7 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="mt-1 text-[15px] leading-normal wrap-break-word">
+                  <div className="mt-1 text-sm leading-normal wrap-break-word">
                     <TipTapViewer content={comment.content} />
                   </div>
 

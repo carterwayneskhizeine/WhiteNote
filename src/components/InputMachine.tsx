@@ -82,8 +82,7 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
     content: '',
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose-base dark:prose-invert focus:outline-none min-h-[50px] w-full bg-transparent text-[20px] leading-6 placeholder:text-muted-foreground/60',
-        style: 'font-size: 20px;'
+        class: 'prose prose-sm dark:prose-invert focus:outline-none min-h-[50px] w-full bg-transparent text-lg leading-6 placeholder:text-muted-foreground/60',
       },
     },
     onUpdate: ({ editor }) => {

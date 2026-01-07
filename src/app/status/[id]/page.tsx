@@ -160,7 +160,7 @@ export default function StatusPage() {
                     </DropdownMenu>
                 </div>
 
-                <div className="mt-4 text-[22px] leading-normal wrap-break-word">
+                <div className="mt-4 text-sm leading-normal wrap-break-word">
                     <TipTapViewer content={message.content} />
                 </div>
 

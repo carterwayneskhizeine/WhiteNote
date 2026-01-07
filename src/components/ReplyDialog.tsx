@@ -145,7 +145,7 @@ export function ReplyDialog({
                                     {formatTime(target.createdAt)}
                                 </span>
                             </div>
-                            <div className="mt-1 text-[15px] leading-normal">
+                            <div className="mt-1 text-sm leading-normal">
                                 <TipTapViewer content={target.content} />
                             </div>
                             <div className="mt-3 text-sm text-muted-foreground">

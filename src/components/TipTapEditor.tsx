@@ -81,7 +81,7 @@ export function TipTapEditor({
     contentType: 'markdown', // Parse content as Markdown
     editorProps: {
       attributes: {
-        class: 'prose dark:prose-invert focus:outline-none min-h-[min(300px,100%)] h-full w-full',
+        class: 'prose prose-sm dark:prose-invert focus:outline-none min-h-[min(300px,100%)] h-full w-full',
         style: 'max-width: none !important; width: 100%;',
       },
     },

@@ -142,7 +142,7 @@ export function RetweetDialog({
                                     {formatTime(target.createdAt)}
                                 </span>
                             </div>
-                            <div className="mt-1 text-[15px] leading-normal text-muted-foreground line-clamp-3">
+                            <div className="mt-1 text-sm leading-normal text-muted-foreground line-clamp-3">
                                 <TipTapViewer content={target.content} />
                             </div>
                         </div>

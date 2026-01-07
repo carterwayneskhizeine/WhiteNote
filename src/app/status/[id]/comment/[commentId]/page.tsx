@@ -272,7 +272,7 @@ export default function CommentDetailPage() {
               </DropdownMenu>
             </div>
 
-            <div className="mt-2 text-[15px] leading-normal wrap-break-word">
+            <div className="mt-2 text-sm leading-normal wrap-break-word">
               <TipTapViewer content={comment.content} />
             </div>
 
@@ -433,7 +433,7 @@ export default function CommentDetailPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="mt-1 text-[15px] leading-normal wrap-break-word">
+                  <div className="mt-1 text-sm leading-normal wrap-break-word">
                     <TipTapViewer content={childComment.content} />
                   </div>
 
