@@ -210,3 +210,72 @@ export async function deleteFromRAGFlow(userId: string, messageId: string) {
     // 不抛出错误，避免影响本地删除操作
   }
 }
+
+/**
+ * 更新 RAGFlow 中的文档（先删除旧文档，再上传新文档）
+ * @param userId 用户 ID
+ * @param messageId 消息 ID
+ * @param content 新的消息内容
+ */
+export async function updateRAGFlow(userId: string, messageId: string, content: string) {
+  const config = await getAiConfig(userId)
+
+  if (!config.ragflowApiKey || !config.ragflowDatasetId) {
+    console.warn("[RAGFlow] Not configured, skipping update")
+    return
+  }
+
+  try {
+    console.log("[RAGFlow] Updating message:", messageId)
+
+    // 1. 先删除旧文档
+    await deleteFromRAGFlow(userId, messageId)
+
+    // 2. 上传新文档（复用同步逻辑）
+    const formData = new FormData()
+    const blob = new Blob([content], { type: 'text/markdown' })
+    formData.append('file', blob, `message_${messageId}.md`)
+
+    const response = await fetch(
+      `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/documents`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${config.ragflowApiKey}`,
+        },
+        body: formData,
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("[RAGFlow] Failed to update message:", messageId, "Error:", errorText)
+      throw new Error(`RAGFlow update failed: ${errorText}`)
+    }
+
+    const result = await response.json()
+    console.log("[RAGFlow] Successfully updated message:", messageId, "Document:", result.data?.[0]?.id)
+
+    // 3. 触发文档解析（自动生成 chunks）
+    if (result.data?.[0]?.id) {
+      const documentId = result.data[0].id
+      await fetch(
+        `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/chunks`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${config.ragflowApiKey}`,
+          },
+          body: JSON.stringify({
+            document_ids: [documentId],
+          }),
+        }
+      )
+      console.log("[RAGFlow] Triggered parsing for updated document:", documentId)
+    }
+  } catch (error) {
+    console.error("[RAGFlow] Update error for message:", messageId, error)
+    // 不抛出错误，避免影响本地更新操作
+  }
+}

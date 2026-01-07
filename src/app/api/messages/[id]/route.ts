@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
-import { deleteFromRAGFlow } from "@/lib/ai/ragflow"
+import { deleteFromRAGFlow, updateRAGFlow } from "@/lib/ai/ragflow"
 import { NextRequest } from "next/server"
 
 interface RouteContext {
@@ -158,6 +158,13 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         _count: { select: { children: true, comments: true } },
       },
     })
+
+    // 同步更新 RAGFlow 文档（异步执行，不阻塞响应）
+    if (content && content !== existing.content) {
+      updateRAGFlow(session.user.id, id, content).catch((error) => {
+        console.error("Failed to update RAGFlow document:", error)
+      })
+    }
 
     return Response.json({ data: message })
   } catch (error) {
