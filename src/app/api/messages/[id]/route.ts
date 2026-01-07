@@ -50,7 +50,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
         },
       },
       _count: {
-        select: { children: true, comments: true, versions: true },
+        select: { children: true, comments: true, versions: true, retweets: true },
+      },
+      retweets: {
+        where: { userId: session.user.id },
+        select: { id: true },
       },
     },
   })
@@ -64,7 +68,20 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return Response.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  return Response.json({ data: message })
+  // 添加转发相关字段
+  const retweetCount = (message as any)._count.retweets
+  const isRetweeted = (message as any).retweets.length > 0
+
+  // @ts-ignore - retweets is included in the query
+  const { retweets, ...messageData } = message
+
+  const messageWithRetweetInfo = {
+    ...messageData,
+    retweetCount,
+    isRetweeted,
+  }
+
+  return Response.json({ data: messageWithRetweetInfo })
 }
 
 /**

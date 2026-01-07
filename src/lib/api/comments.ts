@@ -57,4 +57,14 @@ export const commentsApi = {
     const response = await fetch(`${API_BASE}/comments/${parentId}/children`)
     return response.json()
   },
+
+  /**
+   * Toggle retweet status
+   */
+  async toggleRetweet(commentId: string): Promise<CommentResponse> {
+    const response = await fetch(`${API_BASE}/comments/${commentId}/retweet`, {
+      method: 'POST',
+    })
+    return response.json()
+  },
 }

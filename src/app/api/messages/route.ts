@@ -58,7 +58,11 @@ export async function GET(request: NextRequest) {
           },
         },
         _count: {
-          select: { children: true, comments: true },
+          select: { children: true, comments: true, retweets: true },
+        },
+        retweets: {
+          where: { userId: session.user.id },
+          select: { id: true },
         },
       },
       orderBy: [
@@ -71,8 +75,15 @@ export async function GET(request: NextRequest) {
     prisma.message.count({ where }),
   ])
 
+  // 添加转发相关字段
+  const messagesWithRetweetInfo = messages.map((message) => ({
+    ...message,
+    retweetCount: message._count.retweets,
+    isRetweeted: message.retweets.length > 0,
+  }))
+
   return Response.json({
-    data: messages,
+    data: messagesWithRetweetInfo,
     meta: {
       total,
       page,
@@ -149,10 +160,21 @@ export async function POST(request: NextRequest) {
           },
         },
         _count: {
-          select: { children: true, comments: true },
+          select: { children: true, comments: true, retweets: true },
+        },
+        retweets: {
+          where: { userId: session.user.id },
+          select: { id: true },
         },
       },
     })
+
+    // 添加转发相关字段
+    const messageWithRetweetInfo = {
+      ...message,
+      retweetCount: message._count.retweets,
+      isRetweeted: message.retweets.length > 0,
+    }
 
     // 获取用户 AI 配置
     const config = await prisma.aiConfig.findUnique({
@@ -173,7 +195,7 @@ export async function POST(request: NextRequest) {
       messageId: message.id,
     })
 
-    return Response.json({ data: message }, { status: 201 })
+    return Response.json({ data: messageWithRetweetInfo }, { status: 201 })
   } catch (error) {
     console.error("Failed to create message:", error)
     return Response.json(

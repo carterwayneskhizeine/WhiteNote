@@ -19,13 +19,27 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     include: {
       author: { select: { id: true, name: true, avatar: true, email: true } },
       _count: {
-        select: { replies: true }
-      }
+        select: { replies: true, retweets: true }
+      },
+      retweets: {
+        where: { userId: session.user.id },
+        select: { id: true },
+      },
     },
     orderBy: { createdAt: "asc" },
   })
 
-  return Response.json({ data: comments })
+  // 添加转发相关字段
+  const commentsWithRetweetInfo = comments.map((comment: any) => ({
+    ...comment,
+    _count: {
+      ...comment._count,
+    },
+    retweetCount: comment._count.retweets,
+    isRetweeted: comment.retweets.length > 0,
+  }))
+
+  return Response.json({ data: commentsWithRetweetInfo })
 }
 
 /**

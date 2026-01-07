@@ -20,8 +20,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       author: { select: { id: true, name: true, avatar: true, email: true } },
       message: { select: { id: true, content: true } },
       _count: {
-        select: { replies: true }
-      }
+        select: { replies: true, retweets: true }
+      },
+      retweets: {
+        where: { userId: session.user.id },
+        select: { id: true },
+      },
     },
   })
 
@@ -29,5 +33,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return Response.json({ error: "Comment not found" }, { status: 404 })
   }
 
-  return Response.json({ data: comment })
+  // 添加转发相关字段
+  const retweetCount = (comment as any)._count.retweets
+  const isRetweeted = (comment as any).retweets.length > 0
+
+  // @ts-ignore - retweets is included in the query
+  const { retweets, ...commentData } = comment
+
+  const commentWithRetweetInfo = {
+    ...commentData,
+    retweetCount,
+    isRetweeted,
+  }
+
+  return Response.json({ data: commentWithRetweetInfo })
 }

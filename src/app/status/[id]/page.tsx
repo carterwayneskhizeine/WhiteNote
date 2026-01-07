@@ -22,6 +22,8 @@ export default function StatusPage() {
 
     const [showReplyDialog, setShowReplyDialog] = useState(false)
     const [replyTarget, setReplyTarget] = useState<any>(null)
+    const [retweetCount, setRetweetCount] = useState(0)
+    const [isRetweeted, setIsRetweeted] = useState(false)
 
     useEffect(() => {
         const fetchMessage = async () => {
@@ -29,6 +31,8 @@ export default function StatusPage() {
                 const result = await messagesApi.getMessage(id)
                 if (result.data) {
                     setMessage(result.data)
+                    setRetweetCount(result.data.retweetCount || 0)
+                    setIsRetweeted(result.data.isRetweeted || false)
                 } else if (result.error) {
                     setError(result.error)
                 }
@@ -121,11 +125,29 @@ export default function StatusPage() {
                         </div>
                         <span className="text-sm">{message._count.comments}</span>
                     </div>
-                    <div className="flex items-center gap-1 group cursor-pointer">
-                        <div className="p-2 rounded-full group-hover:bg-green-500/10 group-hover:text-green-500 transition-colors">
-                            <Repeat2 className="h-[22px] w-[22px]" />
+                    <div
+                        className="flex items-center gap-1 group cursor-pointer"
+                        onClick={async () => {
+                            const result = await messagesApi.toggleRetweet(message.id)
+                            if (result.data) {
+                                setRetweetCount(result.data.retweetCount)
+                                setIsRetweeted(result.data.isRetweeted)
+                            }
+                        }}
+                    >
+                        <div className={cn(
+                            "p-2 rounded-full transition-colors",
+                            isRetweeted ? "bg-green-500/20" : "group-hover:bg-green-500/10"
+                        )}>
+                            <Repeat2 className={cn(
+                                "h-[22px] w-[22px] transition-colors",
+                                isRetweeted ? "text-green-500" : "group-hover:text-green-500"
+                            )} />
                         </div>
-                        <span className="text-sm">11</span>
+                        <span className={cn(
+                            "text-sm",
+                            isRetweeted && "text-green-500"
+                        )}>{retweetCount}</span>
                     </div>
                     <div
                         className="flex items-center gap-1 group cursor-pointer"

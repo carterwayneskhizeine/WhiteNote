@@ -64,6 +64,8 @@ export function MessageCard({
   const router = useRouter()
   const [isExpanded, setIsExpanded] = useState(false)
   const [hasMore, setHasMore] = useState(false)
+  const [isRetweeted, setIsRetweeted] = useState(message.isRetweeted || false)
+  const [retweetCount, setRetweetCount] = useState(message.retweetCount || 0)
   const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -133,6 +135,21 @@ export function MessageCard({
       }
     } catch (error) {
       console.error("Failed to toggle pin:", error)
+    }
+  }
+
+  // Handle retweet toggle
+  const handleToggleRetweet = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const result = await messagesApi.toggleRetweet(message.id)
+      if (result.data) {
+        setIsRetweeted(result.data.isRetweeted)
+        setRetweetCount(result.data.retweetCount)
+        onUpdate?.()
+      }
+    } catch (error) {
+      console.error("Failed to toggle retweet:", error)
     }
   }
 
@@ -293,7 +310,23 @@ export function MessageCard({
                 )}
               </div>
 
-              {/* 2. Copy */}
+              {/* 2. Retweet */}
+              <div onClick={handleToggleRetweet} className="group flex items-center cursor-pointer">
+                <div className={cn(
+                  "p-2 rounded-full transition-colors",
+                  isRetweeted ? "bg-green-500/20" : "group-hover:bg-green-500/10"
+                )}>
+                  <Repeat2 className={cn(
+                    "h-[18px] w-[18px] transition-colors",
+                    isRetweeted ? "text-green-500" : "text-muted-foreground group-hover:text-green-500"
+                  )} />
+                </div>
+                {retweetCount > 0 && (
+                  <span className="text-xs text-muted-foreground group-hover:text-green-500 transition-colors">{retweetCount}</span>
+                )}
+              </div>
+
+              {/* 3. Copy */}
               <div onClick={handleCopy} className="group flex items-center cursor-pointer">
                 <div className={cn(
                   "p-2 rounded-full transition-colors",
@@ -306,7 +339,7 @@ export function MessageCard({
                 </div>
               </div>
 
-              {/* 3. Bookmark */}
+              {/* 4. Bookmark */}
               <div onClick={handleToggleStar} className="group flex items-center cursor-pointer">
                 <div className="p-2 rounded-full group-hover:bg-yellow-500/10 transition-colors">
                   {isStarred ? (
@@ -317,7 +350,7 @@ export function MessageCard({
                 </div>
               </div>
 
-              {/* 4. Share */}
+              {/* 5. Share */}
               <div className="group flex items-center -mr-2">
                 <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
                   <Share className="h-[18px] w-[18px] text-muted-foreground group-hover:text-blue-500 transition-colors" />

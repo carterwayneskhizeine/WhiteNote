@@ -68,6 +68,8 @@ export interface MessageWithRelations {
     children: number
     comments: number
   }
+  retweetCount?: number
+  isRetweeted?: boolean
 }
 
 // ==================== Tags ====================
@@ -111,6 +113,8 @@ export interface Comment {
   _count?: {
     replies: number
   }
+  retweetCount?: number
+  isRetweeted?: boolean
 }
 
 export interface CreateCommentInput {

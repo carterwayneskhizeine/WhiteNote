@@ -21,6 +21,7 @@ model User {
   messages      Message[]
   sessions      Session[]
   templates     Template[]
+  retweets      Retweet[]
 }
 
 model Account {
@@ -78,6 +79,7 @@ model Message {
   tags          MessageTag[]
   versions      MessageVersion[]
   reminders     Reminder[]
+  retweets      Retweet[]
 
   @@index([authorId])
   @@index([createdAt(sort: Desc)])
@@ -175,8 +177,26 @@ model Comment {
   message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
   parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies   Comment[] @relation("CommentReplies")
+  retweets  Retweet[]
 
   @@index([messageId, createdAt])
+}
+
+model Retweet {
+  id        String   @id @default(cuid())
+  userId    String
+  messageId String?
+  commentId String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId])
+  @@unique([userId, commentId])
+  @@index([messageId])
+  @@index([commentId])
+  @@index([createdAt(sort: Desc)])
 }
 
 model Media {

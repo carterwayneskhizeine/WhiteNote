@@ -25,6 +25,8 @@ export interface Message {
     children: number
     comments: number
   }
+  retweetCount?: number
+  isRetweeted?: boolean
 }
 
 export interface CreateMessageInput {
@@ -148,6 +150,16 @@ export const messagesApi = {
    */
   async togglePin(id: string): Promise<MessageResponse> {
     const response = await fetch(`${API_BASE}/messages/${id}/pin`, {
+      method: 'POST',
+    })
+    return response.json()
+  },
+
+  /**
+   * Toggle retweet status
+   */
+  async toggleRetweet(id: string): Promise<MessageResponse> {
+    const response = await fetch(`${API_BASE}/messages/${id}/retweet`, {
       method: 'POST',
     })
     return response.json()

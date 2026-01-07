@@ -13,6 +13,7 @@ import { Comment } from "@/types/api"
 import { useSession } from "next-auth/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ReplyDialog } from "@/components/ReplyDialog"
+import { cn } from "@/lib/utils"
 
 export default function CommentDetailPage() {
   const { id, commentId } = useParams() as { id: string; commentId: string }
@@ -29,6 +30,10 @@ export default function CommentDetailPage() {
   const [newReply, setNewReply] = useState("")
   const [posting, setPosting] = useState(false)
 
+  const [isRetweeted, setIsRetweeted] = useState(false)
+  const [retweetCount, setRetweetCount] = useState(0)
+  const [childCommentRetweets, setChildCommentRetweets] = useState<Record<string, { isRetweeted: boolean; count: number }>>({})
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -42,12 +47,24 @@ export default function CommentDetailPage() {
 
         if (commentResult.data) {
           setComment(commentResult.data)
+          setIsRetweeted(commentResult.data.isRetweeted || false)
+          setRetweetCount(commentResult.data.retweetCount || 0)
         } else {
           setError(commentResult.error || "Comment not found")
         }
 
         if (childrenResult.data) {
           setChildComments(childrenResult.data)
+
+          // Initialize child comment retweets state
+          const retweetsState: Record<string, { isRetweeted: boolean; count: number }> = {}
+          childrenResult.data.forEach(childComment => {
+            retweetsState[childComment.id] = {
+              isRetweeted: childComment.isRetweeted || false,
+              count: childComment.retweetCount || 0,
+            }
+          })
+          setChildCommentRetweets(retweetsState)
         }
       } catch (err) {
         console.error("Failed to fetch comment data:", err)
@@ -120,6 +137,39 @@ export default function CommentDetailPage() {
       })
     } catch {
       return ""
+    }
+  }
+
+  // Handle retweet toggle for main comment
+  const handleToggleRetweet = async () => {
+    if (!comment) return
+    try {
+      const result = await commentsApi.toggleRetweet(comment.id)
+      if (result.data) {
+        setIsRetweeted(result.data.isRetweeted ?? false)
+        setRetweetCount(result.data.retweetCount ?? 0)
+      }
+    } catch (error) {
+      console.error("Failed to toggle retweet:", error)
+    }
+  }
+
+  // Handle retweet toggle for child comments
+  const handleToggleChildRetweet = async (childCommentId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const result = await commentsApi.toggleRetweet(childCommentId)
+      if (result.data) {
+        setChildCommentRetweets(prev => ({
+          ...prev,
+          [childCommentId]: {
+            isRetweeted: result.data?.isRetweeted ?? false,
+            count: result.data?.retweetCount ?? 0,
+          },
+        }))
+      }
+    } catch (error) {
+      console.error("Failed to toggle retweet:", error)
     }
   }
 
@@ -206,10 +256,25 @@ export default function CommentDetailPage() {
                 </div>
                 <span className="ml-1 text-sm">{childComments.length}</span>
               </div>
-              <div className="group flex items-center cursor-pointer">
-                <div className="p-2 rounded-full group-hover:bg-green-500/10 group-hover:text-green-500 transition-colors">
-                  <Repeat2 className="h-4 w-4" />
+              <div
+                className="group flex items-center cursor-pointer"
+                onClick={handleToggleRetweet}
+              >
+                <div className={cn(
+                  "p-2 rounded-full transition-colors",
+                  isRetweeted ? "bg-green-500/20" : "group-hover:bg-green-500/10"
+                )}>
+                  <Repeat2 className={cn(
+                    "h-4 w-4 transition-colors",
+                    isRetweeted ? "text-green-500" : "group-hover:text-green-500"
+                  )} />
                 </div>
+                {retweetCount > 0 && (
+                  <span className={cn(
+                    "ml-1 text-sm",
+                    isRetweeted && "text-green-500"
+                  )}>{retweetCount}</span>
+                )}
               </div>
               <div className="group flex items-center cursor-pointer">
                 <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors text-right">
@@ -326,10 +391,27 @@ export default function CommentDetailPage() {
                         {childComment._count?.replies || 0}
                       </span>
                     </div>
-                    <div className="group flex items-center cursor-pointer">
-                      <div className="p-2 rounded-full group-hover:bg-green-500/10 group-hover:text-green-500 transition-colors">
-                        <Repeat2 className="h-4 w-4" />
+                    <div
+                      className="group flex items-center cursor-pointer"
+                      onClick={(e) => handleToggleChildRetweet(childComment.id, e)}
+                    >
+                      <div className={cn(
+                        "p-2 rounded-full transition-colors",
+                        childCommentRetweets[childComment.id]?.isRetweeted ? "bg-green-500/20" : "group-hover:bg-green-500/10"
+                      )}>
+                        <Repeat2 className={cn(
+                          "h-4 w-4 transition-colors",
+                          childCommentRetweets[childComment.id]?.isRetweeted ? "text-green-500" : "group-hover:text-green-500"
+                        )} />
                       </div>
+                      {childCommentRetweets[childComment.id]?.count > 0 && (
+                        <span className={cn(
+                          "ml-1 text-xs",
+                          childCommentRetweets[childComment.id]?.isRetweeted && "text-green-500"
+                        )}>
+                          {childCommentRetweets[childComment.id]?.count}
+                        </span>
+                      )}
                     </div>
                     <div className="group flex items-center cursor-pointer">
                       <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors text-right">
