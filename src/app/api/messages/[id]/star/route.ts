@@ -2,39 +2,43 @@ import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
-interface RouteContext {
-  params: Promise<{ id: string }>
-}
-
 /**
  * POST /api/messages/[id]/star
- * 切换收藏状态
+ * 切换消息的收藏状态
  */
-export async function POST(request: NextRequest, context: RouteContext) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { id } = await context.params
+  const { id } = await params
 
-  const message = await prisma.message.findUnique({
-    where: { id },
-  })
+  try {
+    // 获取消息
+    const message = await prisma.message.findUnique({
+      where: { id },
+    })
 
-  if (!message) {
-    return Response.json({ error: "Message not found" }, { status: 404 })
+    if (!message) {
+      return Response.json({ error: "Message not found" }, { status: 404 })
+    }
+
+    // 切换isStarred状态
+    const updatedMessage = await prisma.message.update({
+      where: { id },
+      data: {
+        isStarred: !message.isStarred,
+      },
+      select: {
+        id: true,
+        isStarred: true,
+      },
+    })
+
+    return Response.json({ data: updatedMessage })
+  } catch (error) {
+    console.error("Failed to toggle star:", error)
+    return Response.json({ error: "Failed to toggle star" }, { status: 500 })
   }
-
-  if (message.authorId !== session.user.id) {
-    return Response.json({ error: "Forbidden" }, { status: 403 })
-  }
-
-  const updated = await prisma.message.update({
-    where: { id },
-    data: { isStarred: !message.isStarred },
-    select: { id: true, isStarred: true },
-  })
-
-  return Response.json({ data: updated })
 }

@@ -133,11 +133,19 @@ export default function StatusPage() {
                         </div>
                         <span className="text-sm">{message.isStarred ? 43 : 42}</span>
                     </div>
-                    <div className="flex items-center gap-1 group cursor-pointer">
+                    <div
+                        className="flex items-center gap-1 group cursor-pointer"
+                        onClick={async () => {
+                            const result = await messagesApi.toggleStar(message.id)
+                            if (result.data) {
+                                setMessage({ ...message, isStarred: result.data.isStarred })
+                            }
+                        }}
+                    >
                         <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">
-                            <Bookmark className="h-[22px] w-[22px]" />
+                            <Bookmark className={cn("h-[22px] w-[22px]", message.isStarred && "text-blue-600 fill-blue-600")} />
                         </div>
-                        <span className="text-sm">14</span>
+                        <span className="text-sm">{message.isStarred ? "已收藏" : "收藏"}</span>
                     </div>
                     <div className="flex items-center group cursor-pointer">
                         <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">

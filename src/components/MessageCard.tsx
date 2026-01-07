@@ -12,7 +12,6 @@ import {
   Trash2,
   Edit2,
   MessageCircle,
-  BarChart2,
   Pin,
   PinOff
 } from "lucide-react"
@@ -318,14 +317,7 @@ export function MessageCard({
                 </div>
               </div>
 
-              {/* 4. Views (Stat) */}
-              <div className="group flex items-center">
-                <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
-                  <BarChart2 className="h-[18px] w-[18px] text-muted-foreground group-hover:text-blue-500 transition-colors" />
-                </div>
-              </div>
-
-              {/* 5. Share */}
+              {/* 4. Share */}
               <div className="group flex items-center -mr-2">
                 <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
                   <Share className="h-[18px] w-[18px] text-muted-foreground group-hover:text-blue-500 transition-colors" />

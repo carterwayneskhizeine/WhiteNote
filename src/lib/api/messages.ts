@@ -136,6 +136,14 @@ export const messagesApi = {
   },
 
   /**
+   * Get starred messages
+   */
+  async getStarred(): Promise<MessagesResponse> {
+    const response = await fetch(`${API_BASE}/messages/starred`)
+    return response.json()
+  },
+
+  /**
    * Toggle pin status
    */
   async togglePin(id: string): Promise<MessageResponse> {
