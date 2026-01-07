@@ -130,7 +130,7 @@ export default function StatusPage() {
                         <div className="p-2 rounded-full group-hover:bg-green-500/10 group-hover:text-green-500 transition-colors">
                             <Repeat2 className="h-[22px] w-[22px]" />
                         </div>
-                        {(typeof message.retweetCount === 'number' && message.retweetCount > 0) && (
+                        {(message.retweetCount ?? 0) > 0 && (
                             <span className="text-sm text-foreground/60 group-hover:text-green-600 transition-colors">{message.retweetCount}</span>
                         )}
                     </div>
@@ -184,6 +184,7 @@ export default function StatusPage() {
                 open={showRetweetDialog}
                 onOpenChange={setShowRetweetDialog}
                 target={message}
+                targetType="message"
                 onSuccess={() => {
                     // Navigate to home to show the new message
                     router.push('/')

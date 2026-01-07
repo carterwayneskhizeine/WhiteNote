@@ -10,7 +10,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { messagesApi } from "@/lib/api"
+import { messagesApi, commentsApi } from "@/lib/api"
 import { Loader2, Image as ImageIcon, Smile, List, Calendar, MapPin, X } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
@@ -33,6 +33,7 @@ interface RetweetDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     onSuccess?: () => void
+    targetType?: 'message' | 'comment'
 }
 
 export function RetweetDialog({
@@ -40,6 +41,7 @@ export function RetweetDialog({
     open,
     onOpenChange,
     onSuccess,
+    targetType = 'message',
 }: RetweetDialogProps) {
     const { data: session } = useSession()
     const [content, setContent] = useState("")
@@ -59,7 +61,7 @@ export function RetweetDialog({
 
         setIsSubmitting(true)
         try {
-            // 创建一条新的主消息，包含引用的内容
+            // 1. 创建一条新的主消息，包含引用的内容
             const quotedContent = `\n\n---\n\n转发 @${target.author.email?.split('@')[0] || "user"} 的消息:\n${target.content.substring(0, 200)}${target.content.length > 200 ? '...' : ''}`
 
             const result = await messagesApi.createMessage({
@@ -67,6 +69,13 @@ export function RetweetDialog({
             })
 
             if (result.data) {
+                // 2. 调用转发 API 来增加原消息/评论的转发计数
+                if (targetType === 'message') {
+                    await messagesApi.toggleRetweet(target.id)
+                } else {
+                    await commentsApi.toggleRetweet(target.id)
+                }
+
                 setContent("")
                 onOpenChange(false)
                 onSuccess?.()

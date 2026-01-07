@@ -313,7 +313,7 @@ export function MessageCard({
                     "text-muted-foreground group-hover:text-green-500"
                   )} />
                 </div>
-                {(typeof message.retweetCount === 'number' && message.retweetCount > 0) && (
+                {(message.retweetCount ?? 0) > 0 && (
                   <span className="text-xs text-foreground/60 group-hover:text-green-600 transition-colors">{message.retweetCount}</span>
                 )}
               </div>
@@ -369,6 +369,7 @@ export function MessageCard({
         open={showRetweetDialog}
         onOpenChange={setShowRetweetDialog}
         target={message}
+        targetType="message"
         onSuccess={() => {
           onUpdate?.()
           // Navigate to home to show the new message

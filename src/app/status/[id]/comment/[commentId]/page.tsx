@@ -231,7 +231,7 @@ export default function CommentDetailPage() {
                 <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
                   <Repeat2 className="h-4 w-4 transition-colors group-hover:text-green-500" />
                 </div>
-                {(typeof comment?.retweetCount === 'number' && comment.retweetCount > 0) && (
+                {(comment?.retweetCount ?? 0) > 0 && (
                   <span className="ml-1 text-sm text-foreground/60 group-hover:text-green-600 transition-colors">
                     {comment.retweetCount}
                   </span>
@@ -359,7 +359,7 @@ export default function CommentDetailPage() {
                       <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
                         <Repeat2 className="h-4 w-4 transition-colors group-hover:text-green-500" />
                       </div>
-                      {(typeof childComment.retweetCount === 'number' && childComment.retweetCount > 0) && (
+                      {(childComment.retweetCount ?? 0) > 0 && (
                         <span className="ml-1 text-xs text-foreground/60 group-hover:text-green-600 transition-colors">
                           {childComment.retweetCount}
                         </span>
@@ -399,6 +399,7 @@ export default function CommentDetailPage() {
         open={showRetweetDialog}
         onOpenChange={setShowRetweetDialog}
         target={retweetTarget || comment}
+        targetType="comment"
         onSuccess={() => {
           // Navigate to home to show the new message
           router.push('/')
