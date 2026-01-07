@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
+import { deleteFromRAGFlow } from "@/lib/ai/ragflow"
 import { NextRequest } from "next/server"
 
 interface RouteContext {
@@ -192,6 +193,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return Response.json({ error: "Forbidden" }, { status: 403 })
   }
 
+  // 先从 RAGFlow 删除对应的文档
+  try {
+    await deleteFromRAGFlow(session.user.id, id)
+  } catch (error) {
+    console.error("Failed to delete from RAGFlow:", error)
+    // 继续删除本地消息，不因 RAGFlow 删除失败而中断
+  }
+
+  // 删除本地消息
   await prisma.message.delete({
     where: { id },
   })

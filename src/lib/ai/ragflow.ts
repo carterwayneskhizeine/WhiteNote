@@ -140,3 +140,73 @@ export async function syncToRAGFlow(userId: string, messageId: string, content: 
     throw error
   }
 }
+
+/**
+ * 从 RAGFlow 删除消息对应的文档
+ * @param userId 用户 ID
+ * @param messageId 消息 ID
+ */
+export async function deleteFromRAGFlow(userId: string, messageId: string) {
+  const config = await getAiConfig(userId)
+
+  if (!config.ragflowApiKey || !config.ragflowDatasetId) {
+    console.warn("[RAGFlow] Not configured, skipping delete")
+    return
+  }
+
+  try {
+    const documentName = `message_${messageId}.md`
+
+    // 1. 先查询文档 ID（通过文档名称）
+    const listResponse = await fetch(
+      `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/documents?name=${encodeURIComponent(documentName)}`,
+      {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${config.ragflowApiKey}`,
+        },
+      }
+    )
+
+    if (!listResponse.ok) {
+      console.error("[RAGFlow] Failed to list documents:", await listResponse.text())
+      return
+    }
+
+    const listResult = await listResponse.json()
+
+    // 检查是否找到文档
+    if (!listResult.data?.docs || listResult.data.docs.length === 0) {
+      console.log("[RAGFlow] Document not found, skipping delete:", documentName)
+      return
+    }
+
+    // 2. 删除文档
+    const documentIds = listResult.data.docs.map((doc: any) => doc.id)
+
+    const deleteResponse = await fetch(
+      `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/documents`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${config.ragflowApiKey}`,
+        },
+        body: JSON.stringify({
+          ids: documentIds,
+        }),
+      }
+    )
+
+    if (!deleteResponse.ok) {
+      const errorText = await deleteResponse.text()
+      console.error("[RAGFlow] Failed to delete documents:", errorText)
+      throw new Error(`RAGFlow delete failed: ${errorText}`)
+    }
+
+    console.log("[RAGFlow] Successfully deleted message:", messageId, "Documents:", documentIds)
+  } catch (error) {
+    console.error("[RAGFlow] Delete error for message:", messageId, error)
+    // 不抛出错误，避免影响本地删除操作
+  }
+}
