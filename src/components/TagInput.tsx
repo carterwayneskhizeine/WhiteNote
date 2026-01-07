@@ -2,17 +2,14 @@
 
 import { useState, KeyboardEvent } from "react"
 import { X } from "lucide-react"
-import { Button } from "./ui/button"
-import { Input } from "./ui/input"
 
 interface TagInputProps {
   tags: string[]
   onChange: (tags: string[]) => void
-  placeholder?: string
   className?: string
 }
 
-export function TagInput({ tags, onChange, placeholder = "输入标签后按回车", className }: TagInputProps) {
+export function TagInput({ tags, onChange, className }: TagInputProps) {
   const [inputValue, setInputValue] = useState("")
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -40,30 +37,30 @@ export function TagInput({ tags, onChange, placeholder = "输入标签后按回�
   }
 
   return (
-    <div className={`flex flex-wrap items-center gap-2 p-2 border rounded-md bg-background ${className}`}>
+    <div className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${className}`}>
       {tags.map((tag, index) => (
         <span
           key={index}
-          className="inline-flex items-center gap-1 px-2 py-1 text-sm bg-primary/10 text-primary rounded-md"
+          className="inline-flex items-center text-sm text-primary font-normal group"
         >
           #{tag}
           <button
             type="button"
             onClick={() => removeTag(index)}
-            className="hover:bg-primary/20 rounded p-0.5 transition-colors"
+            className="ml-0.5 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-destructive transition-all"
+            aria-label={`Remove ${tag}`}
           >
             <X className="h-3 w-3" />
           </button>
         </span>
       ))}
-      <Input
+      <input
         type="text"
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={addTag}
-        placeholder={tags.length === 0 ? placeholder : ""}
-        className="flex-1 min-w-[120px] border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-2 h-7"
+        className="flex-1 min-w-[60px] bg-transparent border-0 outline-none text-sm h-6 p-0"
       />
     </div>
   )

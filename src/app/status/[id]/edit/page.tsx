@@ -129,15 +129,10 @@ export default function EditMessagePage() {
       </div>
 
       {/* Tags Section */}
-      <div className="px-4 py-3 border-b border-border bg-muted/30">
-        <div className="flex items-center gap-2 mb-2">
-          <Tag className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">标签</span>
-        </div>
+      <div className="px-4 py-2 border-b border-border bg-muted/30">
         <TagInput
           tags={tags}
           onChange={setTags}
-          placeholder="输入标签后按回车添加..."
         />
       </div>
 
