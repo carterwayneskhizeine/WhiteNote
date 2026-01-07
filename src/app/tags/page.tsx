@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Tag as TagIcon, Plus, Search, Hash } from "lucide-react"
+import { Tag as TagIcon, Plus, Search, Hash, Trash2 } from "lucide-react"
 import { tagsApi } from "@/lib/api/tags"
 import { Tag } from "@/types/api"
 import { formatDistanceToNow } from "date-fns"
@@ -23,6 +23,7 @@ export default function TagsPage() {
   const [newTagName, setNewTagName] = useState("")
   const [newTagColor, setNewTagColor] = useState("#3B82F6")
   const [creating, setCreating] = useState(false)
+  const [cleaning, setCleaning] = useState(false)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -76,10 +77,43 @@ export default function TagsPage() {
     }
   }
 
+  // Cleanup unused tags
+  const handleCleanupUnusedTags = async () => {
+    if (cleaning) return
+
+    const unusedCount = tags.filter((tag) => tag.count === 0).length
+    if (unusedCount === 0) {
+      alert("没有需要清理的标签")
+      return
+    }
+
+    if (!confirm(`确定要清理 ${unusedCount} 个未使用的标签吗？`)) {
+      return
+    }
+
+    setCleaning(true)
+    try {
+      const result = await tagsApi.cleanupUnusedTags()
+      if (result.data) {
+        // Remove tags with 0 count from the list
+        setTags(tags.filter((tag) => tag.count > 0))
+        alert(`已清理 ${result.data.deletedCount} 个未使用的标签`)
+      }
+    } catch (error) {
+      console.error("Failed to cleanup tags:", error)
+      alert("清理标签失败")
+    } finally {
+      setCleaning(false)
+    }
+  }
+
   // Filter tags by search query
   const filteredTags = tags.filter((tag) =>
     tag.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  // Count unused tags
+  const unusedTagsCount = tags.filter((tag) => tag.count === 0).length
 
   if (status === "loading" || loading) {
     return (
@@ -118,6 +152,18 @@ export default function TagsPage() {
             <Plus className="h-5 w-5 mr-2" />
             创建标签
           </Button>
+
+          {/* Cleanup unused tags button */}
+          {unusedTagsCount > 0 && (
+            <Button
+              className="w-full mt-2 rounded-full font-bold bg-destructive hover:bg-destructive/90"
+              onClick={handleCleanupUnusedTags}
+              disabled={cleaning}
+            >
+              <Trash2 className="h-5 w-5 mr-2" />
+              {cleaning ? "清理中..." : `清理未使用标签 (${unusedTagsCount})`}
+            </Button>
+          )}
         </div>
       </div>
 

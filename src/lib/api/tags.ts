@@ -39,4 +39,16 @@ export const tagsApi = {
     )
     return response.json()
   },
+
+  /**
+   * Cleanup unused tags (tags with zero messages)
+   */
+  async cleanupUnusedTags(): Promise<
+    ApiResponse<{ deletedCount: number; deletedTags: Array<{ id: string; name: string }> }>
+  > {
+    const response = await fetch(`${API_BASE}/tags`, {
+      method: 'DELETE',
+    })
+    return response.json()
+  },
 }
