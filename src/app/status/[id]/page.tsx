@@ -12,6 +12,7 @@ import { TipTapViewer } from "@/components/TipTapViewer"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { ReplyDialog } from "@/components/ReplyDialog"
+import { RetweetDialog } from "@/components/RetweetDialog"
 
 export default function StatusPage() {
     const { id } = useParams() as { id: string }
@@ -22,8 +23,7 @@ export default function StatusPage() {
 
     const [showReplyDialog, setShowReplyDialog] = useState(false)
     const [replyTarget, setReplyTarget] = useState<any>(null)
-    const [retweetCount, setRetweetCount] = useState(0)
-    const [isRetweeted, setIsRetweeted] = useState(false)
+    const [showRetweetDialog, setShowRetweetDialog] = useState(false)
 
     useEffect(() => {
         const fetchMessage = async () => {
@@ -31,8 +31,6 @@ export default function StatusPage() {
                 const result = await messagesApi.getMessage(id)
                 if (result.data) {
                     setMessage(result.data)
-                    setRetweetCount(result.data.retweetCount || 0)
-                    setIsRetweeted(result.data.isRetweeted || false)
                 } else if (result.error) {
                     setError(result.error)
                 }
@@ -127,27 +125,12 @@ export default function StatusPage() {
                     </div>
                     <div
                         className="flex items-center gap-1 group cursor-pointer"
-                        onClick={async () => {
-                            const result = await messagesApi.toggleRetweet(message.id)
-                            if (result.data) {
-                                setRetweetCount(result.data.retweetCount ?? 0)
-                                setIsRetweeted(result.data.isRetweeted ?? false)
-                            }
-                        }}
+                        onClick={() => setShowRetweetDialog(true)}
                     >
-                        <div className={cn(
-                            "p-2 rounded-full transition-colors",
-                            isRetweeted ? "bg-green-500/20" : "group-hover:bg-green-500/10"
-                        )}>
-                            <Repeat2 className={cn(
-                                "h-[22px] w-[22px] transition-colors",
-                                isRetweeted ? "text-green-500" : "group-hover:text-green-500"
-                            )} />
+                        <div className="p-2 rounded-full group-hover:bg-green-500/10 group-hover:text-green-500 transition-colors">
+                            <Repeat2 className="h-[22px] w-[22px]" />
                         </div>
-                        <span className={cn(
-                            "text-sm",
-                            isRetweeted && "text-green-500"
-                        )}>{retweetCount}</span>
+                        <span className="text-sm">转发</span>
                     </div>
                     <div
                         className="flex items-center gap-1 group cursor-pointer"
@@ -191,6 +174,17 @@ export default function StatusPage() {
                 onSuccess={() => {
                     // Refresh page
                     window.location.reload()
+                }}
+            />
+
+            {/* Retweet Dialog */}
+            <RetweetDialog
+                open={showRetweetDialog}
+                onOpenChange={setShowRetweetDialog}
+                target={message}
+                onSuccess={() => {
+                    // Navigate to home to show the new message
+                    router.push('/')
                 }}
             />
         </div>

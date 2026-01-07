@@ -20,6 +20,7 @@ import { zhCN } from "date-fns/locale"
 import { useSession } from "next-auth/react"
 import { TipTapViewer } from "@/components/TipTapViewer"
 import { ReplyDialog } from "@/components/ReplyDialog"
+import { RetweetDialog } from "@/components/RetweetDialog"
 import { cn } from "@/lib/utils"
 
 interface CommentsListProps {
@@ -37,7 +38,8 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
 
   const [showReplyDialog, setShowReplyDialog] = useState(false)
   const [replyTarget, setReplyTarget] = useState<Comment | null>(null)
-  const [commentRetweets, setCommentRetweets] = useState<Record<string, { isRetweeted: boolean; count: number }>>({})
+  const [showRetweetDialog, setShowRetweetDialog] = useState(false)
+  const [retweetTarget, setRetweetTarget] = useState<Comment | null>(null)
 
   // Fetch comments (only top-level)
   const fetchComments = async () => {
@@ -48,16 +50,6 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
         // 只显示顶级评论（parentId 为 null）
         const topLevelComments = result.data.filter(c => !c.parentId)
         setComments(topLevelComments)
-
-        // Initialize retweet state
-        const retweetsState: Record<string, { isRetweeted: boolean; count: number }> = {}
-        topLevelComments.forEach(comment => {
-          retweetsState[comment.id] = {
-            isRetweeted: comment.isRetweeted || false,
-            count: comment.retweetCount || 0,
-          }
-        })
-        setCommentRetweets(retweetsState)
       }
     } catch (error) {
       console.error("Failed to fetch comments:", error)
@@ -70,23 +62,11 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
     fetchComments()
   }, [messageId])
 
-  // Handle retweet toggle
-  const handleToggleRetweet = async (commentId: string, e: React.MouseEvent) => {
+  // Handle retweet - opens quote retweet dialog
+  const handleRetweet = (comment: Comment, e: React.MouseEvent) => {
     e.stopPropagation()
-    try {
-      const result = await commentsApi.toggleRetweet(commentId)
-      if (result.data) {
-        setCommentRetweets(prev => ({
-          ...prev,
-          [commentId]: {
-            isRetweeted: result.data?.isRetweeted ?? false,
-            count: result.data?.retweetCount ?? 0,
-          },
-        }))
-      }
-    } catch (error) {
-      console.error("Failed to toggle retweet:", error)
-    }
+    setRetweetTarget(comment)
+    setShowRetweetDialog(true)
   }
 
   // Post new comment
@@ -278,25 +258,11 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
                     </div>
                     <div
                       className="group flex items-center cursor-pointer"
-                      onClick={(e) => handleToggleRetweet(comment.id, e)}
+                      onClick={(e) => handleRetweet(comment, e)}
                     >
-                      <div className={cn(
-                        "p-2 rounded-full transition-colors",
-                        commentRetweets[comment.id]?.isRetweeted ? "bg-green-500/20" : "group-hover:bg-green-500/10"
-                      )}>
-                        <Repeat2 className={cn(
-                          "h-4 w-4 transition-colors",
-                          commentRetweets[comment.id]?.isRetweeted ? "text-green-500" : "group-hover:text-green-500"
-                        )} />
+                      <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
+                        <Repeat2 className="h-4 w-4 transition-colors text-muted-foreground group-hover:text-green-500" />
                       </div>
-                      {commentRetweets[comment.id]?.count > 0 && (
-                        <span className={cn(
-                          "ml-1 text-xs",
-                          commentRetweets[comment.id]?.isRetweeted ? "text-green-500" : "text-muted-foreground"
-                        )}>
-                          {commentRetweets[comment.id]?.count}
-                        </span>
-                      )}
                     </div>
                     <div className="group flex items-center cursor-pointer">
                       <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors text-right">
@@ -321,6 +287,17 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
           // Refresh comments list
           fetchComments()
           onCommentAdded?.()
+        }}
+      />
+
+      {/* Retweet Dialog */}
+      <RetweetDialog
+        open={showRetweetDialog}
+        onOpenChange={setShowRetweetDialog}
+        target={retweetTarget}
+        onSuccess={() => {
+          // Navigate to home to show the new message
+          router.push('/')
         }}
       />
     </div>

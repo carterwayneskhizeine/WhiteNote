@@ -37,6 +37,7 @@ import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { CommentsList } from "@/components/CommentsList"
 import { ReplyDialog } from "@/components/ReplyDialog"
+import { RetweetDialog } from "@/components/RetweetDialog"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { TipTapViewer } from "@/components/TipTapViewer"
@@ -61,12 +62,11 @@ export function MessageCard({
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showReplyDialog, setShowReplyDialog] = useState(false)
+  const [showRetweetDialog, setShowRetweetDialog] = useState(false)
   const [copied, setCopied] = useState(false)
   const router = useRouter()
   const [isExpanded, setIsExpanded] = useState(false)
   const [hasMore, setHasMore] = useState(false)
-  const [isRetweeted, setIsRetweeted] = useState(message.isRetweeted || false)
-  const [retweetCount, setRetweetCount] = useState(message.retweetCount || 0)
   const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -139,19 +139,10 @@ export function MessageCard({
     }
   }
 
-  // Handle retweet toggle
-  const handleToggleRetweet = async (e: React.MouseEvent) => {
+  // Handle retweet - opens quote retweet dialog
+  const handleRetweet = (e: React.MouseEvent) => {
     e.stopPropagation()
-    try {
-      const result = await messagesApi.toggleRetweet(message.id)
-      if (result.data) {
-        setIsRetweeted(result.data.isRetweeted ?? false)
-        setRetweetCount(result.data.retweetCount ?? 0)
-        onUpdate?.()
-      }
-    } catch (error) {
-      console.error("Failed to toggle retweet:", error)
-    }
+    setShowRetweetDialog(true)
   }
 
 
@@ -312,19 +303,16 @@ export function MessageCard({
               </div>
 
               {/* 2. Retweet */}
-              <div onClick={handleToggleRetweet} className="group flex items-center cursor-pointer">
+              <div onClick={handleRetweet} className="group flex items-center cursor-pointer">
                 <div className={cn(
                   "p-2 rounded-full transition-colors",
-                  isRetweeted ? "bg-green-500/20" : "group-hover:bg-green-500/10"
+                  "group-hover:bg-green-500/10"
                 )}>
                   <Repeat2 className={cn(
                     "h-[18px] w-[18px] transition-colors",
-                    isRetweeted ? "text-green-500" : "text-muted-foreground group-hover:text-green-500"
+                    "text-muted-foreground group-hover:text-green-500"
                   )} />
                 </div>
-                {retweetCount > 0 && (
-                  <span className="text-xs text-muted-foreground group-hover:text-green-500 transition-colors">{retweetCount}</span>
-                )}
               </div>
 
               {/* 3. Copy */}
@@ -370,6 +358,18 @@ export function MessageCard({
         messageId={message.id}
         onSuccess={() => {
           onUpdate?.()
+        }}
+      />
+
+      {/* Retweet Dialog */}
+      <RetweetDialog
+        open={showRetweetDialog}
+        onOpenChange={setShowRetweetDialog}
+        target={message}
+        onSuccess={() => {
+          onUpdate?.()
+          // Navigate to home to show the new message
+          router.push('/')
         }}
       />
 
