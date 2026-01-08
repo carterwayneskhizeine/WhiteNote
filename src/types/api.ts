@@ -151,6 +151,12 @@ export interface CreateTemplateInput {
   description?: string
 }
 
+export interface UpdateTemplateInput {
+  name?: string
+  content?: string
+  description?: string
+}
+
 export interface TemplatesResponse {
   data: Template[]
   error?: string

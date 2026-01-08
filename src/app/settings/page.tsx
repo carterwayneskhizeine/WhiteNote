@@ -6,8 +6,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Moon, Sun, Monitor, Sparkles, User, Palette, Shield, Bell, Key, Globe, HelpCircle, LogOut } from "lucide-react"
 import { AIConfigForm } from "@/components/AIConfigForm"
 import { ProfileEditForm } from "@/components/ProfileEditForm"
+import { TemplateManager } from "@/components/templates/TemplateManager"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
+import { FileText } from "lucide-react"
 
 export default function SettingsPage() {
   const { setTheme } = useTheme()
@@ -21,6 +23,7 @@ export default function SettingsPage() {
   const navItems = [
     { id: 'profile', label: '个人资料', icon: User },
     { id: 'ai', label: 'AI 配置', icon: Sparkles },
+    { id: 'templates', label: '模板管理', icon: FileText },
     { id: 'appearance', label: '显示与外观', icon: Palette },
     { id: 'privacy', label: '隐私与安全', icon: Shield },
     { id: 'notifications', label: '通知', icon: Bell },
@@ -78,6 +81,17 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground">配置您的 AI 设置</p>
               </div>
               <AIConfigForm />
+            </div>
+          )}
+
+          {/* Templates Tab */}
+          {currentTab === 'templates' && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold">模板管理</h2>
+                <p className="text-muted-foreground">管理和编辑您的消息模板</p>
+              </div>
+              <TemplateManager />
             </div>
           )}
 
@@ -320,6 +334,17 @@ export default function SettingsPage() {
                     <p className="text-muted-foreground">配置您的 AI 设置</p>
                   </div>
                   <AIConfigForm />
+                </div>
+              )}
+
+              {/* Templates Tab */}
+              {currentTab === 'templates' && (
+                <div>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold">模板管理</h2>
+                    <p className="text-muted-foreground">管理和编辑您的消息模板</p>
+                  </div>
+                  <TemplateManager />
                 </div>
               )}
 

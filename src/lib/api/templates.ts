@@ -1,6 +1,7 @@
 import {
   Template,
   CreateTemplateInput,
+  UpdateTemplateInput,
   TemplatesResponse,
   TemplateResponse,
 } from '@/types/api'
@@ -33,6 +34,21 @@ export const templatesApi = {
    */
   async getTemplate(id: string): Promise<TemplateResponse> {
     const response = await fetch(`${API_BASE}/templates/${id}`)
+    return response.json()
+  },
+
+  /**
+   * Update template
+   */
+  async updateTemplate(
+    id: string,
+    data: UpdateTemplateInput
+  ): Promise<TemplateResponse> {
+    const response = await fetch(`${API_BASE}/templates/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
     return response.json()
   },
 

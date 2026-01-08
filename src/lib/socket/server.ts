@@ -46,7 +46,7 @@ export function initSocketServer(httpServer: HTTPServer) {
       // For now, we'll attach the socket to rooms and use session-based auth
       socket.data = {
         userId: socket.id,
-        userName: "Anonymous",
+        userName: "GoldieRill",
       }
 
       next()

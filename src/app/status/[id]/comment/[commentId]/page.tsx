@@ -232,7 +232,7 @@ export default function CommentDetailPage() {
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-1 flex-wrap">
                 <span className="font-bold text-base hover:underline">
-                  {comment.author?.name || "Anonymous"}
+                  {comment.author?.name || "GoldieRill"}
                 </span>
                 <span className="text-muted-foreground text-sm">
                   @{comment.author?.email?.split('@')[0] || "user"}
@@ -387,7 +387,7 @@ export default function CommentDetailPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-1 flex-wrap">
                       <span className="font-bold text-sm hover:underline">
-                        {childComment.author?.name || "Anonymous"}
+                        {childComment.author?.name || "GoldieRill"}
                       </span>
                       <span className="text-muted-foreground text-sm">
                         @{childComment.author?.email?.split('@')[0] || "user"}

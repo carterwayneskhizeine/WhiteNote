@@ -148,7 +148,7 @@ export function ReplyDialog({
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1 text-sm">
                                 <span className="font-bold text-foreground">
-                                    {target.author?.name || "Anonymous"}
+                                    {target.author?.name || "GoldieRill"}
                                 </span>
                                 <span className="text-muted-foreground truncate">
                                     @{targetHandle}

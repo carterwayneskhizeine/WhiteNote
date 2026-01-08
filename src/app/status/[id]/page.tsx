@@ -134,7 +134,7 @@ export default function StatusPage() {
                         {message.author ? (
                             <>
                                 <span className="font-bold text-foreground leading-tight hover:underline cursor-pointer">
-                                    {message.author.name || "Anonymous"}
+                                    {message.author.name || "GoldieRill"}
                                 </span>
                                 <span className="text-muted-foreground text-sm leading-tight">
                                     @{message.author.email?.split('@')[0] || "user"}

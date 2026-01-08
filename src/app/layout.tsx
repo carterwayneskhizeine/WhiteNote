@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "WhiteNote",
   description: "A Twitter-like note taking app",
+  icons: {
+    icon: "/goldielogo.svg",
+  },
 };
 
 export default function RootLayout({
