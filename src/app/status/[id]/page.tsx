@@ -42,6 +42,7 @@ export default function StatusPage() {
     const [showRetweetDialog, setShowRetweetDialog] = useState(false)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [refreshKey, setRefreshKey] = useState(0)
 
     useEffect(() => {
         const fetchMessage = async () => {
@@ -63,7 +64,7 @@ export default function StatusPage() {
         if (id) {
             fetchMessage()
         }
-    }, [id])
+    }, [id, refreshKey])
 
     const handleTogglePin = async () => {
         if (!message) return
@@ -239,8 +240,8 @@ export default function StatusPage() {
             <CommentsList
                 messageId={message.id}
                 onCommentAdded={() => {
-                    // Refresh page or list
-                    window.location.reload()
+                    // Refresh message data to update comment count
+                    setRefreshKey(prev => prev + 1)
                 }}
             />
 
@@ -251,8 +252,8 @@ export default function StatusPage() {
                 target={replyTarget}
                 messageId={message.id}
                 onSuccess={() => {
-                    // Refresh page
-                    window.location.reload()
+                    // Refresh message data to update comment count
+                    setRefreshKey(prev => prev + 1)
                 }}
             />
 

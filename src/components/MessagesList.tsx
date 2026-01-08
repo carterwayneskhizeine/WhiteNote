@@ -53,6 +53,18 @@ export function MessagesList({ filters }: MessagesListProps) {
     fetchMessages()
   }, [filters])
 
+  // Refresh when window gains focus (e.g., returning from detail page)
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchMessages(false)
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [filters])
+
   const handleRefresh = () => {
     fetchMessages(false)
   }

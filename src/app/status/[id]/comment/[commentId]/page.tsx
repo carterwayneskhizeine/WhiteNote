@@ -50,6 +50,7 @@ export default function CommentDetailPage() {
   const [retweetTarget, setRetweetTarget] = useState<Comment | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,7 +83,7 @@ export default function CommentDetailPage() {
     if (commentId) {
       fetchData()
     }
-  }, [commentId])
+  }, [commentId, refreshKey])
 
   const handlePostReply = async () => {
     if (!newReply.trim() || posting) return
@@ -487,12 +488,8 @@ export default function CommentDetailPage() {
         target={replyTarget || comment}
         messageId={id}
         onSuccess={() => {
-          // 刷新子评论列表
-          commentsApi.getChildComments(commentId).then((result) => {
-            if (result.data) {
-              setChildComments(result.data)
-            }
-          })
+          // Refresh comment data to update reply count
+          setRefreshKey(prev => prev + 1)
         }}
       />
 
