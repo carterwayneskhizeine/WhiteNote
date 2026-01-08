@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
-import { Home, Search, Bell, Mail, User, Bookmark, List, Settings, PenLine, MoreVertical, LogOut } from "lucide-react"
+import { Hash, Bell, Bookmark, List, Settings, PenLine, LogOut } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -24,7 +24,7 @@ const XIcon = ({ icon: Icon, filled, size = 26, className }: any) => (
     size={size}
     className={cn(className)}
     fill={filled ? "currentColor" : "none"}
-    strokeWidth={filled ? 0 : 2}
+    strokeWidth={filled ? 2.5 : 2}
   />
 )
 
@@ -146,10 +146,6 @@ export function MobileNav() {
               <div className="h-px bg-border mx-4" />
 
               <nav className="flex-1 overflow-y-auto py-2">
-                <Link href="/profile" className="flex items-center gap-4 px-4 py-3 text-xl font-bold hover:bg-secondary/50 transition-colors">
-                  <User className="h-6 w-6" />
-                  个人资料
-                </Link>
                 <Link href="/favorites" className="flex items-center gap-4 px-4 py-3 text-xl font-bold hover:bg-secondary/50 transition-colors">
                   <Bookmark className="h-6 w-6" />
                   收藏
@@ -230,15 +226,15 @@ export function MobileNav() {
         </Link>
 
         <Link href="/tags" className="flex flex-col items-center justify-center w-full h-full">
-          <XIcon icon={Search} filled={isActive("/tags")} className={cn("h-7 w-7", isActive("/tags") && "text-white")} />
+          <XIcon icon={Hash} filled={isActive("/tags")} className={cn("h-7 w-7", isActive("/tags") && "text-white")} />
         </Link>
 
         <Link href="/notifications" className="flex flex-col items-center justify-center w-full h-full">
           <XIcon icon={Bell} filled={isActive("/notifications")} className={cn("h-7 w-7", isActive("/notifications") && "text-white")} />
         </Link>
 
-        <Link href="/messages" className="flex flex-col items-center justify-center w-full h-full">
-          <XIcon icon={Mail} filled={isActive("/messages")} className={cn("h-7 w-7", isActive("/messages") && "text-white")} />
+        <Link href="/favorites" className="flex flex-col items-center justify-center w-full h-full">
+          <XIcon icon={Bookmark} filled={isActive("/favorites")} className={cn("h-7 w-7", isActive("/favorites") && "text-white")} />
         </Link>
       </div>
     </>

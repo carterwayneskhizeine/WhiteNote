@@ -272,3 +272,39 @@ export interface ConnectionTestResponse {
   message?: string
   error?: string
 }
+
+// ==================== AI Commands ====================
+export interface AICommand {
+  id: string
+  label: string
+  description: string
+  action: string
+  prompt: string
+  isBuiltIn: boolean
+  createdAt: string
+  updatedAt: string
+  authorId: string | null
+}
+
+export interface CreateAICommandInput {
+  label: string
+  description: string
+  action: string
+  prompt: string
+}
+
+export interface UpdateAICommandInput {
+  label?: string
+  description?: string
+  prompt?: string
+}
+
+export interface AICommandsResponse {
+  data: AICommand[]
+  error?: string
+}
+
+export interface AICommandResponse {
+  data?: AICommand
+  error?: string
+}

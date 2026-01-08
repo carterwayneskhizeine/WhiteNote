@@ -3,10 +3,11 @@
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Moon, Sun, Monitor, Sparkles, User, Palette, Shield, Bell, Key, Globe, HelpCircle, LogOut } from "lucide-react"
+import { Moon, Sun, Monitor, Sparkles, User, Palette, Shield, Bell, Globe, HelpCircle, Wand2 } from "lucide-react"
 import { AIConfigForm } from "@/components/AIConfigForm"
 import { ProfileEditForm } from "@/components/ProfileEditForm"
 import { TemplateManager } from "@/components/templates/TemplateManager"
+import { AICommandManager } from "@/components/ai-commands/AICommandManager"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { FileText } from "lucide-react"
@@ -23,11 +24,11 @@ export default function SettingsPage() {
   const navItems = [
     { id: 'profile', label: '个人资料', icon: User },
     { id: 'ai', label: 'AI 配置', icon: Sparkles },
+    { id: 'ai-commands', label: 'AI 命令', icon: Wand2 },
     { id: 'templates', label: '模板管理', icon: FileText },
     { id: 'appearance', label: '显示与外观', icon: Palette },
     { id: 'privacy', label: '隐私与安全', icon: Shield },
     { id: 'notifications', label: '通知', icon: Bell },
-    { id: 'accessibility', label: '无障碍', icon: Key },
     { id: 'language', label: '语言', icon: Globe },
     { id: 'help', label: '帮助中心', icon: HelpCircle },
   ]
@@ -92,6 +93,17 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground">管理和编辑您的消息模板</p>
               </div>
               <TemplateManager />
+            </div>
+          )}
+
+          {/* AI Commands Tab */}
+          {currentTab === 'ai-commands' && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold">AI 命令</h2>
+                <p className="text-muted-foreground">管理和编辑您的自定义 AI 命令</p>
+              </div>
+              <AICommandManager />
             </div>
           )}
 
@@ -196,29 +208,6 @@ export default function SettingsPage() {
                       <p className="text-sm text-muted-foreground">通过邮件接收摘要</p>
                     </div>
                     <Button variant="outline" size="sm">管理</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {currentTab === 'accessibility' && (
-            <div>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold">无障碍</h2>
-                <p className="text-muted-foreground">调整应用以满足您的需求</p>
-              </div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>无障碍设置</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">高对比度模式</p>
-                      <p className="text-sm text-muted-foreground">增加界面元素的对比度</p>
-                    </div>
-                    <Button variant="outline" size="sm">启用</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -348,6 +337,17 @@ export default function SettingsPage() {
                 </div>
               )}
 
+              {/* AI Commands Tab */}
+              {currentTab === 'ai-commands' && (
+                <div>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold">AI 命令</h2>
+                    <p className="text-muted-foreground">管理和编辑您的自定义 AI 命令</p>
+                  </div>
+                  <AICommandManager />
+                </div>
+              )}
+
               {/* Appearance Tab */}
               {currentTab === 'appearance' && (
                 <div>
@@ -449,29 +449,6 @@ export default function SettingsPage() {
                           <p className="text-sm text-muted-foreground">通过邮件接收摘要</p>
                         </div>
                         <Button variant="outline" size="sm">管理</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {currentTab === 'accessibility' && (
-                <div>
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-bold">无障碍</h2>
-                    <p className="text-muted-foreground">调整应用以满足您的需求</p>
-                  </div>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>无障碍设置</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">高对比度模式</p>
-                          <p className="text-sm text-muted-foreground">增加界面元素的对比度</p>
-                        </div>
-                        <Button variant="outline" size="sm">启用</Button>
                       </div>
                     </CardContent>
                   </Card>

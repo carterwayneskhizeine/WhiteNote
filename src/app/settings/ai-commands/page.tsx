@@ -1,5 +1,5 @@
 import SettingsPage from '../page'
 
-export default function AccessibilitySettingsPage() {
+export default function AICommandsSettingsPage() {
   return <SettingsPage />
 }

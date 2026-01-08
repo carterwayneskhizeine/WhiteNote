@@ -7,13 +7,13 @@ datasource db {
 }
 
 model User {
-  id            String     @id @default(cuid())
-  email         String     @unique
+  id            String       @id @default(cuid())
+  email         String       @unique
   passwordHash  String
   name          String?
   avatar        String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   emailVerified DateTime?
   accounts      Account[]
   aiConfig      AiConfig?
@@ -22,6 +22,7 @@ model User {
   sessions      Session[]
   templates     Template[]
   retweets      Retweet[]
+  aiCommands    AICommand[]
 }
 
 model Account {
@@ -245,4 +246,19 @@ model SearchHistory {
   createdAt DateTime @default(now())
 
   @@index([createdAt(sort: Desc)])
+}
+
+model AICommand {
+  id          String   @id @default(cuid())
+  label       String
+  description String
+  action      String   @unique
+  prompt      String
+  isBuiltIn   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  authorId    String?
+  author      User?    @relation(fields: [authorId], references: [id])
+
+  @@index([isBuiltIn])
 }

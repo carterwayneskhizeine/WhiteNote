@@ -1,44 +1,13 @@
-import { Check, Sparkles, Languages, FileText, Wand2 } from 'lucide-react'
+import { Check, Sparkles } from 'lucide-react'
 import * as React from 'react'
+import { aiCommandsApi } from '@/lib/api'
 
-export interface AICommand {
+export interface AICommandData {
   id: string
   label: string
   description: string
-  icon: React.ElementType
   action: string
 }
-
-const commands: AICommand[] = [
-  {
-    id: 'summarize',
-    label: '总结',
-    description: '总结内容的要点',
-    icon: FileText,
-    action: 'summarize',
-  },
-  {
-    id: 'translate',
-    label: '翻译',
-    description: '翻译成其他语言',
-    icon: Languages,
-    action: 'translate',
-  },
-  {
-    id: 'expand',
-    label: '扩展',
-    description: '扩展内容使其更完整',
-    icon: Sparkles,
-    action: 'expand',
-  },
-  {
-    id: 'polish',
-    label: '润色',
-    description: '润色文字使其更专业',
-    icon: Wand2,
-    action: 'polish',
-  },
-]
 
 interface AICommandListProps {
   command: (props: { content: any; action: string }) => void
@@ -47,6 +16,53 @@ interface AICommandListProps {
 export const AICommandList = React.forwardRef<any, AICommandListProps>(
   (props, ref) => {
     const [selectedIndex, setSelectedIndex] = React.useState(0)
+    const [commands, setCommands] = React.useState<AICommandData[]>([])
+    const [isLoading, setIsLoading] = React.useState(true)
+
+    // Load commands from API
+    React.useEffect(() => {
+      const loadCommands = async () => {
+        try {
+          const result = await aiCommandsApi.getCommands()
+          if (result.data) {
+            setCommands(result.data)
+          }
+        } catch (error) {
+          console.error('Failed to load AI commands:', error)
+          // Fallback to default commands if API fails
+          setCommands([
+            {
+              id: 'summarize',
+              label: '总结',
+              description: '总结内容的要点',
+              action: 'summarize',
+            },
+            {
+              id: 'translate',
+              label: '翻译',
+              description: '翻译成其他语言',
+              action: 'translate',
+            },
+            {
+              id: 'expand',
+              label: '扩展',
+              description: '扩展内容使其更完整',
+              action: 'expand',
+            },
+            {
+              id: 'polish',
+              label: '润色',
+              description: '润色文字使其更专业',
+              action: 'polish',
+            },
+          ])
+        } finally {
+          setIsLoading(false)
+        }
+      }
+
+      loadCommands()
+    }, [])
 
     React.useImperativeHandle(ref, () => ({
       onKeyDown: ({ event }: { event: KeyboardEvent }) => {
@@ -77,13 +93,25 @@ export const AICommandList = React.forwardRef<any, AICommandListProps>(
       })
     }
 
+    if (isLoading) {
+      return (
+        <div className="bg-popover text-popover-foreground border border-border rounded-lg shadow-lg p-2 min-w-[200px]">
+          <div className="text-xs font-semibold text-muted-foreground px-2 py-1 mb-1">
+            AI 助手
+          </div>
+          <div className="px-2 py-3 text-sm text-muted-foreground">
+            加载中...
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="bg-popover text-popover-foreground border border-border rounded-lg shadow-lg p-2 min-w-[200px] max-h-[300px] overflow-y-auto">
         <div className="text-xs font-semibold text-muted-foreground px-2 py-1 mb-1">
           AI 助手
         </div>
         {commands.map((command, index) => {
-          const Icon = command.icon
           const isSelected = index === selectedIndex
 
           return (
@@ -96,7 +124,7 @@ export const AICommandList = React.forwardRef<any, AICommandListProps>(
               }`}
               onClick={() => selectItem(index)}
             >
-              <Icon className="h-4 w-4 shrink-0 mt-0.5" />
+              <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
               <div className="flex-1 min-w-0">
                 <div className="font-medium">{command.label}</div>
                 <div className="text-xs text-muted-foreground truncate">
@@ -116,4 +144,3 @@ export const AICommandList = React.forwardRef<any, AICommandListProps>(
 
 AICommandList.displayName = 'AICommandList'
 
-export { commands }

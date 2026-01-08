@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
 import {
-  Hash, Bell, Bookmark, User,
+  Hash, Bell, Bookmark,
   MoreHorizontal, PenLine, LogOut, UserCircle
 } from "lucide-react"
 
@@ -48,9 +48,6 @@ const XNotifications = ({ isActive, ...props }: any) => (
 const XBookmarks = ({ isActive, ...props }: any) => (
   <Bookmark {...props} size={28} strokeWidth={isActive ? 3 : 2} fill={isActive ? "currentColor" : "none"} />
 )
-const XProfile = ({ isActive, ...props }: any) => (
-  <User {...props} size={28} strokeWidth={isActive ? 3 : 2} fill={isActive ? "currentColor" : "none"} />
-)
 const XMore = ({ isActive, ...props }: any) => (
   <MoreHorizontal {...props} size={28} strokeWidth={2} />
 )
@@ -60,7 +57,6 @@ const navItems = [
   { icon: XExplore, label: "Tags", href: "/tags" },
   { icon: XNotifications, label: "通知", href: "/notifications" },
   { icon: XBookmarks, label: "收藏", href: "/favorites" },
-  { icon: XProfile, label: "个人资料", href: "/profile" },
   { icon: XMore, label: "更多", href: "/settings" },
 ]
 
@@ -229,9 +225,6 @@ export function LeftSidebar({ isMobile, collapsed }: LeftSidebarProps) {
                 <Button variant="ghost" className="w-full justify-start font-bold h-12" onClick={() => router.push('/settings')}>
                   <UserCircle className="h-5 w-5 mr-3" />
                   编辑资料
-                </Button>
-                <Button variant="ghost" className="w-full justify-start font-bold h-12" onClick={() => router.push('/profile')}>
-                  添加现有账号
                 </Button>
                 <div className="h-px bg-border my-1" />
                 <Button variant="ghost" className="w-full justify-start font-bold h-12" onClick={handleSignOut}>

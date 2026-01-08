@@ -4,7 +4,7 @@ import { ReactRenderer } from '@tiptap/react'
 import tippy from 'tippy.js'
 import 'tippy.js/animations/scale.css'
 import 'tippy.js/themes/light.css'
-import { AICommandList, commands } from './AICommandList'
+import { AICommandList } from './AICommandList'
 
 interface SlashCommandOptions {
   onCommandSelect: (action: string, editor: any) => void
@@ -25,9 +25,8 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
         editor: this.editor,
         char: '/',
         items: ({ query }) => {
-          return commands.filter((item) =>
-            item.label.toLowerCase().includes(query.toLowerCase())
-          )
+          // Return empty array as filtering is now done inside AICommandList
+          return []
         },
         render: () => {
           let component: any
