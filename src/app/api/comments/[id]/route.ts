@@ -61,18 +61,29 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
   const { id } = await params
 
-  // 检查评论是否存在以及用户是否有权限删除
+  // 检查评论是否存在
   const comment = await prisma.comment.findUnique({
     where: { id },
+    include: { message: { select: { authorId: true } } },
   })
 
   if (!comment) {
     return Response.json({ error: "Comment not found" }, { status: 404 })
   }
 
-  // 只有作者可以删除自己的评论
-  if (comment.authorId !== session.user.id) {
-    return Response.json({ error: "Forbidden" }, { status: 403 })
+  // 授权检查：
+  // 1. 如果评论有作者（普通评论），只有作者可以删除
+  // 2. 如果评论没有作者（AI 生成评论），只有消息作者可以删除
+  if (comment.authorId) {
+    // 普通评论：只有作者可以删除
+    if (comment.authorId !== session.user.id) {
+      return Response.json({ error: "Forbidden" }, { status: 403 })
+    }
+  } else {
+    // AI 评论：只有消息作者可以删除
+    if (comment.message.authorId !== session.user.id) {
+      return Response.json({ error: "Forbidden" }, { status: 403 })
+    }
   }
 
   // 删除评论（级联删除子评论）
@@ -103,18 +114,29 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return Response.json({ error: "Content is required" }, { status: 400 })
     }
 
-    // 检查评论是否存在以及用户是否有权限编辑
+    // 检查评论是否存在
     const comment = await prisma.comment.findUnique({
       where: { id },
+      include: { message: { select: { authorId: true } } },
     })
 
     if (!comment) {
       return Response.json({ error: "Comment not found" }, { status: 404 })
     }
 
-    // 只有作者可以编辑自己的评论
-    if (comment.authorId !== session.user.id) {
-      return Response.json({ error: "Forbidden" }, { status: 403 })
+    // 授权检查：
+    // 1. 如果评论有作者（普通评论），只有作者可以编辑
+    // 2. 如果评论没有作者（AI 生成评论），只有消息作者可以编辑
+    if (comment.authorId) {
+      // 普通评论：只有作者可以编辑
+      if (comment.authorId !== session.user.id) {
+        return Response.json({ error: "Forbidden" }, { status: 403 })
+      }
+    } else {
+      // AI 评论：只有消息作者可以编辑
+      if (comment.message.authorId !== session.user.id) {
+        return Response.json({ error: "Forbidden" }, { status: 403 })
+      }
     }
 
     // 更新评论
