@@ -29,6 +29,7 @@ import {
 import { cn, getHandle } from "@/lib/utils"
 import { ReplyDialog } from "@/components/ReplyDialog"
 import { RetweetDialog } from "@/components/RetweetDialog"
+import { QuotedMessageCard } from "@/components/QuotedMessageCard"
 
 export default function StatusPage() {
     const { id } = useParams() as { id: string }
@@ -177,6 +178,11 @@ export default function StatusPage() {
                 <div className="mt-4 text-sm leading-normal wrap-break-word">
                     <TipTapViewer content={message.content} />
                 </div>
+
+                {/* 引用的消息卡片 - 转推时显示 */}
+                {message.quotedMessage && (
+                    <QuotedMessageCard message={message.quotedMessage} />
+                )}
 
                 <div className="mt-4 flex flex-wrap gap-1 text-muted-foreground text-[15px]">
                     <span>{format(new Date(message.createdAt), "a h:mm · yyyy'年'M'月'd'日'", { locale: zhCN })}</span>

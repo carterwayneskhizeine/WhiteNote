@@ -95,6 +95,19 @@ export interface TagsResponse {
 }
 
 // ==================== Comments ====================
+// 引用的消息（简化版）
+export interface QuotedMessage {
+  id: string
+  content: string
+  createdAt: string
+  author: {
+    id: string
+    name: string | null
+    avatar: string | null
+    email: string | null
+  } | null
+}
+
 export interface Comment {
   id: string
   content: string
@@ -110,6 +123,8 @@ export interface Comment {
     email: string | null
   }
   parentId?: string | null
+  quotedMessageId?: string | null
+  quotedMessage?: QuotedMessage | null
   _count?: {
     replies: number
   }

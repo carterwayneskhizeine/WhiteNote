@@ -55,6 +55,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       author: {
         select: { id: true, name: true, avatar: true, email: true },
       },
+      quotedMessage: {
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          author: {
+            select: { id: true, name: true, avatar: true, email: true }
+          }
+        }
+      },
       tags: {
         include: {
           tag: { select: { id: true, name: true, color: true } },
@@ -181,6 +191,16 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       },
       include: {
         author: { select: { id: true, name: true, avatar: true } },
+        quotedMessage: {
+          select: {
+            id: true,
+            content: true,
+            createdAt: true,
+            author: {
+              select: { id: true, name: true, avatar: true, email: true }
+            }
+          }
+        },
         tags: {
           include: {
             tag: { select: { id: true, name: true, color: true } },

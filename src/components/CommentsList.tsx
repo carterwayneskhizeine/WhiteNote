@@ -24,6 +24,7 @@ import { zhCN } from "date-fns/locale"
 import { useSession } from "next-auth/react"
 import { TipTapViewer } from "@/components/TipTapViewer"
 import { ReplyDialog } from "@/components/ReplyDialog"
+import { QuotedMessageCard } from "@/components/QuotedMessageCard"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -306,6 +307,14 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
                   <div className="mt-1 text-sm leading-normal wrap-break-word">
                     <TipTapViewer content={comment.content} />
                   </div>
+
+                  {/* 引用的消息卡片 - 类似 X/Twitter */}
+                  {comment.quotedMessage && (
+                    <QuotedMessageCard
+                      message={comment.quotedMessage}
+                      className="mt-2"
+                    />
+                  )}
 
                   {/* Action row for comments */}
                   <div className="mt-3 flex items-center justify-between max-w-75 text-muted-foreground">

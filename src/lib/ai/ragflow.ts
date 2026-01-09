@@ -25,13 +25,11 @@ interface RAGFlowResponse {
   choices: Array<{
     message: {
       content: string
-      reference?: {
-        chunks: Record<string, {
-          content: string
-          document_name: string
-          similarity: number
-        }>
-      }
+      reference?: Array<{
+        content: string
+        document_name: string
+        similarity: number
+      }>
     }
   }>
 }
@@ -82,10 +80,10 @@ export async function callRAGFlow(
   const data: RAGFlowResponse = await response.json()
   const message = data.choices[0]?.message
 
-  const references = message?.reference?.chunks
-    ? Object.values(message.reference.chunks).map((chunk) => ({
-        content: chunk.content,
-        source: chunk.document_name,
+  const references = message?.reference
+    ? message.reference.map((ref) => ({
+        content: ref.content,
+        source: ref.document_name,
       }))
     : undefined
 

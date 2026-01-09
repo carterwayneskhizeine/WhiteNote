@@ -32,6 +32,7 @@ import { GoldieAvatar } from "@/components/GoldieAvatar"
 import { getHandle } from "@/lib/utils"
 import { ReplyDialog } from "@/components/ReplyDialog"
 import { RetweetDialog } from "@/components/RetweetDialog"
+import { QuotedMessageCard } from "@/components/QuotedMessageCard"
 
 export default function CommentDetailPage() {
   const { id, commentId } = useParams() as { id: string; commentId: string }
@@ -268,6 +269,14 @@ export default function CommentDetailPage() {
               <TipTapViewer content={comment.content} />
             </div>
 
+            {/* 引用的消息卡片 - 类似 X/Twitter */}
+            {comment.quotedMessage && (
+              <QuotedMessageCard
+                message={comment.quotedMessage}
+                className="mt-2"
+              />
+            )}
+
             {/* Action Row */}
             <div className="mt-3 flex items-center justify-between max-w-75 text-muted-foreground">
               <div
@@ -427,6 +436,14 @@ export default function CommentDetailPage() {
                   <div className="mt-1 text-sm leading-normal wrap-break-word">
                     <TipTapViewer content={childComment.content} />
                   </div>
+
+                  {/* 引用的消息卡片 - 类似 X/Twitter */}
+                  {childComment.quotedMessage && (
+                    <QuotedMessageCard
+                      message={childComment.quotedMessage}
+                      className="mt-2"
+                    />
+                  )}
 
                   {/* Action Row for Child Comments */}
                   <div className="mt-3 flex items-center justify-between max-w-75 text-muted-foreground">

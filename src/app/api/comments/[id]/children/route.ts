@@ -28,6 +28,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     where: { parentId: id },
     include: {
       author: { select: { id: true, name: true, avatar: true, email: true } },
+      quotedMessage: {
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          author: {
+            select: { id: true, name: true, avatar: true, email: true }
+          }
+        }
+      },
       _count: {
         select: { replies: true, retweets: true }
       },

@@ -5,6 +5,15 @@ import { callRAGFlow } from "@/lib/ai/ragflow"
 import { getAiConfig } from "@/lib/ai/config"
 import { NextRequest } from "next/server"
 
+/**
+ * 从 RAGFlow 文档名称提取消息 ID
+ * 例如: message_cmk73pxzu000ccgim9wb5f6bc.md -> cmk73pxzu000ccgim9wb5f6bc
+ */
+function extractMessageIdFromDocument(documentName: string): string | null {
+  const match = documentName.match(/message_([a-z0-9]+)\.md$/i)
+  return match ? match[1] : null
+}
+
 export const runtime = 'nodejs'
 
 /**
@@ -42,6 +51,7 @@ export async function POST(request: NextRequest) {
 
     let aiResponse: string
     let references: Array<{ content: string; source: string }> | undefined
+    let quotedMessageId: string | undefined
 
     if (config.enableRag && config.ragflowApiKey && config.ragflowChatId) {
       // RAG 模式
@@ -49,6 +59,11 @@ export async function POST(request: NextRequest) {
       const result = await callRAGFlow(session.user.id, messages)
       aiResponse = result.content
       references = result.references
+
+      // 从 references 中提取第一个（最相关）的 messageId
+      if (references && references.length > 0) {
+        quotedMessageId = extractMessageIdFromDocument(references[0].source) || undefined
+      }
     } else {
       // 标准模式
       const systemPrompt = await buildSystemPrompt(session.user.id)
@@ -59,12 +74,19 @@ export async function POST(request: NextRequest) {
       aiResponse = await callOpenAI({ userId: session.user.id, messages })
     }
 
-    // 保存 AI 回复（AI 评论的 authorId 为 null）
+    // 清理 AI 回复中的 [ID:0] 标记
+    const cleanedResponse = aiResponse.replace(/\[ID:\d+\]/g, '').trim()
+
+    // 保存 AI 回复（AI 评论的 authorId 为 null，包含引用）
     const comment = await prisma.comment.create({
       data: {
-        content: aiResponse,
+        content: cleanedResponse,
         messageId,
         isAIBot: true,
+        quotedMessageId,
+      },
+      include: {
+        quotedMessage: true,
       },
     })
 
