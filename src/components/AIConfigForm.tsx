@@ -312,6 +312,22 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
               />
             </div>
           </div>
+          {config.enableAutoTag && (
+            <div>
+              <label className="text-sm font-medium mb-1 block">自动打标签模型</label>
+              <Input
+                value={config.autoTagModel}
+                onChange={(e) =>
+                  setConfig({ ...config, autoTagModel: e.target.value })
+                }
+                placeholder={config.openaiModel}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                留空则使用 OpenAI 配置中的模型
+              </p>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium">每日晨报</div>
