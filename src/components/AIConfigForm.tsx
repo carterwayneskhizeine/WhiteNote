@@ -31,11 +31,16 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
       if (result.data) {
         setConfig(result.data)
 
-        // Restore ASR API key from sessionStorage if available
+        // Restore API keys from sessionStorage if available
+        const sessionOpenAIKey = sessionStorage.getItem('openai_api_key')
+        const sessionRagflowKey = sessionStorage.getItem('ragflow_api_key')
         const sessionAsrKey = sessionStorage.getItem('asr_api_key')
-        if (sessionAsrKey) {
-          setSessionApiKeys(prev => ({ ...prev, asr: sessionAsrKey }))
-        }
+
+        setSessionApiKeys({
+          openai: sessionOpenAIKey || "",
+          ragflow: sessionRagflowKey || "",
+          asr: sessionAsrKey || "",
+        })
       }
     } catch (error) {
       console.error("Failed to fetch config:", error)
@@ -97,6 +102,12 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
         setSessionApiKeys(updatedSessionKeys)
 
         // Save to sessionStorage for other components to access
+        if (updatedSessionKeys.openai) {
+          sessionStorage.setItem('openai_api_key', updatedSessionKeys.openai)
+        }
+        if (updatedSessionKeys.ragflow) {
+          sessionStorage.setItem('ragflow_api_key', updatedSessionKeys.ragflow)
+        }
         if (updatedSessionKeys.asr) {
           sessionStorage.setItem('asr_api_key', updatedSessionKeys.asr)
         }
@@ -194,12 +205,12 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
             <label className="text-sm font-medium mb-1 block">API Key</label>
             <Input
               type="password"
-              value={sessionApiKeys.openai || ""}
+              value={sessionApiKeys.openai || (config.openaiApiKey === "***" ? "******" : "")}
               onChange={(e) => {
                 setConfig({ ...config, openaiApiKey: e.target.value })
                 setSessionApiKeys({ ...sessionApiKeys, openai: e.target.value })
               }}
-              placeholder={config.openaiApiKey === "***" ? "已配置 (留空保持不变)" : "sk-..."}
+              placeholder="sk-..."
             />
             {config.openaiApiKey === "***" && !sessionApiKeys.openai && (
               <p className="text-xs text-muted-foreground mt-1">✓ API Key 已配置</p>
@@ -277,12 +288,12 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
             <label className="text-sm font-medium mb-1 block">API Key</label>
             <Input
               type="password"
-              value={sessionApiKeys.ragflow || ""}
+              value={sessionApiKeys.ragflow || (config.ragflowApiKey === "***" ? "******" : "")}
               onChange={(e) => {
                 setConfig({ ...config, ragflowApiKey: e.target.value })
                 setSessionApiKeys({ ...sessionApiKeys, ragflow: e.target.value })
               }}
-              placeholder={config.ragflowApiKey === "***" ? "已配置 (留空保持不变)" : "ragflow-..."}
+              placeholder="ragflow-..."
             />
             {config.ragflowApiKey === "***" && !sessionApiKeys.ragflow && (
               <p className="text-xs text-muted-foreground mt-1">✓ API Key 已配置</p>
@@ -393,12 +404,12 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
             <label className="text-sm font-medium mb-1 block">API Key</label>
             <Input
               type="password"
-              value={sessionApiKeys.asr || ""}
+              value={sessionApiKeys.asr || (config.asrApiKey === "***" ? "******" : "")}
               onChange={(e) => {
                 setConfig({ ...config, asrApiKey: e.target.value })
                 setSessionApiKeys({ ...sessionApiKeys, asr: e.target.value })
               }}
-              placeholder={config.asrApiKey === "***" ? "已配置 (留空保持不变)" : "sk-..."}
+              placeholder="sk-..."
             />
             {config.asrApiKey === "***" && !sessionApiKeys.asr && (
               <p className="text-xs text-muted-foreground mt-1">✓ API Key 已配置</p>
