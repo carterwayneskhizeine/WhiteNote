@@ -21,7 +21,7 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   // Session storage for user-inputted API keys (not persisted to backend as "***")
-  const [sessionApiKeys, setSessionApiKeys] = useState<{ openai?: string; ragflow?: string }>({})
+  const [sessionApiKeys, setSessionApiKeys] = useState<{ openai?: string; ragflow?: string; asr?: string }>({})
 
   // Fetch config
   const fetchConfig = async () => {
@@ -30,6 +30,12 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
       const result = await configApi.getConfig()
       if (result.data) {
         setConfig(result.data)
+
+        // Restore ASR API key from sessionStorage if available
+        const sessionAsrKey = sessionStorage.getItem('asr_api_key')
+        if (sessionAsrKey) {
+          setSessionApiKeys(prev => ({ ...prev, asr: sessionAsrKey }))
+        }
       }
     } catch (error) {
       console.error("Failed to fetch config:", error)
@@ -65,6 +71,7 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
         aiPersonality: config.aiPersonality,
         aiExpertise: config.aiExpertise ?? undefined,
         enableLinkSuggestion: config.enableLinkSuggestion,
+        asrApiUrl: config.asrApiUrl,
       }
 
       // 只有在 API Key 不是遮蔽值时才发送
@@ -74,20 +81,32 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
       if (config.ragflowApiKey && config.ragflowApiKey !== "***") {
         updateData.ragflowApiKey = config.ragflowApiKey
       }
+      if (config.asrApiKey && config.asrApiKey !== "***") {
+        updateData.asrApiKey = config.asrApiKey
+      }
 
       const result = await configApi.updateConfig(updateData)
 
       if (result.data) {
         // Update session API keys with what user just input
-        setSessionApiKeys({
+        const updatedSessionKeys = {
           openai: config.openaiApiKey && config.openaiApiKey !== "***" ? config.openaiApiKey : sessionApiKeys.openai,
           ragflow: config.ragflowApiKey && config.ragflowApiKey !== "***" ? config.ragflowApiKey : sessionApiKeys.ragflow,
-        })
+          asr: config.asrApiKey && config.asrApiKey !== "***" ? config.asrApiKey : sessionApiKeys.asr,
+        }
+        setSessionApiKeys(updatedSessionKeys)
+
+        // Save to sessionStorage for other components to access
+        if (updatedSessionKeys.asr) {
+          sessionStorage.setItem('asr_api_key', updatedSessionKeys.asr)
+        }
+
         // 保留用户输入的敏感字段，只更新其他字段
         setConfig({
           ...result.data,
           openaiApiKey: config.openaiApiKey, // 保留用户输入
           ragflowApiKey: config.ragflowApiKey, // 保留用户输入
+          asrApiKey: config.asrApiKey, // 保留用户输入
         })
         showMessage("success", "配置保存成功！更改立即生效")
         onSuccess?.()
@@ -362,6 +381,42 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
               <option value="professional">专业严谨</option>
               <option value="casual">轻松幽默</option>
             </select>
+          </div>
+        </div>
+      </Card>
+
+      {/* ASR Configuration */}
+      <Card className="p-6">
+        <h3 className="text-lg font-bold mb-4">语音识别 (ASR) 配置</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-1 block">API Key</label>
+            <Input
+              type="password"
+              value={sessionApiKeys.asr || ""}
+              onChange={(e) => {
+                setConfig({ ...config, asrApiKey: e.target.value })
+                setSessionApiKeys({ ...sessionApiKeys, asr: e.target.value })
+              }}
+              placeholder={config.asrApiKey === "***" ? "已配置 (留空保持不变)" : "sk-..."}
+            />
+            {config.asrApiKey === "***" && !sessionApiKeys.asr && (
+              <p className="text-xs text-muted-foreground mt-1">✓ API Key 已配置</p>
+            )}
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">API URL</label>
+            <Input
+              value={config.asrApiUrl}
+              onChange={(e) =>
+                setConfig({ ...config, asrApiUrl: e.target.value })
+              }
+              placeholder="https://api.siliconflow.cn/v1/audio/transcriptions"
+            />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <p>模型固定为: TeleAI/TeleSpeechASR</p>
+            <p>支持格式: wav/mp3/pcm/opus/webm</p>
           </div>
         </div>
       </Card>

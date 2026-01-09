@@ -207,6 +207,8 @@ export interface AIConfig {
   aiPersonality: string
   aiExpertise: string | null
   enableLinkSuggestion: boolean
+  asrApiKey: string
+  asrApiUrl: string
   updatedAt: string
 }
 
@@ -229,6 +231,8 @@ export interface UpdateAIConfigInput {
   aiPersonality?: string
   aiExpertise?: string
   enableLinkSuggestion?: boolean
+  asrApiKey?: string
+  asrApiUrl?: string
 }
 
 export interface AIConfigResponse {

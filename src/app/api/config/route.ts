@@ -22,6 +22,7 @@ export async function GET() {
       ...config,
       openaiApiKey: config.openaiApiKey ? "***" : "",
       ragflowApiKey: config.ragflowApiKey ? "***" : "",
+      asrApiKey: config.asrApiKey ? "***" : "",
     },
   })
 }
@@ -59,6 +60,8 @@ export async function PUT(request: NextRequest) {
       "aiPersonality",
       "aiExpertise",
       "enableLinkSuggestion",
+      "asrApiKey",
+      "asrApiUrl",
     ]
 
     const updateData: Record<string, unknown> = {}
@@ -75,6 +78,7 @@ export async function PUT(request: NextRequest) {
         ...config,
         openaiApiKey: config.openaiApiKey ? "***" : "",
         ragflowApiKey: config.ragflowApiKey ? "***" : "",
+        asrApiKey: config.asrApiKey ? "***" : "",
       },
       message: "Configuration updated successfully. Changes take effect immediately.",
     })
