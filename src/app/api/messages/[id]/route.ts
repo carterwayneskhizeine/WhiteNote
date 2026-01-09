@@ -64,8 +64,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return Response.json({ error: "Message not found" }, { status: 404 })
   }
 
-  // 权限检查
-  if (message.authorId !== session.user.id) {
+  // 权限检查：系统消息（authorId 为 null）所有用户都可以查看
+  if (message.authorId !== null && message.authorId !== session.user.id) {
     return Response.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -105,7 +105,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return Response.json({ error: "Message not found" }, { status: 404 })
   }
 
-  if (existing.authorId !== session.user.id) {
+  // 权限检查：系统消息可以被任何人编辑
+  if (existing.authorId !== null && existing.authorId !== session.user.id) {
     return Response.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -196,7 +197,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return Response.json({ error: "Message not found" }, { status: 404 })
   }
 
-  if (existing.authorId !== session.user.id) {
+  // 权限检查：系统消息可以被任何人删除
+  if (existing.authorId !== null && existing.authorId !== session.user.id) {
     return Response.json({ error: "Forbidden" }, { status: 403 })
   }
 

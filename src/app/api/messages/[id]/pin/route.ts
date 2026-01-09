@@ -26,7 +26,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return Response.json({ error: "Message not found" }, { status: 404 })
   }
 
-  if (message.authorId !== session.user.id) {
+  // 权限检查：系统消息可以被任何人置顶/取消置顶
+  if (message.authorId !== null && message.authorId !== session.user.id) {
     return Response.json({ error: "Forbidden" }, { status: 403 })
   }
 

@@ -24,24 +24,33 @@ export async function GET(request: NextRequest) {
   const parentId = searchParams.get("parentId")
   const rootOnly = searchParams.get("rootOnly") === "true"
 
-  // 构建查询条件
-  const where: Record<string, unknown> = {
-    authorId: session.user.id,
-  }
+  // 构建基础查询条件
+  const baseWhere: Record<string, unknown> = {}
 
   if (tagId) {
-    where.tags = { some: { tagId } }
+    baseWhere.tags = { some: { tagId } }
   }
   if (isStarred !== undefined) {
-    where.isStarred = isStarred
+    baseWhere.isStarred = isStarred
   }
   if (isPinned !== undefined) {
-    where.isPinned = isPinned
+    baseWhere.isPinned = isPinned
   }
   if (parentId) {
-    where.parentId = parentId
+    baseWhere.parentId = parentId
   } else if (rootOnly) {
-    where.parentId = null
+    baseWhere.parentId = null
+  }
+
+  // 构建最终查询条件：用户的消息 OR 系统生成的晨报
+  const where: Record<string, unknown> = {
+    OR: [
+      { authorId: session.user.id, ...baseWhere },  // 用户的消息
+      {
+        authorId: null,  // 系统消息
+        tags: { some: { tag: { name: "DailyReview" } } }  // 带有 DailyReview 标签
+      }
+    ]
   }
 
   // 查询消息
