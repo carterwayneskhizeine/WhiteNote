@@ -1,6 +1,7 @@
 import { Job } from "bullmq"
 import prisma from "@/lib/prisma"
 import { applyAutoTags } from "@/lib/ai/auto-tag"
+import { addTask } from "@/lib/queue"
 
 interface AutoTagJobData {
   userId: string
@@ -42,4 +43,15 @@ export async function processAutoTag(job: Job<AutoTagJobData>) {
   await applyAutoTags(userId, messageId, config.autoTagModel)
 
   console.log(`[AutoTag] Completed for message: ${messageId}`)
+
+  // 打完标签后，触发 RAGFlow 同步（确保标签被包含）
+  try {
+    const job = await addTask("sync-ragflow", {
+      userId,
+      messageId,
+    })
+    console.log(`[AutoTag] Triggered sync-ragflow job:`, job?.id)
+  } catch (error) {
+    console.error(`[AutoTag] Failed to trigger sync-ragflow:`, error)
+  }
 }

@@ -225,18 +225,19 @@ export async function POST(request: NextRequest) {
     })
 
     // 添加自动打标签任务（如果启用）
+    // 注意：auto-tag 完成后会自动触发 sync-ragflow，确保标签被包含
     if (config?.enableAutoTag) {
       await addTask("auto-tag", {
         userId: session.user.id,
         messageId: message.id,
       })
+    } else {
+      // 如果未启用自动打标签，直接同步到 RAGFlow
+      await addTask("sync-ragflow", {
+        userId: session.user.id,
+        messageId: message.id,
+      })
     }
-
-    // 添加 RAGFlow 同步任务（始终保持同步）
-    await addTask("sync-ragflow", {
-      userId: session.user.id,
-      messageId: message.id,
-    })
 
     return Response.json({ data: messageWithRetweetInfo }, { status: 201 })
   } catch (error) {
