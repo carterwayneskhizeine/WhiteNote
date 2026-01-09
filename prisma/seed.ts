@@ -54,8 +54,8 @@ async function main() {
     {
       id: 'goldierill',
       name: 'GoldieRill',
-      description: 'AI 助手快速调用',
-      content: `· @goldierill ·`,
+      description: 'AI Assistant',
+      content: `  @goldierill  `,
       isBuiltIn: true,
     },
   ]
