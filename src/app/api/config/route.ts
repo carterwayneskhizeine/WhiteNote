@@ -1,5 +1,6 @@
 import { requireAuth, AuthError } from "@/lib/api-auth"
 import { getAiConfig, updateAiConfig } from "@/lib/ai/config"
+import { maskSensitive } from "@/lib/crypto"
 import { NextRequest } from "next/server"
 
 export const runtime = 'nodejs'
@@ -7,32 +8,36 @@ export const runtime = 'nodejs'
 /**
  * GET /api/config
  * 获取 AI 配置 (支持热更新)
+ * 敏感字段（API 密钥）已被加密存储，此处返回时做掩码处理
  */
 export async function GET() {
   try {
     const session = await requireAuth()
     const config = await getAiConfig(session.user.id)
 
-  // 隐藏敏感字段
+  // 敏感字段做掩码处理（显示前4和后4字符）
   return Response.json({
     data: {
       ...config,
-      openaiApiKey: config.openaiApiKey ? "***" : "",
-      ragflowApiKey: config.ragflowApiKey ? "***" : "",
-      asrApiKey: config.asrApiKey ? "***" : "",
+      openaiApiKey: config.openaiApiKey ? maskSensitive(config.openaiApiKey) : "",
+      ragflowApiKey: config.ragflowApiKey ? maskSensitive(config.ragflowApiKey) : "",
+      asrApiKey: config.asrApiKey ? maskSensitive(config.asrApiKey) : "",
     },
   })
   } catch (error) {
     if (error instanceof AuthError) {
       return Response.json({ error: error.message }, { status: 401 })
     }
-    throw error
+    // 不要直接抛出错误，避免泄露内部实现细节
+    console.error("Failed to get config:", error)
+    return Response.json({ error: "Failed to retrieve configuration" }, { status: 500 })
   }
 }
 
 /**
  * PUT /api/config
  * 更新 AI 配置 (立即生效，无需重启)
+ * 敏感字段会自动加密存储
  */
 export async function PUT(request: NextRequest) {
   try {
@@ -76,9 +81,9 @@ export async function PUT(request: NextRequest) {
     return Response.json({
       data: {
         ...config,
-        openaiApiKey: config.openaiApiKey ? "***" : "",
-        ragflowApiKey: config.ragflowApiKey ? "***" : "",
-        asrApiKey: config.asrApiKey ? "***" : "",
+        openaiApiKey: config.openaiApiKey ? maskSensitive(config.openaiApiKey) : "",
+        ragflowApiKey: config.ragflowApiKey ? maskSensitive(config.ragflowApiKey) : "",
+        asrApiKey: config.asrApiKey ? maskSensitive(config.asrApiKey) : "",
       },
       message: "Configuration updated successfully. Changes take effect immediately.",
     })
@@ -87,7 +92,13 @@ export async function PUT(request: NextRequest) {
       return Response.json({ error: error.message }, { status: 401 })
     }
     console.error("Failed to update config:", error)
-    return Response.json({ error: "Failed to update config" }, { status: 500 })
+
+    // 提供更友好的错误消息，不暴露内部实现
+    const errorMessage = error instanceof Error && error.message.includes('encrypt')
+      ? "Encryption failed. Please check server configuration."
+      : "Failed to update configuration"
+
+    return Response.json({ error: errorMessage }, { status: 500 })
   }
 }
 
@@ -119,16 +130,17 @@ export async function POST() {
     } else {
       return Response.json({
         success: false,
-        error: `RAGFlow returned status ${response.status}`,
+        error: `Connection test failed with status ${response.status}`,
       })
     }
   } catch (error) {
     if (error instanceof AuthError) {
       return Response.json({ error: error.message }, { status: 401 })
     }
+    console.error("RAGFlow connection test failed:", error)
     return Response.json({
       success: false,
-      error: error instanceof Error ? error.message : "Connection failed",
+      error: "Connection test failed. Please check your RAGFlow configuration.",
     })
   }
 }
