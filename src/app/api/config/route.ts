@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import { getAiConfig, updateAiConfig } from "@/lib/ai/config"
 import { NextRequest } from "next/server"
 
@@ -9,12 +9,9 @@ export const runtime = 'nodejs'
  * 获取 AI 配置 (支持热更新)
  */
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const config = await getAiConfig(session.user.id)
+  try {
+    const session = await requireAuth()
+    const config = await getAiConfig(session.user.id)
 
   // 隐藏敏感字段
   return Response.json({
@@ -25,6 +22,12 @@ export async function GET() {
       asrApiKey: config.asrApiKey ? "***" : "",
     },
   })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }
 
 /**
@@ -32,12 +35,9 @@ export async function GET() {
  * 更新 AI 配置 (立即生效，无需重启)
  */
 export async function PUT(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
+    const session = await requireAuth()
+
     const body = await request.json()
 
     // 过滤允许更新的字段
@@ -83,6 +83,9 @@ export async function PUT(request: NextRequest) {
       message: "Configuration updated successfully. Changes take effect immediately.",
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
     console.error("Failed to update config:", error)
     return Response.json({ error: "Failed to update config" }, { status: 500 })
   }
@@ -93,14 +96,10 @@ export async function PUT(request: NextRequest) {
  * 测试 RAGFlow 连接
  */
 export async function POST() {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const config = await getAiConfig(session.user.id)
-
   try {
+    const session = await requireAuth()
+    const config = await getAiConfig(session.user.id)
+
     // 测试 RAGFlow 连接
     const response = await fetch(
       `${config.ragflowBaseUrl}/api/v1/datasets`,
@@ -124,6 +123,9 @@ export async function POST() {
       })
     }
   } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
     return Response.json({
       success: false,
       error: error instanceof Error ? error.message : "Connection failed",

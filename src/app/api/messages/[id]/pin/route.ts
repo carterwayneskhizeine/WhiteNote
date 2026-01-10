@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
@@ -11,14 +11,11 @@ interface RouteContext {
  * 切换置顶状态
  */
 export async function POST(request: NextRequest, context: RouteContext) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  try {
+    const session = await requireAuth()
+    const { id } = await context.params
 
-  const { id } = await context.params
-
-  const message = await prisma.message.findUnique({
+    const message = await prisma.message.findUnique({
     where: { id },
   })
 
@@ -38,4 +35,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
   })
 
   return Response.json({ data: updated })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }

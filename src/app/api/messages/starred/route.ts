@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
@@ -7,12 +7,9 @@ import { NextRequest } from "next/server"
  * 获取用户收藏的所有消息
  */
 export async function GET(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
+    const session = await requireAuth()
+
     const messages = await prisma.message.findMany({
       where: {
         authorId: session.user.id,
@@ -36,6 +33,9 @@ export async function GET(request: NextRequest) {
 
     return Response.json({ data: messages })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
     console.error("Failed to fetch starred messages:", error)
     return Response.json({ error: "Failed to fetch starred messages" }, { status: 500 })
   }

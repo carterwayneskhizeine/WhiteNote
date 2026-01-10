@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { getPaginationParams } from "@/lib/validation"
 import { NextRequest } from "next/server"
@@ -8,12 +8,9 @@ import { NextRequest } from "next/server"
  * 全局搜索
  */
 export async function GET(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const searchParams = request.nextUrl.searchParams
+  try {
+    const session = await requireAuth()
+    const searchParams = request.nextUrl.searchParams
   const query = searchParams.get("q")
 
   if (!query || query.trim() === "") {
@@ -62,4 +59,10 @@ export async function GET(request: NextRequest) {
     data: messages,
     meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
   })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }

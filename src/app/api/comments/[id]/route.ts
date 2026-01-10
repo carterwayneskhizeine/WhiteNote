@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
@@ -7,14 +7,11 @@ import { NextRequest } from "next/server"
  * 获取单个评论详情
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  try {
+    const session = await requireAuth()
+    const { id } = await params
 
-  const { id } = await params
-
-  const comment = await prisma.comment.findUnique({
+    const comment = await prisma.comment.findUnique({
     where: { id },
     include: {
       author: { select: { id: true, name: true, avatar: true, email: true } },
@@ -57,6 +54,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   return Response.json({ data: commentWithRetweetInfo })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }
 
 /**
@@ -64,14 +67,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
  * 删除评论
  */
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  try {
+    const session = await requireAuth()
+    const { id } = await params
 
-  const { id } = await params
-
-  // 检查评论是否存在
+    // 检查评论是否存在
   const comment = await prisma.comment.findUnique({
     where: { id },
     include: { message: { select: { authorId: true } } },
@@ -102,6 +102,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   })
 
   return Response.json({ success: true })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }
 
 /**
@@ -109,14 +115,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
  * 更新评论
  */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const { id } = await params
-
   try {
+    const session = await requireAuth()
+    const { id } = await params
+
     const body = await request.json()
     const { content } = body
 
@@ -173,6 +175,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     return Response.json({ data: updatedComment })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
     console.error("Failed to update comment:", error)
     return Response.json({ error: "Failed to update comment" }, { status: 500 })
   }

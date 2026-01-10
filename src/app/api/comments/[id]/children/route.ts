@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
@@ -7,14 +7,11 @@ import { NextRequest } from "next/server"
  * 获取评论的直接子评论（一级回复）
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  try {
+    const session = await requireAuth()
+    const { id } = await params
 
-  const { id } = await params
-
-  // 验证父评论存在
+    // 验证父评论存在
   const parentComment = await prisma.comment.findUnique({
     where: { id },
   })
@@ -60,4 +57,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }))
 
   return Response.json({ data: childCommentsWithRetweetInfo })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }

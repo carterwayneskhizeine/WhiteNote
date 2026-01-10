@@ -9,9 +9,7 @@ const JWT_SECRET = new TextEncoder().encode(
  */
 export async function verifySessionToken(token: string) {
   try {
-    const { payload } = await jwtDecrypt(token, JWT_SECRET, {
-      algorithms: ["dir"],
-    })
+    const { payload } = await jwtDecrypt(token, JWT_SECRET)
 
     // NextAuth v5 stores user data in the JWT payload
     // The structure is: { user: { id, email, name, image }, exp, iat }

@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
@@ -7,14 +7,10 @@ import { NextRequest } from "next/server"
  * 切换评论的转发状态
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const { id } = await params
-
   try {
+    const session = await requireAuth()
+    const { id } = await params
+
     // 检查评论是否存在
     const comment = await prisma.comment.findUnique({
       where: { id },
@@ -70,6 +66,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
     console.error("Failed to toggle retweet:", error)
     return Response.json({ error: "Failed to toggle retweet" }, { status: 500 })
   }

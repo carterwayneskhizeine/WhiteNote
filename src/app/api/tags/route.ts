@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
@@ -7,12 +7,9 @@ import { NextRequest } from "next/server"
  * 获取所有标签 (含消息数量，按热度排序)
  */
 export async function GET(_request: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const tags = await prisma.tag.findMany({
+  try {
+    const session = await requireAuth()
+    const tags = await prisma.tag.findMany({
     include: {
       _count: {
         select: { messages: true },
@@ -32,6 +29,12 @@ export async function GET(_request: NextRequest) {
   }))
 
   return Response.json({ data: formattedTags })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }
 
 /**
@@ -39,12 +42,9 @@ export async function GET(_request: NextRequest) {
  * 创建新标签
  */
 export async function POST(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
+    const session = await requireAuth()
+
     const body = await request.json()
     const { name, color } = body
 
@@ -60,7 +60,10 @@ export async function POST(request: NextRequest) {
     })
 
     return Response.json({ data: tag }, { status: 201 })
-  } catch (error: unknown) {
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
     if ((error as { code?: string }).code === "P2002") {
       return Response.json({ error: "Tag already exists" }, { status: 409 })
     }
@@ -73,12 +76,9 @@ export async function POST(request: NextRequest) {
  * 清理未使用的标签 (消息数量为0的标签)
  */
 export async function DELETE(_request: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
+    const session = await requireAuth()
+
     // 查找所有未使用的标签
     const unusedTags = await prisma.tag.findMany({
       where: {
@@ -108,6 +108,9 @@ export async function DELETE(_request: NextRequest) {
       },
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
     console.error("Failed to cleanup unused tags:", error)
     return Response.json({ error: "Failed to cleanup tags" }, { status: 500 })
   }

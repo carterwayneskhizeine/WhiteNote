@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { getPaginationParams } from "@/lib/validation"
 import { NextRequest } from "next/server"
@@ -12,12 +12,9 @@ interface RouteParams {
  * 获取标签下的所有消息
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const { id } = await params
+  try {
+    const session = await requireAuth()
+    const { id } = await params
   const { page, limit, skip } = getPaginationParams(request)
 
   const [messages, total] = await Promise.all([
@@ -51,4 +48,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     data: messages,
     meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
   })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }

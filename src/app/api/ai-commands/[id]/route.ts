@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
@@ -10,14 +10,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  try {
+    const session = await requireAuth()
+    const { id } = await params
 
-  const { id } = await params
-
-  const command = await prisma.aICommand.findFirst({
+    const command = await prisma.aICommand.findFirst({
     where: {
       id,
       OR: [
@@ -32,6 +29,12 @@ export async function GET(
   }
 
   return Response.json({ data: command })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }
 
 /**
@@ -42,12 +45,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
+    const session = await requireAuth()
     const { id } = await params
 
     const command = await prisma.aICommand.findUnique({
@@ -85,6 +84,9 @@ export async function PUT(
 
     return Response.json({ data: updatedCommand })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
     console.error("Failed to update AI command:", error)
     return Response.json({ error: "Failed to update AI command" }, { status: 500 })
   }
@@ -98,12 +100,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
+    const session = await requireAuth()
     const { id } = await params
 
     const command = await prisma.aICommand.findUnique({
@@ -133,6 +131,9 @@ export async function DELETE(
 
     return Response.json({ success: true })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
     console.error("Failed to delete AI command:", error)
     return Response.json({ error: "Failed to delete AI command" }, { status: 500 })
   }

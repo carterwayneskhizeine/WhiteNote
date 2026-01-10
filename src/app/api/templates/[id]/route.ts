@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
@@ -10,14 +10,11 @@ interface RouteParams {
  * GET /api/templates/[id]
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  try {
+    const session = await requireAuth()
+    const { id } = await params
 
-  const { id } = await params
-
-  const template = await prisma.template.findUnique({
+    const template = await prisma.template.findUnique({
     where: { id },
   })
 
@@ -26,18 +23,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   return Response.json({ data: template })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }
 
 /**
  * PUT /api/templates/[id]
  */
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const { id } = await params
+  try {
+    const session = await requireAuth()
+    const { id } = await params
   const body = await request.json()
 
   const template = await prisma.template.findUnique({
@@ -66,20 +66,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   })
 
   return Response.json({ data: updated })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }
 
 /**
  * DELETE /api/templates/[id]
  */
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  try {
+    const session = await requireAuth()
+    const { id } = await params
 
-  const { id } = await params
-
-  const template = await prisma.template.findUnique({
+    const template = await prisma.template.findUnique({
     where: { id },
   })
 
@@ -98,4 +101,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   await prisma.template.delete({ where: { id } })
 
   return Response.json({ success: true })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }

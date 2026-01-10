@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
 
@@ -7,25 +7,29 @@ import { NextRequest } from "next/server"
  * 获取所有AI命令（内置+用户自定义）
  */
 export async function GET(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  try {
+    const session = await requireAuth()
 
-  const commands = await prisma.aICommand.findMany({
-    where: {
-      OR: [
-        { isBuiltIn: true },
-        { authorId: session.user.id },
+    const commands = await prisma.aICommand.findMany({
+      where: {
+        OR: [
+          { isBuiltIn: true },
+          { authorId: session.user.id },
+        ],
+      },
+      orderBy: [
+        { isBuiltIn: "desc" },
+        { label: "asc" },
       ],
-    },
-    orderBy: [
-      { isBuiltIn: "desc" },
-      { label: "asc" },
-    ],
-  })
+    })
 
-  return Response.json({ data: commands })
+    return Response.json({ data: commands })
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
 }
 
 /**
@@ -33,12 +37,8 @@ export async function GET(request: NextRequest) {
  * 创建自定义AI命令
  */
 export async function POST(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
+    const session = await requireAuth()
     const body = await request.json()
     const { label, description, action, prompt } = body
 
@@ -74,6 +74,10 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ data: command }, { status: 201 })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+
     console.error("Failed to create AI command:", error)
     return Response.json({ error: "Failed to create AI command" }, { status: 500 })
   }

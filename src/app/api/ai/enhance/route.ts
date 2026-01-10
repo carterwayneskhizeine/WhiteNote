@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth"
+import { requireAuth, AuthError } from "@/lib/api-auth"
 import { callOpenAI } from "@/lib/ai/openai"
 import { NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
@@ -14,12 +14,8 @@ const fallbackPrompts: Record<string, string> = {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
+    const session = await requireAuth()
     const body = await request.json()
     const { action, content, target } = body
 
@@ -62,6 +58,10 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ data: { result } })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 })
+    }
+
     console.error("AI enhance error:", error)
     return Response.json(
       { error: error instanceof Error ? error.message : "AI service error" },

@@ -14,7 +14,7 @@ export async function batchUpsertTags(tagNames: string[]): Promise<string[]> {
 
   // Normalize tag names (trim, lowercase, remove duplicates)
   const normalizedNames = Array.from(
-    new Set(tagNames.map((name) => name.trim().toLowerCase()).filter(Boolean)
+    new Set(tagNames.map((name) => name.trim().toLowerCase()).filter(Boolean))
   )
 
   // Step 1: Batch query all existing tags (1 query)
