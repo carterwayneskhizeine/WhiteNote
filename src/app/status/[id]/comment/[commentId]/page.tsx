@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { commentsApi, aiApi } from "@/lib/api"
+import { commentsApi, aiApi, templatesApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import { MessageCircle, Repeat2, Share, Bot, Loader2, Image as ImageIcon, Smile, Edit2, Trash2, MoreVertical, Copy, Bookmark, BookmarkCheck } from "lucide-react"
+import { MessageCircle, Repeat2, Share, Bot, Loader2, Edit2, Trash2, MoreVertical, Copy, Bookmark, BookmarkCheck } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { TipTapViewer } from "@/components/TipTapViewer"
@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Comment } from "@/types/api"
+import { Template } from "@/types/api"
 import { useSession } from "next-auth/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { GoldieAvatar } from "@/components/GoldieAvatar"
@@ -34,6 +35,7 @@ import { ReplyDialog } from "@/components/ReplyDialog"
 import { RetweetDialog } from "@/components/RetweetDialog"
 import { QuotedMessageCard } from "@/components/QuotedMessageCard"
 import { ImageLightbox } from "@/components/ImageLightbox"
+import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
 
 export default function CommentDetailPage() {
   const { id, commentId } = useParams() as { id: string; commentId: string }
@@ -49,6 +51,10 @@ export default function CommentDetailPage() {
   const [replyTarget, setReplyTarget] = useState<Comment | null>(null)
   const [newReply, setNewReply] = useState("")
   const [posting, setPosting] = useState(false)
+  const [uploadedMedia, setUploadedMedia] = useState<MediaItem[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [templates, setTemplates] = useState<Template[]>([])
+  const mediaUploaderRef = useRef<MediaUploaderRef>(null)
 
   const [showRetweetDialog, setShowRetweetDialog] = useState(false)
   const [retweetTarget, setRetweetTarget] = useState<Comment | null>(null)
@@ -62,6 +68,21 @@ export default function CommentDetailPage() {
 
   // Manage starred state for comments
   const [starredComments, setStarredComments] = useState<Set<string>>(new Set())
+
+  // Fetch templates
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const result = await templatesApi.getTemplates()
+        if (result.data) {
+          setTemplates(result.data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch templates:", error)
+      }
+    }
+    fetchTemplates()
+  }, [])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,7 +128,7 @@ export default function CommentDetailPage() {
   }, [commentId, refreshKey])
 
   const handlePostReply = async () => {
-    if (!newReply.trim() || posting) return
+    if ((!newReply.trim() && uploadedMedia.length === 0) || posting) return
 
     setPosting(true)
     try {
@@ -115,6 +136,7 @@ export default function CommentDetailPage() {
         content: newReply.trim(),
         messageId: id,
         parentId: commentId,
+        media: uploadedMedia.map(m => ({ url: m.url, type: m.type })),
       })
 
       if (result.data) {
@@ -138,12 +160,18 @@ export default function CommentDetailPage() {
         }
 
         setNewReply("")
+        setUploadedMedia([])
       }
     } catch (error) {
       console.error("Failed to post reply:", error)
     } finally {
       setPosting(false)
     }
+  }
+
+  // Apply template
+  const applyTemplate = (template: Template) => {
+    setNewReply(prev => prev + template.content)
   }
 
   const formatTime = (dateString: string) => {
@@ -453,7 +481,7 @@ export default function CommentDetailPage() {
           <div className="flex-1 flex flex-col gap-2">
             <textarea
               placeholder="发布你的回复"
-              className="w-full bg-transparent border-none focus:outline-none text-lg resize-none min-h-10 py-1 placeholder:text-muted-foreground"
+              className="w-full bg-transparent border-none focus:outline-none text-lg resize-none min-h-[40px] py-1 placeholder:text-muted-foreground"
               value={newReply}
               onChange={(e) => {
                 setNewReply(e.target.value)
@@ -463,18 +491,64 @@ export default function CommentDetailPage() {
               disabled={posting}
               rows={1}
             />
-            <div className="flex justify-between items-center mt-2">
-              <div className="flex gap-1 text-primary">
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-primary hover:bg-primary/10">
-                  <ImageIcon className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-primary hover:bg-primary/10">
-                  <Smile className="h-4 w-4" />
-                </Button>
+            <MediaUploader
+              ref={mediaUploaderRef}
+              media={uploadedMedia}
+              onMediaChange={setUploadedMedia}
+              disabled={posting}
+              onUploadingChange={setIsUploading}
+            />
+            <div className="flex items-center justify-between gap-3 mt-2">
+              {/* Left side: Action buttons */}
+              <div className="flex-1 flex gap-1 text-primary">
+                {/* Image Upload Button */}
+                <button
+                  className="h-8 w-8 text-primary hover:bg-primary/10 rounded-full flex items-center justify-center disabled:opacity-50"
+                  onClick={() => mediaUploaderRef.current?.triggerUpload()}
+                  disabled={isUploading}
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                </button>
+
+                {/* Templates Dropdown */}
+                {templates.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="h-8 w-8 text-primary hover:bg-primary/10 rounded-full flex items-center justify-center">
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="8" y1="6" x2="21" y2="6"></line>
+                          <line x1="8" y1="12" x2="21" y2="12"></line>
+                          <line x1="8" y1="18" x2="21" y2="18"></line>
+                          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56">
+                      {templates.map((template) => (
+                        <DropdownMenuItem
+                          key={template.id}
+                          onClick={() => applyTemplate(template)}
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium">{template.name}</span>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
+
+              {/* Right side: Submit button */}
               <Button
                 className="rounded-full px-5 font-bold h-9 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                disabled={!newReply.trim() || posting}
+                disabled={(!newReply.trim() && uploadedMedia.length === 0) || posting}
                 onClick={handlePostReply}
               >
                 {posting ? (

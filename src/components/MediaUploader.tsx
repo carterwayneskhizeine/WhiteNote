@@ -16,7 +16,7 @@ export interface MediaUploaderRef {
 
 interface MediaUploaderProps {
   media: MediaItem[]
-  onMediaChange: (media: MediaItem[]) => void
+  onMediaChange: (media: MediaItem[] | ((prevMedia: MediaItem[]) => MediaItem[])) => void
   disabled?: boolean
   maxImages?: number
   maxVideos?: number
@@ -115,8 +115,8 @@ export const MediaUploader = forwardRef<MediaUploaderRef, MediaUploaderProps>(({
 
         const result = await response.json()
         if (result.data) {
-          onMediaChange([
-            ...media,
+          onMediaChange((prevMedia) => [
+            ...prevMedia,
             {
               url: result.data.url,
               type: result.data.type,
