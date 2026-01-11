@@ -25,6 +25,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           }
         }
       },
+      medias: {
+        select: { id: true, url: true, type: true, description: true }
+      },
       _count: {
         select: { replies: true, retweets: true }
       },
@@ -74,22 +77,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const body = await request.json()
-    const { content, parentId } = body
+    const { content, parentId, media } = body
 
-    if (!content || content.trim() === "") {
-      return Response.json({ error: "Content is required" }, { status: 400 })
+    if ((!content || content.trim() === "") && (!media || media.length === 0)) {
+      return Response.json({ error: "Content or media is required" }, { status: 400 })
     }
 
     const comment = await prisma.comment.create({
       data: {
-        content: content.trim(),
+        content: content?.trim() || "",
         messageId: id,
         authorId: session.user.id,
         isAIBot: false,
         parentId: parentId || null,
+        medias: media && media.length > 0 ? {
+          create: media.map((m: { url: string; type: string }) => ({
+            url: m.url,
+            type: m.type,
+          }))
+        } : undefined,
       },
       include: {
         author: { select: { id: true, name: true, avatar: true, email: true } },
+        medias: { select: { id: true, url: true, type: true, description: true } },
       },
     })
 

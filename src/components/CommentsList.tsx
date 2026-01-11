@@ -46,6 +46,7 @@ import {
 import { RetweetDialog } from "@/components/RetweetDialog"
 import { cn, getHandle } from "@/lib/utils"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
+import { ImageLightbox } from "@/components/ImageLightbox"
 
 interface CommentsListProps {
   messageId: string
@@ -75,6 +76,11 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
 
   // Manage starred state for each comment
   const [starredComments, setStarredComments] = useState<Set<string>>(new Set())
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [currentMedias, setCurrentMedias] = useState<Comment['medias']>([])
 
   // Fetch templates
   useEffect(() => {
@@ -187,6 +193,15 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
     } catch (error) {
       console.error("Failed to toggle star:", error)
     }
+  }
+
+  // Handle image click to open lightbox
+  const handleImageClick = (index: number, medias: Comment['medias'], e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!medias || medias.length === 0) return
+    setCurrentMedias(medias)
+    setLightboxIndex(index)
+    setLightboxOpen(true)
   }
 
   // Post new comment
@@ -432,6 +447,47 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
                     <TipTapViewer content={comment.content} />
                   </div>
 
+                  {/* Media Display */}
+                  {comment.medias && comment.medias.length > 0 && (() => {
+                    const mediaCount = comment.medias.length
+                    return (
+                      <div className={cn(
+                        "mt-2 grid gap-1 rounded-lg overflow-hidden border border-border",
+                        mediaCount === 1 && "grid-cols-1",
+                        mediaCount === 2 && "grid-cols-2",
+                        mediaCount === 3 && "grid-cols-2",
+                        mediaCount === 4 && "grid-cols-2"
+                      )}>
+                        {comment.medias.map((media, index) => (
+                          <div key={media.id} className={cn(
+                            "relative overflow-hidden",
+                            mediaCount === 1 && "aspect-auto",
+                            mediaCount !== 1 && "aspect-square",
+                            mediaCount === 3 && index === 0 && "col-span-2"
+                          )}>
+                            {media.type === "image" ? (
+                              <img
+                                src={media.url}
+                                alt={media.description || ""}
+                                className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleImageClick(index, comment.medias, e)
+                                }}
+                              />
+                            ) : media.type === "video" ? (
+                              <video
+                                src={media.url}
+                                className="w-full h-full"
+                                controls
+                              />
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+
                   {/* 引用的消息卡片 - 类似 X/Twitter */}
                   {comment.quotedMessage && (
                     <QuotedMessageCard
@@ -555,6 +611,14 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Image Lightbox */}
+      <ImageLightbox
+        media={currentMedias || []}
+        initialIndex={lightboxIndex}
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </div>
   )
 }

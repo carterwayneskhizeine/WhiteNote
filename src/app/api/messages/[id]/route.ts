@@ -83,6 +83,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
           messageId: true,
           author: {
             select: { id: true, name: true, avatar: true, email: true }
+          },
+          medias: {
+            select: { id: true, url: true, type: true, description: true }
           }
         }
       },

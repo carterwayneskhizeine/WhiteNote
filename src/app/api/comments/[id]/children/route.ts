@@ -35,6 +35,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           }
         }
       },
+      medias: {
+        select: { id: true, url: true, type: true, description: true }
+      },
       _count: {
         select: { replies: true, retweets: true }
       },

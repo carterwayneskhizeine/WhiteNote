@@ -33,6 +33,7 @@ import { cn, getHandle } from "@/lib/utils"
 import { ReplyDialog } from "@/components/ReplyDialog"
 import { RetweetDialog } from "@/components/RetweetDialog"
 import { QuotedMessageCard } from "@/components/QuotedMessageCard"
+import { ImageLightbox } from "@/components/ImageLightbox"
 
 export default function CommentDetailPage() {
   const { id, commentId } = useParams() as { id: string; commentId: string }
@@ -55,6 +56,9 @@ export default function CommentDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [currentMedias, setCurrentMedias] = useState<Comment['medias']>([])
 
   // Manage starred state for comments
   const [starredComments, setStarredComments] = useState<Set<string>>(new Set())
@@ -224,6 +228,14 @@ export default function CommentDetailPage() {
     }
   }
 
+  const handleImageClick = (index: number, medias: Comment['medias'], e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!medias || medias.length === 0) return
+    setCurrentMedias(medias)
+    setLightboxIndex(index)
+    setLightboxOpen(true)
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -318,6 +330,44 @@ export default function CommentDetailPage() {
             <div className="mt-2 text-sm leading-normal wrap-break-word">
               <TipTapViewer content={comment.content} />
             </div>
+
+            {/* Media Display */}
+            {comment.medias && comment.medias.length > 0 && (() => {
+              const mediaCount = comment.medias.length
+              return (
+                <div className={cn(
+                  "mt-2 grid gap-2 rounded-lg overflow-hidden border border-border",
+                  mediaCount === 1 && "grid-cols-1",
+                  mediaCount === 2 && "grid-cols-2",
+                  mediaCount === 3 && "grid-cols-2",
+                  mediaCount === 4 && "grid-cols-2"
+                )}>
+                  {comment.medias.map((media, index) => (
+                    <div key={media.id} className={cn(
+                      "relative overflow-hidden",
+                      mediaCount === 1 && "aspect-auto",
+                      mediaCount !== 1 && "aspect-square",
+                      mediaCount === 3 && index === 0 && "col-span-2"
+                    )}>
+                      {media.type === "image" ? (
+                        <img
+                          src={media.url}
+                          alt={media.description || ""}
+                          className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={(e) => handleImageClick(index, comment.medias, e)}
+                        />
+                      ) : media.type === "video" ? (
+                        <video
+                          src={media.url}
+                          className="w-full h-full"
+                          controls
+                        />
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
 
             {/* 引用的消息卡片 - 类似 X/Twitter */}
             {comment.quotedMessage && (
@@ -513,6 +563,44 @@ export default function CommentDetailPage() {
                     <TipTapViewer content={childComment.content} />
                   </div>
 
+                  {/* Media Display */}
+                  {childComment.medias && childComment.medias.length > 0 && (() => {
+                    const mediaCount = childComment.medias.length
+                    return (
+                      <div className={cn(
+                        "mt-2 grid gap-1 rounded-lg overflow-hidden border border-border",
+                        mediaCount === 1 && "grid-cols-1",
+                        mediaCount === 2 && "grid-cols-2",
+                        mediaCount === 3 && "grid-cols-2",
+                        mediaCount === 4 && "grid-cols-2"
+                      )}>
+                        {childComment.medias.map((media, index) => (
+                          <div key={media.id} className={cn(
+                            "relative overflow-hidden",
+                            mediaCount === 1 && "aspect-auto",
+                            mediaCount !== 1 && "aspect-square",
+                            mediaCount === 3 && index === 0 && "col-span-2"
+                          )}>
+                            {media.type === "image" ? (
+                              <img
+                                src={media.url}
+                                alt={media.description || ""}
+                                className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={(e) => handleImageClick(index, childComment.medias, e)}
+                              />
+                            ) : media.type === "video" ? (
+                              <video
+                                src={media.url}
+                                className="w-full h-full"
+                                controls
+                              />
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+
                   {/* 引用的消息卡片 - 类似 X/Twitter */}
                   {childComment.quotedMessage && (
                     <QuotedMessageCard
@@ -635,6 +723,14 @@ export default function CommentDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Image Lightbox */}
+      <ImageLightbox
+        media={currentMedias || []}
+        initialIndex={lightboxIndex}
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </div>
   )
 }

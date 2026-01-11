@@ -100,12 +100,19 @@ export interface QuotedMessage {
   id: string
   content: string
   createdAt: string
+  messageId?: string
   author: {
     id: string
     name: string | null
     avatar: string | null
     email: string | null
   } | null
+  medias?: Array<{
+    id: string
+    url: string
+    type: string
+    description?: string | null
+  }>
 }
 
 export interface Comment {
@@ -126,6 +133,12 @@ export interface Comment {
   parentId?: string | null
   quotedMessageId?: string | null
   quotedMessage?: QuotedMessage | null
+  medias?: Array<{
+    id: string
+    url: string
+    type: string
+    description?: string | null
+  }>
   _count?: {
     replies: number
   }
@@ -137,6 +150,7 @@ export interface CreateCommentInput {
   content: string
   messageId: string
   parentId?: string
+  media?: Array<{ url: string; type: string }>
 }
 
 export interface CommentsResponse {

@@ -27,7 +27,8 @@ export const commentsApi = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: data.content,
-          parentId: data.parentId
+          parentId: data.parentId,
+          media: data.media,
         }),
       }
     )

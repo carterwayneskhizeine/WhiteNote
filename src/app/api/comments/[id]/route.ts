@@ -26,6 +26,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           }
         }
       },
+      medias: {
+        select: { id: true, url: true, type: true, description: true }
+      },
       _count: {
         select: { replies: true, retweets: true }
       },
@@ -166,6 +169,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
               select: { id: true, name: true, avatar: true, email: true }
             }
           }
+        },
+        medias: {
+          select: { id: true, url: true, type: true, description: true }
         },
         _count: {
           select: { replies: true, retweets: true }

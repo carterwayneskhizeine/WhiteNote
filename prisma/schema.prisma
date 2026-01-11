@@ -190,6 +190,7 @@ model Comment {
   replies         Comment[]         @relation("CommentReplies")
   quotedMessage   Message?          @relation("QuoteComment", fields: [quotedMessageId], references: [id])
   quotedByMessages Message[]        @relation("QuoteCommentByMessage")
+  medias          Media[]
   retweets        Retweet[]
 
   @@index([messageId, createdAt])
@@ -214,14 +215,17 @@ model Retweet {
 }
 
 model Media {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   url         String
   type        String
   description String?
-  messageId   String
-  message     Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId   String?
+  commentId   String?
+  message     Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  comment     Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
+  @@index([commentId])
 }
 
 model AiConfig {
