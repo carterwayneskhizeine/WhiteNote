@@ -484,7 +484,7 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
       <div className="flex gap-4">
         {/* User avatar */}
         <Avatar className="h-10 w-10 shrink-0">
-          <AvatarImage src={session?.user?.image || undefined} className="opacity-0" />
+          <AvatarImage src={session?.user?.image || undefined} />
           <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
             {getInitials(session?.user?.name)}
           </AvatarFallback>
