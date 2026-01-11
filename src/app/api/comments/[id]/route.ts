@@ -1,6 +1,12 @@
 import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
+import { unlink } from "fs/promises"
+import { join } from "path"
+import { existsSync } from "fs"
+
+// Upload directory outside the codebase
+const UPLOAD_DIR = process.env.UPLOAD_DIR || join(process.cwd(), "..", "whitenote-data", "uploads")
 
 /**
  * GET /api/comments/[id]
@@ -74,37 +80,60 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const session = await requireAuth()
     const { id } = await params
 
-    // 检查评论是否存在
-  const comment = await prisma.comment.findUnique({
-    where: { id },
-    include: { message: { select: { authorId: true } } },
-  })
+    // 检查评论是否存在，并获取关联的媒体文件
+    const comment = await prisma.comment.findUnique({
+      where: { id },
+      include: {
+        message: { select: { authorId: true } },
+        medias: { select: { id: true, url: true } },
+      },
+    })
 
-  if (!comment) {
-    return Response.json({ error: "Comment not found" }, { status: 404 })
-  }
-
-  // 授权检查：
-  // 1. 如果评论有作者（普通评论），只有作者可以删除
-  // 2. 如果评论没有作者（AI 生成评论），只有消息作者可以删除
-  if (comment.authorId) {
-    // 普通评论：只有作者可以删除
-    if (comment.authorId !== session.user.id) {
-      return Response.json({ error: "Forbidden" }, { status: 403 })
+    if (!comment) {
+      return Response.json({ error: "Comment not found" }, { status: 404 })
     }
-  } else {
-    // AI 评论：只有消息作者可以删除
-    if (comment.message.authorId !== session.user.id) {
-      return Response.json({ error: "Forbidden" }, { status: 403 })
+
+    // 授权检查：
+    // 1. 如果评论有作者（普通评论），只有作者可以删除
+    // 2. 如果评论没有作者（AI 生成评论），只有消息作者可以删除
+    if (comment.authorId) {
+      // 普通评论：只有作者可以删除
+      if (comment.authorId !== session.user.id) {
+        return Response.json({ error: "Forbidden" }, { status: 403 })
+      }
+    } else {
+      // AI 评论：只有消息作者可以删除
+      if (comment.message.authorId !== session.user.id) {
+        return Response.json({ error: "Forbidden" }, { status: 403 })
+      }
     }
-  }
 
-  // 删除评论（级联删除子评论）
-  await prisma.comment.delete({
-    where: { id },
-  })
+    // 先删除媒体文件（在删除评论记录之前）
+    if (comment.medias.length > 0) {
+      for (const media of comment.medias) {
+        try {
+          // Extract filename from URL (format: /api/media/${filename})
+          const filename = media.url.split('/').pop()
+          if (filename) {
+            const filePath = join(UPLOAD_DIR, filename)
+            if (existsSync(filePath)) {
+              await unlink(filePath)
+              console.log(`Deleted media file: ${filename}`)
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to delete media file ${media.url}:`, error)
+          // 继续删除其他文件，不因单个文件删除失败而中断
+        }
+      }
+    }
 
-  return Response.json({ success: true })
+    // 删除评论（级联删除子评论和 Media 数据库记录）
+    await prisma.comment.delete({
+      where: { id },
+    })
+
+    return Response.json({ success: true })
   } catch (error) {
     if (error instanceof AuthError) {
       return Response.json({ error: error.message }, { status: 401 })
