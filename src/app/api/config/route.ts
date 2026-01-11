@@ -1,27 +1,35 @@
 import { requireAuth, AuthError } from "@/lib/api-auth"
 import { getAiConfig, updateAiConfig } from "@/lib/ai/config"
-import { maskSensitive } from "@/lib/crypto"
 import { NextRequest } from "next/server"
 
 export const runtime = 'nodejs'
 
 /**
+ * 获取配置时对敏感字段进行掩码处理
+ * 如果密钥已设置，返回 "***" 表示已存在（但不显示实际值）
+ * 如果密钥未设置，返回 ""
+ */
+function maskApiKey(key: string | null): string {
+  return key ? "***" : ""
+}
+
+/**
  * GET /api/config
  * 获取 AI 配置 (支持热更新)
- * 敏感字段（API 密钥）已被加密存储，此处返回时做掩码处理
+ * 敏感字段（API 密钥）已被加密存储，此处返回 "***" 表示已设置
  */
 export async function GET() {
   try {
     const session = await requireAuth()
     const config = await getAiConfig(session.user.id)
 
-  // 敏感字段做掩码处理（显示前4和后4字符）
+  // 敏感字段掩码：已设置显示 "***"，未设置显示 ""
   return Response.json({
     data: {
       ...config,
-      openaiApiKey: config.openaiApiKey ? maskSensitive(config.openaiApiKey) : "",
-      ragflowApiKey: config.ragflowApiKey ? maskSensitive(config.ragflowApiKey) : "",
-      asrApiKey: config.asrApiKey ? maskSensitive(config.asrApiKey) : "",
+      openaiApiKey: maskApiKey(config.openaiApiKey),
+      ragflowApiKey: maskApiKey(config.ragflowApiKey),
+      asrApiKey: maskApiKey(config.asrApiKey),
     },
   })
   } catch (error) {
@@ -81,9 +89,9 @@ export async function PUT(request: NextRequest) {
     return Response.json({
       data: {
         ...config,
-        openaiApiKey: config.openaiApiKey ? maskSensitive(config.openaiApiKey) : "",
-        ragflowApiKey: config.ragflowApiKey ? maskSensitive(config.ragflowApiKey) : "",
-        asrApiKey: config.asrApiKey ? maskSensitive(config.asrApiKey) : "",
+        openaiApiKey: maskApiKey(config.openaiApiKey),
+        ragflowApiKey: maskApiKey(config.ragflowApiKey),
+        asrApiKey: maskApiKey(config.asrApiKey),
       },
       message: "Configuration updated successfully. Changes take effect immediately.",
     })
