@@ -13,7 +13,7 @@ import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Image as ImageIcon, Smile, List, Calendar, MapPin, Loader2, FileText, Mic, MicOff } from "lucide-react"
+import { Image as ImageIcon, List, Loader2, Mic, MicOff } from "lucide-react"
 import { messagesApi } from "@/lib/api/messages"
 import { templatesApi } from "@/lib/api/templates"
 import { aiApi } from "@/lib/api"
@@ -522,9 +522,6 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
               <Button variant="ghost" size="icon" className="h-[34px] w-[34px] text-primary hover:bg-primary/10 rounded-full">
                 <ImageIcon className="h-5 w-5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-[34px] w-[34px] text-primary hover:bg-primary/10 rounded-full">
-                <span className="font-bold text-xs border border-current rounded px-0.5">GIF</span>
-              </Button>
 
               {/* Templates Dropdown mapped to List icon */}
               <DropdownMenu>
@@ -548,16 +545,6 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              <Button variant="ghost" size="icon" className="h-[34px] w-[34px] text-primary hover:bg-primary/10 rounded-full">
-                <Smile className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-[34px] w-[34px] text-primary hover:bg-primary/10 rounded-full">
-                <Calendar className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-[34px] w-[34px] text-primary hover:bg-primary/10 rounded-full">
-                <MapPin className="h-5 w-5" />
-              </Button>
 
               {/* Microphone Button - Mobile only */}
               <Button
