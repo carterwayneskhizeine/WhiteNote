@@ -21,7 +21,7 @@ import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUp
 import { ActionButtons } from "@/components/ActionButtons"
 import { templatesApi } from "@/lib/api/templates"
 import { Template } from "@/types/api"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 
 interface ReplyTarget {
     id: string
@@ -56,6 +56,7 @@ export function ReplyDialog({
     const [isUploading, setIsUploading] = useState(false)
     const [templates, setTemplates] = useState<Template[]>([])
     const mediaUploaderRef = useRef<MediaUploaderRef>(null)
+    const wasOpen = useRef(false)
 
     // Fetch templates
     useEffect(() => {
@@ -72,12 +73,13 @@ export function ReplyDialog({
         fetchTemplates()
     }, [])
 
-    // Reset content and media when dialog opens
+    // Reset content and media only when dialog opens (transition from closed to open)
     useEffect(() => {
-        if (open && target) {
+        if (open && !wasOpen.current && target) {
             setContent("")
             setUploadedMedia([])
         }
+        wasOpen.current = open
     }, [open, target])
 
     if (!target) return null
