@@ -43,6 +43,7 @@ import { cn, getHandle } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { TipTapViewer } from "@/components/TipTapViewer"
 import { ImageLightbox } from "@/components/ImageLightbox"
+import { VideoPlayer } from "@/components/VideoPlayer"
 
 interface MessageCardProps {
   message: Message
@@ -330,9 +331,8 @@ export function MessageCard({
                             onClick={(e) => handleImageClick(index, e)}
                           />
                         ) : media.type === "video" ? (
-                          <video
+                          <VideoPlayer
                             src={media.url}
-                            controls
                             className="w-full h-full"
                           />
                         ) : null}

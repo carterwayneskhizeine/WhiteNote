@@ -36,6 +36,7 @@ import { RetweetDialog } from "@/components/RetweetDialog"
 import { QuotedMessageCard } from "@/components/QuotedMessageCard"
 import { ImageLightbox } from "@/components/ImageLightbox"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
+import { VideoPlayer } from "@/components/VideoPlayer"
 
 export default function CommentDetailPage() {
   const { id, commentId } = useParams() as { id: string; commentId: string }
@@ -385,10 +386,9 @@ export default function CommentDetailPage() {
                           onClick={(e) => handleImageClick(index, comment.medias, e)}
                         />
                       ) : media.type === "video" ? (
-                        <video
+                        <VideoPlayer
                           src={media.url}
                           className="w-full h-full"
-                          controls
                         />
                       ) : null}
                     </div>

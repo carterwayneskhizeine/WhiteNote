@@ -47,6 +47,7 @@ import { RetweetDialog } from "@/components/RetweetDialog"
 import { cn, getHandle } from "@/lib/utils"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
 import { ImageLightbox } from "@/components/ImageLightbox"
+import { VideoPlayer } from "@/components/VideoPlayer"
 
 interface CommentsListProps {
   messageId: string
@@ -476,10 +477,9 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
                                 }}
                               />
                             ) : media.type === "video" ? (
-                              <video
+                              <VideoPlayer
                                 src={media.url}
                                 className="w-full h-full"
-                                controls
                               />
                             ) : null}
                           </div>

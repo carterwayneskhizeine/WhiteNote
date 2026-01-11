@@ -31,6 +31,7 @@ import { ReplyDialog } from "@/components/ReplyDialog"
 import { RetweetDialog } from "@/components/RetweetDialog"
 import { QuotedMessageCard } from "@/components/QuotedMessageCard"
 import { ImageLightbox } from "@/components/ImageLightbox"
+import { VideoPlayer } from "@/components/VideoPlayer"
 
 export default function StatusPage() {
     const { id } = useParams() as { id: string }
@@ -235,9 +236,8 @@ export default function StatusPage() {
                                             onClick={(e) => handleImageClick(index, e)}
                                         />
                                     ) : media.type === "video" ? (
-                                        <video
+                                        <VideoPlayer
                                             src={media.url}
-                                            controls
                                             className="w-full h-full"
                                         />
                                     ) : null}
