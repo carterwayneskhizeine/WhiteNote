@@ -45,9 +45,28 @@ export async function GET(
       // Convert Node stream to Web ReadableStream for Next.js Response
       const stream = new ReadableStream({
         start(controller) {
-          fileStream.on("data", (chunk) => controller.enqueue(chunk))
-          fileStream.on("end", () => controller.close())
-          fileStream.on("error", (err) => controller.error(err))
+          fileStream.on("data", (chunk) => {
+            try {
+              controller.enqueue(chunk)
+            } catch (error) {
+              // Controller is closed, destroy stream
+              fileStream.destroy()
+            }
+          })
+          fileStream.on("end", () => {
+            try { controller.close() } catch (e) {}
+          })
+          fileStream.on("error", (err: any) => {
+            if (err.code === "ENOENT") {
+              try { controller.error(err) } catch (e) {}
+            } else {
+              // Ignore other errors (like premature close) and just close stream
+              try { controller.close() } catch (e) {}
+            }
+          })
+        },
+        cancel() {
+          fileStream.destroy()
         },
       })
 
@@ -67,9 +86,26 @@ export async function GET(
     const fileStream = createReadStream(filePath)
     const stream = new ReadableStream({
       start(controller) {
-        fileStream.on("data", (chunk) => controller.enqueue(chunk))
-        fileStream.on("end", () => controller.close())
-        fileStream.on("error", (err) => controller.error(err))
+        fileStream.on("data", (chunk) => {
+          try {
+            controller.enqueue(chunk)
+          } catch (error) {
+            fileStream.destroy()
+          }
+        })
+        fileStream.on("end", () => {
+          try { controller.close() } catch (e) {}
+        })
+        fileStream.on("error", (err: any) => {
+          if (err.code === "ENOENT") {
+            try { controller.error(err) } catch (e) {}
+          } else {
+            try { controller.close() } catch (e) {}
+          }
+        })
+      },
+      cancel() {
+        fileStream.destroy()
       },
     })
 
