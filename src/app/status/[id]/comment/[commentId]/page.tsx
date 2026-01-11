@@ -663,10 +663,9 @@ export default function CommentDetailPage() {
                                 onClick={(e) => handleImageClick(index, childComment.medias, e)}
                               />
                             ) : media.type === "video" ? (
-                              <video
+                              <VideoPlayer
                                 src={media.url}
                                 className="w-full h-full"
-                                controls
                               />
                             ) : null}
                           </div>

@@ -84,6 +84,9 @@ export async function GET(request: NextRequest) {
             author: {
               select: { id: true, name: true, avatar: true, email: true },
             },
+            medias: {
+              select: { id: true, url: true, type: true, description: true },
+            },
           },
         },
         tags: {
@@ -247,6 +250,9 @@ export async function POST(request: NextRequest) {
             messageId: true,
             author: {
               select: { id: true, name: true, avatar: true, email: true },
+            },
+            medias: {
+              select: { id: true, url: true, type: true, description: true },
             },
           },
         },

@@ -205,11 +205,6 @@ export default function StatusPage() {
                     <TipTapViewer content={message.content} />
                 </div>
 
-                {/* 引用的消息/评论卡片 - 转推时显示 */}
-                {(message.quotedMessage || message.quotedComment) && (
-                    <QuotedMessageCard message={message.quotedMessage || message.quotedComment!} />
-                )}
-
                 {/* Media Display */}
                 {message.medias && message.medias.length > 0 && (() => {
                     const mediaCount = message.medias.length
@@ -246,6 +241,11 @@ export default function StatusPage() {
                         </div>
                     )
                 })()}
+
+                {/* 引用的消息/评论卡片 - 转推时显示 */}
+                {(message.quotedMessage || message.quotedComment) && (
+                    <QuotedMessageCard message={message.quotedMessage || message.quotedComment!} />
+                )}
 
                 <div className="mt-4 flex flex-wrap gap-1 text-muted-foreground text-[15px]">
                     <span>{format(new Date(message.createdAt), "a h:mm · yyyy'年'M'月'd'日'", { locale: zhCN })}</span>

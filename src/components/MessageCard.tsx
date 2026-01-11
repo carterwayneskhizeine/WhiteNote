@@ -300,11 +300,6 @@ export function MessageCard({
                 </button>
               )}
 
-              {/* Quoted Message/Comment Card */}
-              {(message.quotedMessage || message.quotedComment) && (
-                <QuotedMessageCard message={message.quotedMessage || message.quotedComment!} />
-              )}
-
               {/* Media Display */}
               {message.medias && message.medias.length > 0 && (() => {
                 const mediaCount = message.medias.length
@@ -341,6 +336,11 @@ export function MessageCard({
                   </div>
                 )
               })()}
+
+              {/* Quoted Message/Comment Card */}
+              {(message.quotedMessage || message.quotedComment) && (
+                <QuotedMessageCard message={message.quotedMessage || message.quotedComment!} />
+              )}
             </div>
 
             {/* Action Bar (Footer) */}

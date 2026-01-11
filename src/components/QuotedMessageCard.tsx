@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { GoldieAvatar } from "@/components/GoldieAvatar"
 import { getHandle } from "@/lib/utils"
 import { ImageLightbox } from "@/components/ImageLightbox"
+import { VideoPlayer } from "@/components/VideoPlayer"
 
 interface QuotedMessage {
   id: string
@@ -140,7 +141,7 @@ export function QuotedMessageCard({ message, className }: QuotedMessageCardProps
                     onClick={(e) => handleImageClick(index, e)}
                   />
                 ) : media.type === "video" ? (
-                  <video
+                  <VideoPlayer
                     src={media.url}
                     className="w-full h-full"
                   />
