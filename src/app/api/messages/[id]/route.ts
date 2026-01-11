@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
 import { deleteFromRAGFlow, updateRAGFlow } from "@/lib/ai/ragflow"
 import { NextRequest } from "next/server"
-import { batchUpsertTags } from "@/lib/tag-utils"
+import { batchUpsertTags, cleanupUnusedTags } from "@/lib/tag-utils"
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -261,6 +261,11 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   // 删除本地消息
   await prisma.message.delete({
     where: { id },
+  })
+
+  // 自动清理未使用的标签（异步执行，不阻塞响应）
+  cleanupUnusedTags().catch((error) => {
+    console.error("Failed to cleanup unused tags:", error)
   })
 
   return Response.json({ success: true })

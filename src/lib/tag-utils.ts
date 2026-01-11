@@ -84,3 +84,41 @@ export async function connectTagsToMessage(
     skipDuplicates: true,
   })
 }
+
+/**
+ * Cleanup unused tags (tags with no associated messages)
+ * Automatically removes tags that have zero message references
+ *
+ * @returns Object containing deletion statistics
+ */
+export async function cleanupUnusedTags(): Promise<{
+  deletedCount: number
+  deletedTags: Array<{ id: string; name: string }>
+}> {
+  // Find all unused tags (tags with no messages)
+  const unusedTags = await prisma.tag.findMany({
+    where: {
+      messages: {
+        none: {},
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+    },
+  })
+
+  // Delete all unused tags in a single query
+  const deleteResult = await prisma.tag.deleteMany({
+    where: {
+      messages: {
+        none: {},
+      },
+    },
+  })
+
+  return {
+    deletedCount: deleteResult.count,
+    deletedTags: unusedTags,
+  }
+}
