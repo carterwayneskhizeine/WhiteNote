@@ -210,7 +210,7 @@ export default function StatusPage() {
                     const mediaCount = message.medias.length
                     return (
                         <div className={cn(
-                            "mt-4 grid gap-2 rounded-lg overflow-hidden border border-border",
+                            "mt-4 grid gap-1 rounded-lg overflow-hidden border border-border",
                             mediaCount === 1 && "grid-cols-1",
                             mediaCount === 2 && "grid-cols-2",
                             mediaCount === 3 && "grid-cols-2",

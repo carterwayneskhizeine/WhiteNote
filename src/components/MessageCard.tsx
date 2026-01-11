@@ -306,7 +306,7 @@ export function MessageCard({
                 const hasOnlyVideo = mediaCount === 1 && message.medias[0].type === "video"
                 return (
                   <div className={cn(
-                    "mt-3 grid gap-2",
+                    "mt-3 grid gap-1",
                     !hasOnlyVideo && "rounded-lg overflow-hidden border border-border",
                     mediaCount === 1 && "grid-cols-1",
                     mediaCount === 2 && "grid-cols-2",
