@@ -63,11 +63,18 @@ export function RetweetDialog({
 
         setIsSubmitting(true)
         try {
-            // 1. 创建一条新的主消息，使用 quotedMessageId 引用原消息
-            const result = await messagesApi.createMessage({
-                content: content.trim(), // 只保存用户评论，不包含引用的文本
-                quotedMessageId: target.id, // 使用 quotedMessageId 引用原消息
-            })
+            // 1. 创建一条新的主消息，根据 targetType 使用不同的引用字段
+            const createData: { content: string; quotedMessageId?: string; quotedCommentId?: string } = {
+                content: content.trim(),
+            }
+
+            if (targetType === 'message') {
+                createData.quotedMessageId = target.id
+            } else {
+                createData.quotedCommentId = target.id
+            }
+
+            const result = await messagesApi.createMessage(createData)
 
             if (result.data) {
                 // 2. 调用转发 API 来增加原消息/评论的转发计数

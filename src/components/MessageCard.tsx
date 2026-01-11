@@ -289,9 +289,9 @@ export function MessageCard({
                 </button>
               )}
 
-              {/* Quoted Message Card */}
-              {message.quotedMessage && (
-                <QuotedMessageCard message={message.quotedMessage} />
+              {/* Quoted Message/Comment Card */}
+              {(message.quotedMessage || message.quotedComment) && (
+                <QuotedMessageCard message={message.quotedMessage || message.quotedComment!} />
               )}
             </div>
 

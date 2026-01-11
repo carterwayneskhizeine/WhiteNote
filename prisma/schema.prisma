@@ -60,36 +60,39 @@ model VerificationToken {
 }
 
 model Message {
-  id              String           @id @default(cuid())
-  title           String?
-  content         String
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  isStarred       Boolean          @default(false)
-  isPinned        Boolean          @default(false)
-  authorId        String?
-  parentId        String?
-  quotedMessageId String?
-  comments        Comment[]
-  medias          Media[]
-  author          User?            @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  parent          Message?         @relation("Thread", fields: [parentId], references: [id])
-  children        Message[]        @relation("Thread")
-  quotedMessage   Message?         @relation("QuoteRetweet", fields: [quotedMessageId], references: [id])
-  quoteRetweets   Message[]        @relation("QuoteRetweet")
-  quoteComments   Comment[]        @relation("QuoteComment")
-  aliases         MessageAlias[]
-  outgoingLinks   MessageLink[]    @relation("OutgoingLinks")
-  incomingLinks   MessageLink[]    @relation("IncomingLinks")
-  tags            MessageTag[]
-  versions        MessageVersion[]
-  reminders       Reminder[]
-  retweets        Retweet[]
+  id               String           @id @default(cuid())
+  title            String?
+  content          String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  isStarred        Boolean          @default(false)
+  isPinned         Boolean          @default(false)
+  authorId         String?
+  parentId         String?
+  quotedMessageId  String?
+  quotedCommentId  String?
+  comments         Comment[]
+  medias           Media[]
+  author           User?            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent           Message?         @relation("Thread", fields: [parentId], references: [id])
+  children         Message[]        @relation("Thread")
+  quotedMessage    Message?         @relation("QuoteRetweet", fields: [quotedMessageId], references: [id])
+  quotedComment    Comment?         @relation("QuoteCommentByMessage", fields: [quotedCommentId], references: [id])
+  quoteRetweets    Message[]        @relation("QuoteRetweet")
+  quoteComments    Comment[]        @relation("QuoteComment")
+  aliases          MessageAlias[]
+  outgoingLinks    MessageLink[]    @relation("OutgoingLinks")
+  incomingLinks    MessageLink[]    @relation("IncomingLinks")
+  tags             MessageTag[]
+  versions         MessageVersion[]
+  reminders        Reminder[]
+  retweets         Retweet[]
 
   @@index([authorId])
   @@index([createdAt(sort: Desc)])
   @@index([isPinned, createdAt(sort: Desc)])
   @@index([quotedMessageId])
+  @@index([quotedCommentId])
 }
 
 model Tag {
@@ -181,11 +184,12 @@ model Comment {
   authorId        String?
   parentId        String?
   quotedMessageId String?
-  author          User?    @relation(fields: [authorId], references: [id])
-  message         Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  parent          Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies         Comment[] @relation("CommentReplies")
-  quotedMessage   Message? @relation("QuoteComment", fields: [quotedMessageId], references: [id])
+  author          User?             @relation(fields: [authorId], references: [id])
+  message         Message           @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  parent          Comment?          @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies         Comment[]         @relation("CommentReplies")
+  quotedMessage   Message?          @relation("QuoteComment", fields: [quotedMessageId], references: [id])
+  quotedByMessages Message[]        @relation("QuoteCommentByMessage")
   retweets        Retweet[]
 
   @@index([messageId, createdAt])

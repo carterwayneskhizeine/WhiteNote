@@ -195,9 +195,9 @@ export default function StatusPage() {
                     <TipTapViewer content={message.content} />
                 </div>
 
-                {/* 引用的消息卡片 - 转推时显示 */}
-                {message.quotedMessage && (
-                    <QuotedMessageCard message={message.quotedMessage} />
+                {/* 引用的消息/评论卡片 - 转推时显示 */}
+                {(message.quotedMessage || message.quotedComment) && (
+                    <QuotedMessageCard message={message.quotedMessage || message.quotedComment!} />
                 )}
 
                 <div className="mt-4 flex flex-wrap gap-1 text-muted-foreground text-[15px]">

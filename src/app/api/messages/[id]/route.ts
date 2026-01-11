@@ -66,6 +66,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
           }
         }
       },
+      quotedComment: {
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          messageId: true,
+          author: {
+            select: { id: true, name: true, avatar: true, email: true }
+          }
+        }
+      },
       tags: {
         include: {
           tag: { select: { id: true, name: true, color: true } },

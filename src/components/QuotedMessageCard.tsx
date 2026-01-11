@@ -12,6 +12,7 @@ interface QuotedMessage {
   id: string
   content: string
   createdAt: string
+  messageId?: string
   author: {
     id: string
     name: string | null
@@ -41,7 +42,13 @@ export function QuotedMessageCard({ message, className }: QuotedMessageCardProps
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    router.push(`/status/${message.id}`)
+    // If it has a messageId, it's a comment - navigate to the comment's URL
+    if (message.messageId) {
+      router.push(`/status/${message.messageId}/comment/${message.id}`)
+    } else {
+      // Otherwise, it's a message - navigate to the message's URL
+      router.push(`/status/${message.id}`)
+    }
   }
 
   return (

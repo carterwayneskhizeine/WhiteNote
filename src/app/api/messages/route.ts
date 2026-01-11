@@ -72,6 +72,17 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        quotedComment: {
+          select: {
+            id: true,
+            content: true,
+            createdAt: true,
+            messageId: true,
+            author: {
+              select: { id: true, name: true, avatar: true, email: true },
+            },
+          },
+        },
         tags: {
           include: {
             tag: { select: { id: true, name: true, color: true } },
@@ -125,7 +136,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { content, title, parentId, tags, quotedMessageId } = body
+    const { content, title, parentId, tags, quotedMessageId, quotedCommentId } = body
 
     if (!content || content.trim() === "") {
       return Response.json(
@@ -160,6 +171,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 验证引用评论存在 (如果指定)
+    if (quotedCommentId) {
+      const quotedComment = await prisma.comment.findUnique({
+        where: { id: quotedCommentId },
+      })
+      if (!quotedComment) {
+        return Response.json(
+          { error: "Quoted comment not found" },
+          { status: 404 }
+        )
+      }
+    }
+
     // 批量处理标签（优化：将 N+1 查询减少到最多 3 次查询）
     let tagIds: string[] = []
     if (tags?.length > 0) {
@@ -174,6 +198,7 @@ export async function POST(request: NextRequest) {
         authorId: session.user.id,
         parentId: parentId || null,
         quotedMessageId: quotedMessageId || null,
+        quotedCommentId: quotedCommentId || null,
         // 批量关联标签（使用优化后的批量查询）
         tags: tagIds.length > 0
           ? {
@@ -190,6 +215,17 @@ export async function POST(request: NextRequest) {
             id: true,
             content: true,
             createdAt: true,
+            author: {
+              select: { id: true, name: true, avatar: true, email: true },
+            },
+          },
+        },
+        quotedComment: {
+          select: {
+            id: true,
+            content: true,
+            createdAt: true,
+            messageId: true,
             author: {
               select: { id: true, name: true, avatar: true, email: true },
             },

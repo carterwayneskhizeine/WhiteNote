@@ -9,10 +9,23 @@ export interface Message {
   authorId: string
   parentId: string | null
   quotedMessageId?: string | null
+  quotedCommentId?: string | null
   quotedMessage?: {
     id: string
     content: string
     createdAt: string
+    author: {
+      id: string
+      name: string | null
+      avatar: string | null
+      email: string | null
+    }
+  } | null
+  quotedComment?: {
+    id: string
+    content: string
+    createdAt: string
+    messageId: string
     author: {
       id: string
       name: string | null
@@ -45,6 +58,7 @@ export interface CreateMessageInput {
   content: string
   parentId?: string
   quotedMessageId?: string
+  quotedCommentId?: string
   tags?: string[]
 }
 
