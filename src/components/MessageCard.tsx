@@ -303,9 +303,11 @@ export function MessageCard({
               {/* Media Display */}
               {message.medias && message.medias.length > 0 && (() => {
                 const mediaCount = message.medias.length
+                const hasOnlyVideo = mediaCount === 1 && message.medias[0].type === "video"
                 return (
                   <div className={cn(
-                    "mt-3 grid gap-2 rounded-lg overflow-hidden border border-border",
+                    "mt-3 grid gap-2",
+                    !hasOnlyVideo && "rounded-lg overflow-hidden border border-border",
                     mediaCount === 1 && "grid-cols-1",
                     mediaCount === 2 && "grid-cols-2",
                     mediaCount === 3 && "grid-cols-2",
@@ -314,8 +316,8 @@ export function MessageCard({
                     {message.medias.map((media, index) => (
                       <div key={media.id} className={cn(
                         "relative overflow-hidden",
-                        mediaCount === 1 && "aspect-auto",
-                        mediaCount !== 1 && "aspect-square",
+                        !hasOnlyVideo && mediaCount === 1 && "aspect-auto",
+                        !hasOnlyVideo && mediaCount !== 1 && "aspect-square",
                         mediaCount === 3 && index === 0 && "col-span-2"
                       )}>
                         {media.type === "image" ? (
@@ -328,7 +330,7 @@ export function MessageCard({
                         ) : media.type === "video" ? (
                           <VideoPlayer
                             src={media.url}
-                            className="w-full h-full"
+                            className={hasOnlyVideo ? "rounded-xl border border-border/50 bg-black" : "w-full h-full"}
                           />
                         ) : null}
                       </div>

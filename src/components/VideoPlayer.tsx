@@ -67,9 +67,8 @@ export function VideoPlayer({ src, className = "" }: VideoPlayerProps) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        maxHeight: "525px",
-        maxWidth: "525px",
-        margin: "0 auto"
+        maxHeight: "400px",
+        maxWidth: "400px"
       } : {}}
     >
       <video
