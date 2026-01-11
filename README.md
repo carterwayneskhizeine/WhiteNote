@@ -32,7 +32,7 @@ docker exec pg16 psql -U myuser -d postgres -c "CREATE DATABASE whitenote;"
 # 3. Push the Prisma schema
 pnpm prisma db push
 
-# 4. Run seed script (creates default user, templates, tags)
+# 4. Run seed script (creates built-in templates and AI commands)
 pnpm prisma db seed
 ```
 
@@ -44,11 +44,8 @@ pnpm prisma db seed
 # Push schema changes to database
 pnpm prisma db push
 
-# Run seed script (creates default user, templates, tags)
+# Run seed script (creates built-in templates and AI commands)
 pnpm prisma db seed
-
-# Seed AI commands only
-pnpm seed:ai-commands
 
 # Open Prisma Studio (database UI)
 pnpm prisma studio
