@@ -257,8 +257,8 @@ export default function StatusPage() {
                             }
                         }}
                     >
-                        <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">
-                            <Bookmark className={cn("h-[22px] w-[22px]", message.isStarred && "text-blue-600 fill-blue-600")} />
+                        <div className="p-2 rounded-full group-hover:bg-yellow-500/10 group-hover:text-yellow-600 transition-colors">
+                            <Bookmark className={cn("h-[22px] w-[22px]", message.isStarred && "text-yellow-600 fill-yellow-600")} />
                         </div>
                     </div>
                     <div className="flex items-center group cursor-pointer">
