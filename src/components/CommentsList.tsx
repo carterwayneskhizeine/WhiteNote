@@ -48,6 +48,7 @@ import { cn, getHandle } from "@/lib/utils"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
 import { ImageLightbox } from "@/components/ImageLightbox"
 import { VideoPlayer } from "@/components/VideoPlayer"
+import { ImagePlayer } from "@/components/ImagePlayer"
 
 interface CommentsListProps {
   messageId: string
@@ -451,9 +452,11 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
                   {/* Media Display */}
                   {comment.medias && comment.medias.length > 0 && (() => {
                     const mediaCount = comment.medias.length
+                    const hasSingleImage = mediaCount === 1 && comment.medias[0].type === "image"
                     return (
                       <div className={cn(
-                        "mt-2 grid gap-1 rounded-lg overflow-hidden border border-border",
+                        "mt-2 grid gap-1",
+                        !hasSingleImage && "rounded-lg overflow-hidden border border-border",
                         mediaCount === 1 && "grid-cols-1",
                         mediaCount === 2 && "grid-cols-2",
                         mediaCount === 3 && "grid-cols-2",
@@ -462,20 +465,31 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
                         {comment.medias.map((media, index) => (
                           <div key={media.id} className={cn(
                             "relative overflow-hidden",
-                            mediaCount === 1 && "aspect-auto",
-                            mediaCount !== 1 && "aspect-square",
+                            !hasSingleImage && mediaCount === 1 && "aspect-auto",
+                            !hasSingleImage && mediaCount !== 1 && "aspect-square",
                             mediaCount === 3 && index === 0 && "col-span-2"
                           )}>
                             {media.type === "image" ? (
-                              <img
-                                src={media.url}
-                                alt={media.description || ""}
-                                className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleImageClick(index, comment.medias, e)
-                                }}
-                              />
+                              mediaCount === 1 ? (
+                                <ImagePlayer
+                                  src={media.url}
+                                  alt={media.description || ""}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleImageClick(index, comment.medias, e)
+                                  }}
+                                />
+                              ) : (
+                                <img
+                                  src={media.url}
+                                  alt={media.description || ""}
+                                  className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleImageClick(index, comment.medias, e)
+                                  }}
+                                />
+                              )
                             ) : media.type === "video" ? (
                               <VideoPlayer
                                 src={media.url}

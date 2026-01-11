@@ -9,6 +9,7 @@ import { format } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { CommentsList } from "@/components/CommentsList"
 import { TipTapViewer } from "@/components/TipTapViewer"
+import { ImagePlayer } from "@/components/ImagePlayer"
 import { Separator } from "@/components/ui/separator"
 import {
   DropdownMenu,
@@ -208,9 +209,11 @@ export default function StatusPage() {
                 {/* Media Display */}
                 {message.medias && message.medias.length > 0 && (() => {
                     const mediaCount = message.medias.length
+                    const hasSingleImage = mediaCount === 1 && message.medias[0].type === "image"
                     return (
                         <div className={cn(
-                            "mt-4 grid gap-1 rounded-lg overflow-hidden border border-border",
+                            "mt-4 grid gap-1",
+                            !hasSingleImage && "rounded-lg overflow-hidden border border-border",
                             mediaCount === 1 && "grid-cols-1",
                             mediaCount === 2 && "grid-cols-2",
                             mediaCount === 3 && "grid-cols-2",
@@ -219,17 +222,25 @@ export default function StatusPage() {
                             {message.medias.map((media, index) => (
                                 <div key={media.id} className={cn(
                                     "relative overflow-hidden",
-                                    mediaCount === 1 && "aspect-auto",
-                                    mediaCount !== 1 && "aspect-square",
+                                    !hasSingleImage && mediaCount === 1 && "aspect-auto",
+                                    !hasSingleImage && mediaCount !== 1 && "aspect-square",
                                     mediaCount === 3 && index === 0 && "col-span-2"
                                 )}>
                                     {media.type === "image" ? (
-                                        <img
-                                            src={media.url}
-                                            alt={media.description || ""}
-                                            className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                            onClick={(e) => handleImageClick(index, e)}
-                                        />
+                                        mediaCount === 1 ? (
+                                            <ImagePlayer
+                                                src={media.url}
+                                                alt={media.description || ""}
+                                                onClick={(e) => handleImageClick(index, e)}
+                                            />
+                                        ) : (
+                                            <img
+                                                src={media.url}
+                                                alt={media.description || ""}
+                                                className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                                onClick={(e) => handleImageClick(index, e)}
+                                            />
+                                        )
                                     ) : media.type === "video" ? (
                                         <VideoPlayer
                                             src={media.url}
