@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Message, messagesApi } from "@/lib/api/messages"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, MoreVertical, MessageCircle, Repeat2, Share, Bookmark, Loader2, Edit2, Pin, PinOff, Trash2, Copy } from "lucide-react"
+import { ArrowLeft, MoreVertical, Loader2, Edit2, Pin, PinOff, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { CommentsList } from "@/components/CommentsList"
@@ -32,6 +32,7 @@ import { ReplyDialog } from "@/components/ReplyDialog"
 import { RetweetDialog } from "@/components/RetweetDialog"
 import { QuotedMessageCard } from "@/components/QuotedMessageCard"
 import { ImageLightbox } from "@/components/ImageLightbox"
+import { ActionRow } from "@/components/ActionRow"
 
 export default function StatusPage() {
     const { id } = useParams() as { id: string }
@@ -232,63 +233,27 @@ export default function StatusPage() {
                 <Separator className="my-4" />
 
                 {/* Stats Row */}
-                <div className="flex items-center justify-between px-2 text-muted-foreground">
-                    <div
-                        className="flex items-center gap-1 group cursor-pointer"
-                        onClick={() => {
-                            setReplyTarget(message)
-                            setShowReplyDialog(true)
-                        }}
-                    >
-                        <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">
-                            <MessageCircle className="h-[22px] w-[22px]" />
-                        </div>
-                        <span className="text-sm">{message._count.comments}</span>
-                    </div>
-                    <div
-                        className="flex items-center gap-1 group cursor-pointer"
-                        onClick={handleCopy}
-                    >
-                        <div className={cn(
-                            "p-2 rounded-full transition-colors",
-                            copied ? "bg-green-500/20" : "group-hover:bg-green-500/10"
-                        )}>
-                            <Copy className={cn(
-                                "h-[22px] w-[22px] transition-colors",
-                                copied ? "text-green-500" : "group-hover:text-green-500"
-                            )} />
-                        </div>
-                    </div>
-                    <div
-                        className="flex items-center gap-1 group cursor-pointer"
-                        onClick={() => setShowRetweetDialog(true)}
-                    >
-                        <div className="p-2 rounded-full group-hover:bg-green-500/10 group-hover:text-green-500 transition-colors">
-                            <Repeat2 className="h-[22px] w-[22px]" />
-                        </div>
-                        {(message.retweetCount ?? 0) > 0 && (
-                            <span className="text-sm text-foreground/60 group-hover:text-green-600 transition-colors">{message.retweetCount}</span>
-                        )}
-                    </div>
-                    <div
-                        className="flex items-center gap-1 group cursor-pointer"
-                        onClick={async () => {
-                            const result = await messagesApi.toggleStar(message.id)
-                            if (result.data) {
-                                setMessage({ ...message, isStarred: result.data.isStarred })
-                            }
-                        }}
-                    >
-                        <div className="p-2 rounded-full group-hover:bg-yellow-500/10 group-hover:text-yellow-600 transition-colors">
-                            <Bookmark className={cn("h-[22px] w-[22px]", message.isStarred && "text-yellow-600 fill-yellow-600")} />
-                        </div>
-                    </div>
-                    <div className="flex items-center group cursor-pointer">
-                        <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">
-                            <Share className="h-[22px] w-[22px]" />
-                        </div>
-                    </div>
-                </div>
+                <ActionRow
+                    replyCount={message._count.comments}
+                    onReply={() => {
+                        setReplyTarget(message)
+                        setShowReplyDialog(true)
+                    }}
+                    copied={copied}
+                    onCopy={handleCopy}
+                    retweetCount={message.retweetCount ?? 0}
+                    onRetweet={() => setShowRetweetDialog(true)}
+                    starred={message.isStarred}
+                    onToggleStar={async () => {
+                        const result = await messagesApi.toggleStar(message.id)
+                        if (result.data) {
+                            setMessage({ ...message, isStarred: result.data.isStarred })
+                        }
+                    }}
+                    onShare={undefined}
+                    size="lg"
+                    className="px-2"
+                />
 
                 <Separator className="my-4" />
             </div>

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { commentsApi, aiApi, templatesApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
-import { MessageCircle, Repeat2, Share, Bot, Loader2, Edit2, Trash2, MoreVertical, Copy, Bookmark, BookmarkCheck } from "lucide-react"
+import { Bot, Loader2, Edit2, Trash2, MoreVertical } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { TipTapViewer } from "@/components/TipTapViewer"
@@ -37,6 +37,7 @@ import { QuotedMessageCard } from "@/components/QuotedMessageCard"
 import { ImageLightbox } from "@/components/ImageLightbox"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
 import { MediaGrid } from "@/components/MediaGrid"
+import { ActionRow } from "@/components/ActionRow"
 
 export default function CommentDetailPage() {
   const { id, commentId } = useParams() as { id: string; commentId: string }
@@ -386,65 +387,23 @@ export default function CommentDetailPage() {
             )}
 
             {/* Action Row */}
-            <div className="mt-3 flex items-center justify-between gap-2 text-muted-foreground">
-              <div
-                className="group flex items-center cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setReplyTarget(comment)
-                  setShowReplyDialog(true)
-                }}
-              >
-                <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">
-                  <MessageCircle className="h-4 w-4" />
-                </div>
-                <span className="ml-1 text-sm">{childComments.length}</span>
-              </div>
-              <div
-                className="group flex items-center cursor-pointer"
-                onClick={() => handleCopy(comment.id, comment.content)}
-              >
-                <div className={cn(
-                  "p-2 rounded-full transition-colors",
-                  copiedId === comment.id ? "bg-green-500/20" : "group-hover:bg-green-500/10"
-                )}>
-                  <Copy className={cn(
-                    "h-4 w-4 transition-colors",
-                    copiedId === comment.id ? "text-green-500" : "group-hover:text-green-500"
-                  )} />
-                </div>
-              </div>
-              <div
-                className="group flex items-center cursor-pointer"
-                onClick={handleRetweet}
-              >
-                <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
-                  <Repeat2 className="h-4 w-4 transition-colors group-hover:text-green-500" />
-                </div>
-                {(comment?.retweetCount ?? 0) > 0 && (
-                  <span className="ml-1 text-sm text-foreground/60 group-hover:text-green-600 transition-colors">
-                    {comment.retweetCount}
-                  </span>
-                )}
-              </div>
-              <div
-                className="group flex items-center cursor-pointer"
-                onClick={() => handleToggleStar(comment.id)}
-              >
-                <div className="p-2 rounded-full group-hover:bg-yellow-500/10 transition-colors">
-                  {starredComments.has(comment.id) ? (
-                    <BookmarkCheck className="h-4 w-4 text-yellow-600 fill-yellow-600 transition-colors" />
-                  ) : (
-                    <Bookmark className="h-4 w-4 group-hover:text-yellow-600 transition-colors" />
-                  )}
-                </div>
-              </div>
-              <div className="group flex items-center cursor-pointer">
-                <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors text-right">
-                  <Share className="h-4 w-4" />
-                </div>
-              </div>
-            </div>
+            <ActionRow
+              replyCount={childComments.length}
+              onReply={(e) => {
+                e.stopPropagation()
+                setReplyTarget(comment)
+                setShowReplyDialog(true)
+              }}
+              copied={copiedId === comment.id}
+              onCopy={() => handleCopy(comment.id, comment.content)}
+              retweetCount={comment?.retweetCount ?? 0}
+              onRetweet={handleRetweet}
+              starred={starredComments.has(comment.id)}
+              onToggleStar={() => handleToggleStar(comment.id)}
+              onShare={undefined}
+              size="md"
+              className="mt-3"
+            />
           </div>
         </div>
       </div>
@@ -674,67 +633,23 @@ export default function CommentDetailPage() {
                   )}
 
                   {/* Action Row for Child Comments */}
-                  <div className="mt-3 flex items-center justify-between gap-2 text-muted-foreground">
-                    <div
-                      className="group flex items-center cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setReplyTarget(childComment)
-                        setShowReplyDialog(true)
-                      }}
-                    >
-                      <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">
-                        <MessageCircle className="h-4 w-4" />
-                      </div>
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        {childComment._count?.replies || 0}
-                      </span>
-                    </div>
-                    <div
-                      className="group flex items-center cursor-pointer"
-                      onClick={() => handleCopy(childComment.id, childComment.content)}
-                    >
-                      <div className={cn(
-                        "p-2 rounded-full transition-colors",
-                        copiedId === childComment.id ? "bg-green-500/20" : "group-hover:bg-green-500/10"
-                      )}>
-                        <Copy className={cn(
-                          "h-4 w-4 transition-colors",
-                          copiedId === childComment.id ? "text-green-500" : "group-hover:text-green-500"
-                        )} />
-                      </div>
-                    </div>
-                    <div
-                      className="group flex items-center cursor-pointer"
-                      onClick={(e) => handleChildRetweet(childComment, e)}
-                    >
-                      <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
-                        <Repeat2 className="h-4 w-4 transition-colors group-hover:text-green-500" />
-                      </div>
-                      {(childComment.retweetCount ?? 0) > 0 && (
-                        <span className="ml-1 text-xs text-foreground/60 group-hover:text-green-600 transition-colors">
-                          {childComment.retweetCount}
-                        </span>
-                      )}
-                    </div>
-                    <div
-                      className="group flex items-center cursor-pointer"
-                      onClick={() => handleToggleStar(childComment.id)}
-                    >
-                      <div className="p-2 rounded-full group-hover:bg-yellow-500/10 transition-colors">
-                        {starredComments.has(childComment.id) ? (
-                          <BookmarkCheck className="h-4 w-4 text-yellow-600 fill-yellow-600 transition-colors" />
-                        ) : (
-                          <Bookmark className="h-4 w-4 group-hover:text-yellow-600 transition-colors" />
-                        )}
-                      </div>
-                    </div>
-                    <div className="group flex items-center cursor-pointer">
-                      <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors text-right">
-                        <Share className="h-4 w-4" />
-                      </div>
-                    </div>
-                  </div>
+                  <ActionRow
+                    replyCount={childComment._count?.replies || 0}
+                    onReply={(e) => {
+                      e.stopPropagation()
+                      setReplyTarget(childComment)
+                      setShowReplyDialog(true)
+                    }}
+                    copied={copiedId === childComment.id}
+                    onCopy={() => handleCopy(childComment.id, childComment.content)}
+                    retweetCount={childComment.retweetCount ?? 0}
+                    onRetweet={(e) => handleChildRetweet(childComment, e)}
+                    starred={starredComments.has(childComment.id)}
+                    onToggleStar={() => handleToggleStar(childComment.id)}
+                    onShare={undefined}
+                    size="sm"
+                    className="mt-3"
+                  />
                 </div>
               </div>
             </div>

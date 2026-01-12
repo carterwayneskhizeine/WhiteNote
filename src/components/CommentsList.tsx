@@ -8,15 +8,9 @@ import { GoldieAvatar } from "@/components/GoldieAvatar"
 import {
   Loader2,
   Bot,
-  MessageCircle,
-  Repeat2,
-  Share,
   Edit2,
   Trash2,
   MoreVertical,
-  Copy,
-  Bookmark,
-  BookmarkCheck,
 } from "lucide-react"
 import { commentsApi, aiApi, templatesApi } from "@/lib/api"
 import { Comment } from "@/types/api"
@@ -48,6 +42,7 @@ import { cn, getHandle } from "@/lib/utils"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
 import { ImageLightbox } from "@/components/ImageLightbox"
 import { MediaGrid } from "@/components/MediaGrid"
+import { ActionRow } from "@/components/ActionRow"
 
 interface CommentsListProps {
   messageId: string
@@ -507,67 +502,23 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
                   )}
 
                   {/* Action row for comments */}
-                  <div className="mt-3 flex items-center justify-between gap-2 text-muted-foreground">
-                    <div
-                      className="group flex items-center cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setReplyTarget(comment)
-                        setShowReplyDialog(true)
-                      }}
-                    >
-                      <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors">
-                        <MessageCircle className="h-4 w-4" />
-                      </div>
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        {getReplyCount(comment)}
-                      </span>
-                    </div>
-                    <div
-                      className="group flex items-center cursor-pointer"
-                      onClick={(e) => handleCopy(comment, e)}
-                    >
-                      <div className={cn(
-                        "p-2 rounded-full transition-colors",
-                        copiedId === comment.id ? "bg-green-500/20" : "group-hover:bg-green-500/10"
-                      )}>
-                        <Copy className={cn(
-                          "h-4 w-4 transition-colors",
-                          copiedId === comment.id ? "text-green-500" : "text-muted-foreground group-hover:text-green-500"
-                        )} />
-                      </div>
-                    </div>
-                    <div
-                      className="group flex items-center cursor-pointer"
-                      onClick={(e) => handleRetweet(comment, e)}
-                    >
-                      <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
-                        <Repeat2 className="h-4 w-4 transition-colors text-muted-foreground group-hover:text-green-500" />
-                      </div>
-                      {(comment.retweetCount ?? 0) > 0 && (
-                        <span className="ml-1 text-xs text-foreground/60 group-hover:text-green-600 transition-colors">
-                          {comment.retweetCount}
-                        </span>
-                      )}
-                    </div>
-                    <div
-                      className="group flex items-center cursor-pointer"
-                      onClick={(e) => handleToggleStar(comment, e)}
-                    >
-                      <div className="p-2 rounded-full group-hover:bg-yellow-500/10 transition-colors">
-                        {starredComments.has(comment.id) ? (
-                          <BookmarkCheck className="h-4 w-4 text-yellow-600 fill-yellow-600 transition-colors" />
-                        ) : (
-                          <Bookmark className="h-4 w-4 text-muted-foreground group-hover:text-yellow-600 transition-colors" />
-                        )}
-                      </div>
-                    </div>
-                    <div className="group flex items-center cursor-pointer">
-                      <div className="p-2 rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors text-right">
-                        <Share className="h-4 w-4" />
-                      </div>
-                    </div>
-                  </div>
+                  <ActionRow
+                    replyCount={getReplyCount(comment)}
+                    onReply={(e) => {
+                      e.stopPropagation()
+                      setReplyTarget(comment)
+                      setShowReplyDialog(true)
+                    }}
+                    copied={copiedId === comment.id}
+                    onCopy={(e) => handleCopy(comment, e)}
+                    retweetCount={comment.retweetCount ?? 0}
+                    onRetweet={(e) => handleRetweet(comment, e)}
+                    starred={starredComments.has(comment.id)}
+                    onToggleStar={(e) => handleToggleStar(comment, e)}
+                    onShare={undefined}
+                    size="sm"
+                    className="mt-3"
+                  />
                 </div>
               </div>
             </div>

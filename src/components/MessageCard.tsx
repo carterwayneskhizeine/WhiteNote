@@ -3,15 +3,9 @@
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
-  Bookmark,
-  BookmarkCheck,
-  Copy,
-  Share,
   MoreVertical,
   Trash2,
   Edit2,
-  MessageCircle,
-  Repeat2,
   Pin,
   PinOff
 } from "lucide-react"
@@ -44,6 +38,7 @@ import { useRouter } from "next/navigation"
 import { TipTapViewer } from "@/components/TipTapViewer"
 import { ImageLightbox } from "@/components/ImageLightbox"
 import { MediaGrid } from "@/components/MediaGrid"
+import { ActionRow } from "@/components/ActionRow"
 
 interface MessageCardProps {
   message: Message
@@ -310,67 +305,19 @@ export function MessageCard({
             </div>
 
             {/* Action Bar (Footer) */}
-            <div className="mt-3 flex items-center justify-between gap-2">
-              {/* 1. Reply */}
-              <div
-                className="group flex items-center -ml-2 cursor-pointer"
-                onClick={handleReply}
-              >
-                <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
-                  <MessageCircle className="h-[18px] w-[18px] text-muted-foreground group-hover:text-blue-500 transition-colors" />
-                </div>
-                {message._count.comments > 0 && (
-                  <span className="text-xs text-muted-foreground group-hover:text-blue-500 transition-colors">{message._count.comments}</span>
-                )}
-              </div>
-
-              {/* 2. Copy */}
-              <div onClick={handleCopy} className="group flex items-center cursor-pointer">
-                <div className={cn(
-                  "p-2 rounded-full transition-colors",
-                  copied ? "bg-green-500/20" : "group-hover:bg-green-500/10"
-                )}>
-                  <Copy className={cn(
-                    "h-[18px] w-[18px] transition-colors",
-                    copied ? "text-green-500" : "text-muted-foreground group-hover:text-green-500"
-                  )} />
-                </div>
-              </div>
-
-              {/* 3. Retweet */}
-              <div onClick={handleRetweet} className="group flex items-center cursor-pointer">
-                <div className={cn(
-                  "p-2 rounded-full transition-colors",
-                  "group-hover:bg-green-500/10"
-                )}>
-                  <Repeat2 className={cn(
-                    "h-[18px] w-[18px] transition-colors",
-                    "text-muted-foreground group-hover:text-green-500"
-                  )} />
-                </div>
-                {(message.retweetCount ?? 0) > 0 && (
-                  <span className="text-xs text-foreground/60 group-hover:text-green-600 transition-colors">{message.retweetCount}</span>
-                )}
-              </div>
-
-              {/* 4. Bookmark */}
-              <div onClick={handleToggleStar} className="group flex items-center cursor-pointer">
-                <div className="p-2 rounded-full group-hover:bg-yellow-500/10 transition-colors">
-                  {isStarred ? (
-                    <BookmarkCheck className="h-[18px] w-[18px] text-yellow-600 fill-yellow-600 transition-colors" />
-                  ) : (
-                    <Bookmark className="h-[18px] w-[18px] text-muted-foreground group-hover:text-yellow-600 transition-colors" />
-                  )}
-                </div>
-              </div>
-
-              {/* 5. Share */}
-              <div className="group flex items-center -mr-2">
-                <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
-                  <Share className="h-[18px] w-[18px] text-muted-foreground group-hover:text-blue-500 transition-colors" />
-                </div>
-              </div>
-            </div>
+            <ActionRow
+              replyCount={message._count.comments}
+              onReply={handleReply}
+              copied={copied}
+              onCopy={handleCopy}
+              retweetCount={message.retweetCount ?? 0}
+              onRetweet={handleRetweet}
+              starred={isStarred}
+              onToggleStar={handleToggleStar}
+              onShare={undefined}
+              size="md"
+              className="mt-3"
+            />
           </div>
         </div>
       </div>
