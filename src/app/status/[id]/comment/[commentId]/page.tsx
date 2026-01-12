@@ -324,6 +324,17 @@ export default function CommentDetailPage() {
                 {comment.isAIBot && (
                   <Bot className="h-4 w-4 text-primary ml-1" />
                 )}
+
+                {/* Tags displayed after user info */}
+                {comment.tags && comment.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 items-center">
+                    {comment.tags.map(({ tag }) => (
+                      <span key={tag.id} className="text-primary hover:underline cursor-pointer text-sm">
+                        #{tag.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -564,6 +575,17 @@ export default function CommentDetailPage() {
                       </span>
                       {childComment.isAIBot && (
                         <Bot className="h-3.5 w-3.5 text-primary ml-1" />
+                      )}
+
+                      {/* Tags displayed after user info */}
+                      {childComment.tags && childComment.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 items-center">
+                          {childComment.tags.map(({ tag }) => (
+                            <span key={tag.id} className="text-primary hover:underline cursor-pointer text-xs">
+                              #{tag.name}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
                     <DropdownMenu>

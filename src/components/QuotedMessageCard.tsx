@@ -28,6 +28,13 @@ interface QuotedMessage {
     type: string
     description?: string | null
   }>
+  tags?: Array<{
+    tag: {
+      id: string
+      name: string
+      color?: string | null
+    }
+  }>
 }
 
 interface QuotedMessageCardProps {
@@ -78,7 +85,7 @@ export function QuotedMessageCard({ message, className }: QuotedMessageCardProps
       )}
     >
       {/* Header: Author info */}
-      <div className="flex items-center gap-2 text-sm mb-2">
+      <div className="flex items-center gap-2 text-sm mb-2 flex-wrap">
         <GoldieAvatar
           name={message.author?.name || null}
           avatar={message.author?.avatar || null}
@@ -108,6 +115,17 @@ export function QuotedMessageCard({ message, className }: QuotedMessageCardProps
         <span className="text-muted-foreground">
           {formatTime(message.createdAt)}
         </span>
+
+        {/* Tags displayed after user info */}
+        {message.tags && message.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 items-center">
+            {message.tags.map(({ tag }) => (
+              <span key={tag.id} className="text-primary hover:underline cursor-pointer text-xs">
+                #{tag.name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Message Content - truncated to 2 lines */}

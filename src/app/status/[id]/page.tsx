@@ -154,25 +154,40 @@ export default function StatusPage() {
             {/* Main Post Content */}
             <div className="p-4">
                 <div className="flex items-start justify-between">
-                    <div className="flex flex-col">
+                    <div className="flex flex-wrap items-baseline gap-x-1 gap-y-0.5 text-sm leading-5">
                         {message.author ? (
                             <>
-                                <span className="font-bold text-foreground leading-tight hover:underline cursor-pointer">
+                                <span className="font-bold text-foreground hover:underline">
                                     {message.author.name || "GoldieRill"}
                                 </span>
-                                <span className="text-muted-foreground text-sm leading-tight">
+                                <span className="text-muted-foreground">
                                     @{getHandle(message.author?.email || null, !!message.author)}
                                 </span>
                             </>
                         ) : (
                             <>
-                                <span className="font-bold text-purple-600 leading-tight hover:underline cursor-pointer">
+                                <span className="font-bold text-purple-600 hover:underline">
                                     GoldieRill
                                 </span>
-                                <span className="text-muted-foreground text-sm leading-tight">
+                                <span className="text-muted-foreground">
                                     @AI
                                 </span>
                             </>
+                        )}
+                        <span className="text-muted-foreground px-1">·</span>
+                        <span className="text-muted-foreground">
+                            {format(new Date(message.createdAt), "a h:mm · yyyy'年'M'月'd'日'", { locale: zhCN })}
+                        </span>
+
+                        {/* Tags displayed after user info */}
+                        {message.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                                {message.tags.map(({ tag }) => (
+                                    <span key={tag.id} className="text-primary hover:underline cursor-pointer">
+                                        #{tag.name}
+                                    </span>
+                                ))}
+                            </div>
                         )}
                     </div>
                     <DropdownMenu>
@@ -215,8 +230,6 @@ export default function StatusPage() {
                 )}
 
                 <div className="mt-4 flex flex-wrap gap-1 text-muted-foreground text-[15px]">
-                    <span>{format(new Date(message.createdAt), "a h:mm · yyyy'年'M'月'd'日'", { locale: zhCN })}</span>
-                    <span className="px-1">·</span>
                     <span className="font-bold text-foreground">3.6万</span>
                     <span>查看</span>
                 </div>
