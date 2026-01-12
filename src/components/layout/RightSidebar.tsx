@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
-import { Search, MoreHorizontal, Hash } from "lucide-react"
+import { useState, useCallback, useEffect, useRef } from "react"
+import { Search, MoreHorizontal, Hash, Clock, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,19 +9,43 @@ import { searchApi } from "@/lib/api/search"
 import { MessageWithRelations } from "@/types/api"
 import { useRouter } from "next/navigation"
 
+type SearchHistoryItem = {
+  id: string
+  query: string
+  createdAt: string
+}
+
 export function RightSidebar() {
   const router = useRouter()
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<MessageWithRelations[]>([])
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [showResults, setShowResults] = useState(false)
+  const [isDropdownHovered, setIsDropdownHovered] = useState(false)
+
+  // 加载搜索历史
+  const loadSearchHistory = useCallback(async () => {
+    setIsLoadingHistory(true)
+    try {
+      const result = await searchApi.getHistory()
+      if (result.data) {
+        setSearchHistory(result.data)
+      }
+    } catch (error) {
+      console.error("Failed to load search history:", error)
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }, [])
 
   // 防抖搜索（不记录历史）
   const debouncedSearch = useCallback(
     (query: string) => {
       if (!query.trim()) {
         setSearchResults([])
-        setShowResults(false)
         return
       }
 
@@ -30,7 +54,6 @@ export function RightSidebar() {
         .then((result) => {
           if (result.data) {
             setSearchResults(result.data)
-            setShowResults(true)
           }
         })
         .catch((error) => {
@@ -65,6 +88,8 @@ export function RightSidebar() {
       if (result.data) {
         setSearchResults(result.data)
         setShowResults(true)
+        // 刷新搜索历史
+        loadSearchHistory()
       }
     } catch (error) {
       console.error("Search failed:", error)
@@ -73,11 +98,45 @@ export function RightSidebar() {
     }
   }
 
+  // 点击搜索历史项
+  const handleHistoryClick = (historyQuery: string) => {
+    setSearchQuery(historyQuery)
+    handleConfirmSearch(historyQuery)
+    // 保持搜索结果显示，直到失去焦点
+  }
+
+  // 点击搜索结果（记录搜索历史）
+  const handleResultClick = async (messageId: string, query: string) => {
+    // 记录搜索历史
+    await searchApi.search({ q: query, saveHistory: true })
+    router.push(`/status/${messageId}`)
+    setShowResults(false)
+    setSearchQuery("")
+    // 刷新搜索历史
+    loadSearchHistory()
+  }
+
+  // 聚焦时加载搜索历史
+  const handleFocus = () => {
+    setShowResults(true)
+    loadSearchHistory()
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       handleConfirmSearch(searchQuery)
       setShowResults(false)
     }
+  }
+
+  // 处理输入框失去焦点
+  const handleBlur = () => {
+    // 如果鼠标悬停在下拉框内，不关闭
+    setTimeout(() => {
+      if (!isDropdownHovered) {
+        setShowResults(false)
+      }
+    }, 200)
   }
 
   return (
@@ -91,66 +150,108 @@ export function RightSidebar() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => setShowResults(true)}
-            onBlur={() => setTimeout(() => setShowResults(false), 200)}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             className="pl-12 h-10 rounded-full bg-background dark:bg-background border border-border focus-visible:ring-1 focus-visible:ring-primary placeholder:text-muted-foreground"
           />
         </div>
 
-        {/* Search Results Dropdown */}
-        {showResults && searchQuery && (
-          <Card className="absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-lg z-50 max-h-[500px] overflow-y-auto">
-            {isSearching ? (
-              <div className="p-4 text-center text-muted-foreground text-sm">
-                搜索中...
-              </div>
-            ) : searchResults.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground text-sm">
-                未找到相关结果
-              </div>
-            ) : (
-              <div className="divide-y">
-                {searchResults.map((message) => (
-                  <button
-                    key={message.id}
-                    onClick={() => {
-                      router.push(`/status/${message.id}`)
-                      setShowResults(false)
-                      setSearchQuery("")
-                    }}
-                    className="w-full text-left p-4 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-sm">
-                            {message.author?.name || "AI 助手"}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(message.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div
-                          className="text-sm line-clamp-3 prose prose-sm dark:prose-invert"
-                          dangerouslySetInnerHTML={{ __html: message.content }}
-                        />
-                        {message.tags.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {message.tags.map(({ tag }) => (
-                              <span
-                                key={tag.id}
-                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
-                              >
-                                #{tag.name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+        {/* Search Results & History Dropdown */}
+        {showResults && (
+          <Card
+            ref={dropdownRef}
+            className="absolute top-full left-0 right-0 mt-2 rounded-2xl shadow-lg z-50 max-h-[500px] overflow-y-auto"
+            onMouseEnter={() => setIsDropdownHovered(true)}
+            onMouseLeave={() => setIsDropdownHovered(false)}
+          >
+            {/* 搜索历史 */}
+            {!searchQuery && (
+              <>
+                {isLoadingHistory ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    加载中...
+                  </div>
+                ) : searchHistory.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    暂无搜索历史
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    <div className="px-4 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
+                      最近搜索
                     </div>
-                  </button>
-                ))}
-              </div>
+                    {searchHistory.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleHistoryClick(item.query)}
+                        className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors flex items-center justify-between group"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm truncate">{item.query}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          {new Date(item.createdAt).toLocaleDateString()}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* 搜索结果 */}
+            {searchQuery && (
+              <>
+                {isSearching ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    搜索中...
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    未找到相关结果
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {searchResults.map((message) => (
+                      <button
+                        key={message.id}
+                        onClick={() => handleResultClick(message.id, searchQuery)}
+                        className="w-full text-left p-4 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-bold text-sm">
+                                {message.author?.name || "AI 助手"}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(message.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div
+                              className="text-sm line-clamp-3 prose prose-sm dark:prose-invert"
+                              dangerouslySetInnerHTML={{ __html: message.content }}
+                            />
+                            {message.tags.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {message.tags.map(({ tag }) => (
+                                  <span
+                                    key={tag.id}
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                                  >
+                                    #{tag.name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </Card>
         )}
