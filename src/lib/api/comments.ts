@@ -100,7 +100,7 @@ export const commentsApi = {
   /**
    * Update comment
    */
-  async updateComment(commentId: string, data: { content: string }): Promise<CommentResponse> {
+  async updateComment(commentId: string, data: { content: string; tags?: string[] }): Promise<CommentResponse> {
     const response = await fetch(`${API_BASE}/comments/${commentId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

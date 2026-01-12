@@ -98,6 +98,7 @@ model Tag {
   color     String?
   createdAt DateTime     @default(now())
   messages  MessageTag[]
+  comments  CommentTag[]
 
   @@index([name])
 }
@@ -109,6 +110,16 @@ model MessageTag {
   tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([messageId, tagId])
+  @@index([tagId])
+}
+
+model CommentTag {
+  commentId String
+  tagId     String
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, tagId])
   @@index([tagId])
 }
 
@@ -164,6 +175,7 @@ model Comment {
   replies         Comment[]         @relation("CommentReplies")
   quotedMessage   Message?          @relation("QuoteComment", fields: [quotedMessageId], references: [id])
   quotedByMessages Message[]        @relation("QuoteCommentByMessage")
+  tags            CommentTag[]
   medias          Media[]
   retweets        Retweet[]
 

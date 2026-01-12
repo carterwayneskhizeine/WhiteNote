@@ -1,6 +1,7 @@
 import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { NextRequest } from "next/server"
+import { addTask } from "@/lib/queue"
 
 /**
  * GET /api/messages/[id]/comments
@@ -24,6 +25,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             select: { id: true, name: true, avatar: true, email: true }
           }
         }
+      },
+      tags: {
+        include: {
+          tag: { select: { id: true, name: true, color: true } },
+        },
       },
       medias: {
         select: { id: true, url: true, type: true, description: true }
@@ -112,9 +118,35 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
       include: {
         author: { select: { id: true, name: true, avatar: true, email: true } },
+        tags: {
+          include: {
+            tag: { select: { id: true, name: true, color: true } },
+          },
+        },
         medias: { select: { id: true, url: true, type: true, description: true } },
       },
     })
+
+    // 获取用户 AI 配置
+    const config = await prisma.aiConfig.findUnique({
+      where: { userId: session.user.id },
+    })
+
+    // 添加自动打标签任务（如果启用）
+    if (config?.enableAutoTag) {
+      await addTask("auto-tag-comment", {
+        userId: session.user.id,
+        commentId: comment.id,
+        contentType: 'comment',
+      })
+    } else {
+      // 如果未启用自动打标签，直接同步到 RAGFlow
+      await addTask("sync-ragflow", {
+        userId: session.user.id,
+        messageId: comment.id,
+        contentType: 'comment',
+      })
+    }
 
     return Response.json({ data: comment }, { status: 201 })
   } catch (error) {

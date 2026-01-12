@@ -4,8 +4,9 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { commentsApi } from "@/lib/api"
 import { TipTapEditor } from "@/components/TipTapEditor"
+import { TagInput } from "@/components/TagInput"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2, Tag } from "lucide-react"
 import { Comment } from "@/types/api"
 
 export default function EditCommentPage() {
@@ -13,6 +14,7 @@ export default function EditCommentPage() {
   const router = useRouter()
   const [comment, setComment] = useState<Comment | null>(null)
   const [content, setContent] = useState("")
+  const [tags, setTags] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,6 +26,8 @@ export default function EditCommentPage() {
         if (result.data) {
           setComment(result.data)
           setContent(result.data.content)
+          // 提取现有标签
+          setTags(result.data.tags?.map(({ tag }) => tag.name) || [])
         } else if (result.error) {
           setError(result.error)
         }
@@ -45,7 +49,11 @@ export default function EditCommentPage() {
 
     setIsSaving(true)
     try {
-      const result = await commentsApi.updateComment(comment.id, { content })
+      // 更新内容和标签
+      const result = await commentsApi.updateComment(comment.id, {
+        content,
+        tags,
+      })
 
       if (result.data) {
         // Replace the current edit page in history with the comment detail page
@@ -88,7 +96,7 @@ export default function EditCommentPage() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border bg-background/95 backdrop-blur px-4 py-3 sticky top-0 z-10">
+      <div className="flex items-center justify-between border-b border-border bg-background/95 backdrop-blur px-4 py-3 sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -117,6 +125,16 @@ export default function EditCommentPage() {
             {isSaving ? "保存中..." : "保存"}
           </Button>
         </div>
+      </div>
+
+      {/* Tags Section */}
+      <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center gap-2">
+        <Tag className="h-4 w-4 text-muted-foreground" />
+        <TagInput
+          tags={tags}
+          onChange={setTags}
+          className="flex-1"
+        />
       </div>
 
       {/* Editor */}

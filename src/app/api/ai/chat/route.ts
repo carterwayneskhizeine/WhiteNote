@@ -4,6 +4,7 @@ import { buildSystemPrompt, callOpenAI } from "@/lib/ai/openai"
 import { callRAGFlow } from "@/lib/ai/ragflow"
 import { getAiConfig } from "@/lib/ai/config"
 import { NextRequest } from "next/server"
+import { addTask } from "@/lib/queue"
 
 /**
  * 从 RAGFlow 文档名称提取消息 ID
@@ -83,8 +84,30 @@ export async function POST(request: NextRequest) {
       },
       include: {
         quotedMessage: true,
+        tags: {
+          include: {
+            tag: { select: { id: true, name: true, color: true } },
+          },
+        },
       },
     })
+
+    // AI 评论也需要自动打标签并推送到知识库
+    // 注意：AI 评论的 authorId 为 null，所以使用消息作者的用户 ID
+    if (config?.enableAutoTag) {
+      await addTask("auto-tag-comment", {
+        userId: session.user.id,
+        commentId: comment.id,
+        contentType: 'comment',
+      })
+    } else {
+      // 如果未启用自动打标签，直接同步到 RAGFlow
+      await addTask("sync-ragflow", {
+        userId: session.user.id,
+        messageId: comment.id,
+        contentType: 'comment',
+      })
+    }
 
     return Response.json({
       data: { comment, references },

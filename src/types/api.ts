@@ -133,6 +133,13 @@ export interface Comment {
   parentId?: string | null
   quotedMessageId?: string | null
   quotedMessage?: QuotedMessage | null
+  tags?: Array<{
+    tag: {
+      id: string
+      name: string
+      color?: string | null
+    }
+  }>
   medias?: Array<{
     id: string
     url: string
@@ -141,6 +148,7 @@ export interface Comment {
   }>
   _count?: {
     replies: number
+    retweets: number
   }
   retweetCount?: number
   isRetweeted?: boolean

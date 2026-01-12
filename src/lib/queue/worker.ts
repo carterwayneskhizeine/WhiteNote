@@ -1,6 +1,7 @@
 import { Worker, Job } from "bullmq"
 import redis from "@/lib/redis"
 import { processAutoTag } from "./processors/auto-tag"
+import { processAutoTagExtended } from "./processors/auto-tag-extended"
 import { processSyncRAGFlow } from "./processors/sync-ragflow"
 import { processDailyBriefing } from "./processors/daily-briefing"
 
@@ -18,6 +19,9 @@ export function startWorker() {
       switch (job.name) {
         case "auto-tag":
           await processAutoTag(job)
+          break
+        case "auto-tag-comment":
+          await processAutoTagExtended(job)
           break
         case "sync-ragflow":
           await processSyncRAGFlow(job)

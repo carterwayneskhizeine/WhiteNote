@@ -4,6 +4,7 @@ import { NextRequest } from "next/server"
 import { unlink } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
+import { batchUpsertTags } from "@/lib/tag-utils"
 
 // Upload directory outside the codebase
 const UPLOAD_DIR = process.env.UPLOAD_DIR || join(process.cwd(), "..", "whitenote-data", "uploads")
@@ -157,7 +158,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { id } = await params
 
     const body = await request.json()
-    const { content } = body
+    const { content, tags } = body
 
     if (!content || typeof content !== 'string') {
       return Response.json({ error: "Content is required" }, { status: 400 })
@@ -188,10 +189,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       }
     }
 
+    // 准备更新数据
+    const updateData: any = { content }
+
+    // 如果提供了标签，更新标签
+    if (tags !== undefined) {
+      updateData.tags = {
+        deleteMany: {},
+        create: (await batchUpsertTags([...new Set(tags as string[])]))
+          .map((tagId) => ({ tagId })),
+      }
+    }
+
     // 更新评论
     const updatedComment = await prisma.comment.update({
       where: { id },
-      data: { content },
+      data: updateData,
       include: {
         author: { select: { id: true, name: true, avatar: true, email: true } },
         quotedMessage: {
@@ -204,6 +217,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             }
           }
         },
+        tags: {
+          include: {
+            tag: { select: { id: true, name: true, color: true } },
+          },
+        },
         medias: {
           select: { id: true, url: true, type: true, description: true }
         },
@@ -212,6 +230,23 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         },
       },
     })
+
+    // 同步更新 RAGFlow 文档（异步执行，不阻塞响应）
+    // 触发条件：内容变化 或 标签变化
+    const contentChanged = content !== comment.content
+    const tagsChanged = tags !== undefined
+
+    if (contentChanged || tagsChanged) {
+      const { buildContentWithTags, updateInKnowledgeBase } = await import("@/lib/knowledge-base")
+
+      // 获取更新后的完整内容（包含标签）
+      const contentWithTags = await buildContentWithTags('comment', id)
+
+      // 异步更新，不阻塞响应
+      updateInKnowledgeBase(session.user.id, 'comment', id).catch((error) => {
+        console.error("Failed to update comment in RAGFlow:", error)
+      })
+    }
 
     return Response.json({ data: updatedComment })
   } catch (error) {
