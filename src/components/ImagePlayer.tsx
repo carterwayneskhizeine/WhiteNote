@@ -38,7 +38,7 @@ export function ImagePlayer({ src, alt, className = "", onClick }: ImagePlayerPr
     }
   }, [src])
 
-  // 竖图使用 3:4 容器，限制宽度为 400px，靠左显示
+  // 竖图使用 3:4 容器，宽度占满并裁剪上下部分
   const shouldConstrain = isVertical
 
   return (
@@ -48,7 +48,7 @@ export function ImagePlayer({ src, alt, className = "", onClick }: ImagePlayerPr
         aspectRatio: "3/4",
         display: "flex",
         alignItems: "center",
-        justifyContent: "flex-start",
+        justifyContent: "center",
         maxWidth: "400px"
       } : {}}
     >
@@ -57,7 +57,7 @@ export function ImagePlayer({ src, alt, className = "", onClick }: ImagePlayerPr
         src={src}
         alt={alt || ""}
         onClick={onClick}
-        className={shouldConstrain ? "max-h-full max-w-full object-contain cursor-pointer hover:opacity-90 transition-opacity" : "w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"}
+        className={shouldConstrain ? "w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" : "w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"}
       />
     </div>
   )
