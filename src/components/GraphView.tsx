@@ -118,7 +118,8 @@ export const GraphView: React.FC<GraphViewProps> = ({
             })
             .attr("stroke", d => {
                 const nodeType = (d as any).nodeType
-                if (nodeType === 'comment') return '#ffffff' // White stroke for comments
+                if (nodeType === 'comment') return '#1d9bf0' // Blue stroke for comments
+                if (nodeType === 'message') return '#ffffff' // White stroke for messages
                 return d.isHub ? "#fff" : "none"
             })
             .attr("stroke-width", d => (d as any).nodeType === 'comment' ? 2 : 1.5)
