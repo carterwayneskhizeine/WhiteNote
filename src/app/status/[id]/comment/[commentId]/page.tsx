@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { commentsApi, aiApi, templatesApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -27,22 +27,20 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Comment } from "@/types/api"
 import { Template } from "@/types/api"
-import { useSession } from "next-auth/react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { MediaItem } from "@/components/MediaUploader"
 import { GoldieAvatar } from "@/components/GoldieAvatar"
 import { cn, getHandle } from "@/lib/utils"
 import { ReplyDialog } from "@/components/ReplyDialog"
 import { RetweetDialog } from "@/components/RetweetDialog"
 import { QuotedMessageCard } from "@/components/QuotedMessageCard"
 import { ImageLightbox } from "@/components/ImageLightbox"
-import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
 import { MediaGrid } from "@/components/MediaGrid"
 import { ActionRow } from "@/components/ActionRow"
+import { CompactReplyInput } from "@/components/CompactReplyInput"
 
 export default function CommentDetailPage() {
   const { id, commentId } = useParams() as { id: string; commentId: string }
   const router = useRouter()
-  const { data: session } = useSession()
 
   const [comment, setComment] = useState<Comment | null>(null)
   const [childComments, setChildComments] = useState<Comment[]>([])
@@ -57,7 +55,6 @@ export default function CommentDetailPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [templates, setTemplates] = useState<Template[]>([])
   const [replyInputFocused, setReplyInputFocused] = useState(false)
-  const mediaUploaderRef = useRef<MediaUploaderRef>(null)
 
   const [showRetweetDialog, setShowRetweetDialog] = useState(false)
   const [retweetTarget, setRetweetTarget] = useState<Comment | null>(null)
@@ -409,127 +406,20 @@ export default function CommentDetailPage() {
       </div>
 
       {/* Reply Input */}
-      <div className="p-4 border-b">
-        <div className="flex gap-3">
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarImage src={session?.user?.image || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-              {session?.user?.name?.slice(0, 2) || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            {/* Compact mode: textarea and button on same line */}
-            {!replyInputFocused && !newReply.trim() && uploadedMedia.length === 0 ? (
-              <div className="flex items-center gap-3">
-                <textarea
-                  placeholder="发布你的回复"
-                  className="flex-1 bg-transparent border-none focus:outline-none text-lg resize-none h-9 py-1 placeholder:text-muted-foreground"
-                  value={newReply}
-                  onChange={(e) => {
-                    setNewReply(e.target.value)
-                  }}
-                  onFocus={() => setReplyInputFocused(true)}
-                  disabled={posting}
-                  rows={1}
-                />
-                <Button
-                  className="rounded-full px-5 font-bold h-9 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 shrink-0"
-                  disabled
-                  onClick={() => setReplyInputFocused(true)}
-                >
-                  回复
-                </Button>
-              </div>
-            ) : (
-              /* Expanded mode */
-              <div className="flex flex-col gap-2">
-                <textarea
-                  placeholder="发布你的回复"
-                  className="w-full bg-transparent border-none focus:outline-none text-lg resize-none min-h-[40px] py-1 placeholder:text-muted-foreground"
-                  value={newReply}
-                  onChange={(e) => {
-                    setNewReply(e.target.value)
-                    e.target.style.height = 'auto'
-                    e.target.style.height = e.target.scrollHeight + 'px'
-                  }}
-                  onFocus={() => setReplyInputFocused(true)}
-                  disabled={posting}
-                  rows={1}
-                />
-
-                <MediaUploader
-                  ref={mediaUploaderRef}
-                  media={uploadedMedia}
-                  onMediaChange={setUploadedMedia}
-                  disabled={posting}
-                  onUploadingChange={setIsUploading}
-                />
-
-                <div className="flex items-center justify-between gap-3">
-                  {/* Left side: Action buttons */}
-                  <div className="flex-1 flex gap-1 text-primary">
-                    {/* Image Upload Button */}
-                    <button
-                      className="h-8 w-8 text-primary hover:bg-primary/10 rounded-full flex items-center justify-center disabled:opacity-50"
-                      onClick={() => mediaUploaderRef.current?.triggerUpload()}
-                      disabled={isUploading}
-                    >
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                      </svg>
-                    </button>
-
-                    {/* Templates Dropdown */}
-                    {templates.length > 0 && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="h-8 w-8 text-primary hover:bg-primary/10 rounded-full flex items-center justify-center">
-                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <line x1="8" y1="6" x2="21" y2="6"></line>
-                              <line x1="8" y1="12" x2="21" y2="12"></line>
-                              <line x1="8" y1="18" x2="21" y2="18"></line>
-                              <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                              <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                              <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                            </svg>
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56">
-                          {templates.map((template) => (
-                            <DropdownMenuItem
-                              key={template.id}
-                              onClick={() => applyTemplate(template)}
-                            >
-                              <div className="flex flex-col">
-                                <span className="font-medium">{template.name}</span>
-                              </div>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-
-                  {/* Submit button */}
-                  <Button
-                    className="rounded-full px-5 font-bold h-9 bg-black text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                    disabled={(!newReply.trim() && uploadedMedia.length === 0) || posting}
-                    onClick={handlePostReply}
-                  >
-                    {posting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "回复"
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <CompactReplyInput
+        value={newReply}
+        onChange={setNewReply}
+        media={uploadedMedia}
+        onMediaChange={setUploadedMedia}
+        isUploading={isUploading}
+        onUploadingChange={setIsUploading}
+        posting={posting}
+        focused={replyInputFocused}
+        onFocusedChange={setReplyInputFocused}
+        templates={templates}
+        onApplyTemplate={applyTemplate}
+        onSubmit={handlePostReply}
+      />
 
       {/* Child Comments List */}
       <div className="border-t">
