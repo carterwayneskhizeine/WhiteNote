@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Search, MoreHorizontal, Hash } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -16,9 +16,43 @@ export function RightSidebar() {
   const [isSearching, setIsSearching] = useState(false)
   const [showResults, setShowResults] = useState(false)
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query)
+  // 防抖搜索（不记录历史）
+  const debouncedSearch = useCallback(
+    (query: string) => {
+      if (!query.trim()) {
+        setSearchResults([])
+        setShowResults(false)
+        return
+      }
 
+      setIsSearching(true)
+      searchApi.search({ q: query, saveHistory: false })
+        .then((result) => {
+          if (result.data) {
+            setSearchResults(result.data)
+            setShowResults(true)
+          }
+        })
+        .catch((error) => {
+          console.error("Search failed:", error)
+        })
+        .finally(() => {
+          setIsSearching(false)
+        })
+    },
+    []
+  )
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      debouncedSearch(searchQuery)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery, debouncedSearch])
+
+  // 确认搜索（记录历史）
+  const handleConfirmSearch = async (query: string) => {
     if (!query.trim()) {
       setSearchResults([])
       setShowResults(false)
@@ -27,7 +61,7 @@ export function RightSidebar() {
 
     setIsSearching(true)
     try {
-      const result = await searchApi.search({ q: query })
+      const result = await searchApi.search({ q: query, saveHistory: true })
       if (result.data) {
         setSearchResults(result.data)
         setShowResults(true)
@@ -39,6 +73,13 @@ export function RightSidebar() {
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleConfirmSearch(searchQuery)
+      setShowResults(false)
+    }
+  }
+
   return (
     <aside className="w-[390px] flex flex-col gap-4 px-4 pt-0 pb-4 hidden desktop:flex relative">
       {/* Search */}
@@ -46,9 +87,10 @@ export function RightSidebar() {
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary" />
           <Input
-            placeholder="搜索消息、标签..."
+            placeholder="搜索消息、标签... (按回车确认)"
             value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
             onFocus={() => setShowResults(true)}
             onBlur={() => setTimeout(() => setShowResults(false), 200)}
             className="pl-12 h-10 rounded-full bg-background dark:bg-background border border-border focus-visible:ring-1 focus-visible:ring-primary placeholder:text-muted-foreground"
@@ -72,7 +114,7 @@ export function RightSidebar() {
                   <button
                     key={message.id}
                     onClick={() => {
-                      router.push(`/?message=${message.id}`)
+                      router.push(`/status/${message.id}`)
                       setShowResults(false)
                       setSearchQuery("")
                     }}

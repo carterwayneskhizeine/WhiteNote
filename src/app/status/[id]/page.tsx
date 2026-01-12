@@ -229,11 +229,6 @@ export default function StatusPage() {
                     <QuotedMessageCard message={message.quotedMessage || message.quotedComment!} />
                 )}
 
-                <div className="mt-4 flex flex-wrap gap-1 text-muted-foreground text-[15px]">
-                    <span className="font-bold text-foreground">3.6万</span>
-                    <span>查看</span>
-                </div>
-
                 <Separator className="my-4" />
 
                 {/* Stats Row */}
