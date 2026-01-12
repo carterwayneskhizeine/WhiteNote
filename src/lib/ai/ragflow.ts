@@ -159,20 +159,22 @@ export async function syncToRAGFlow(userId: string, messageId: string, content: 
 }
 
 /**
- * 从 RAGFlow 删除消息对应的文档
+ * 从 RAGFlow 删除文档（通用函数，支持消息和评论）
  * @param userId 用户 ID
- * @param messageId 消息 ID
+ * @param id 消息 ID 或评论 ID
+ * @param contentType 内容类型 ('message' | 'comment')
  */
-export async function deleteFromRAGFlow(userId: string, messageId: string) {
+export async function deleteFromRAGFlow(userId: string, id: string, contentType: 'message' | 'comment' = 'message') {
   const config = await getAiConfig(userId)
 
   if (!config.ragflowApiKey || !config.ragflowDatasetId) {
-    console.warn("[RAGFlow] Not configured, skipping delete")
+    console.warn(`[RAGFlow] Not configured, skipping delete for ${contentType}`)
     return
   }
 
   try {
-    const documentName = `message_${messageId}.md`
+    // 文档名格式：message_{id}.md（评论和消息都使用相同格式）
+    const documentName = `message_${id}.md`
 
     // 1. 先查询文档 ID（通过文档名称）
     const listResponse = await fetch(
@@ -221,9 +223,9 @@ export async function deleteFromRAGFlow(userId: string, messageId: string) {
       throw new Error(`RAGFlow delete failed: ${errorText}`)
     }
 
-    console.log("[RAGFlow] Successfully deleted message:", messageId, "Documents:", documentIds)
+    console.log(`[RAGFlow] Successfully deleted ${contentType}:`, id, "Documents:", documentIds)
   } catch (error) {
-    console.error("[RAGFlow] Delete error for message:", messageId, error)
+    console.error(`[RAGFlow] Delete error for ${contentType}:`, id, error)
     // 不抛出错误，避免影响本地删除操作
   }
 }

@@ -10,6 +10,31 @@ import { existsSync } from "fs"
 // Upload directory outside the codebase
 const UPLOAD_DIR = process.env.UPLOAD_DIR || join(process.cwd(), "..", "whitenote-data", "uploads")
 
+/**
+ * 递归删除评论及其所有子评论的 RAGFlow 文档
+ */
+async function deleteCommentRAGFlowDocuments(commentId: string, userId: string) {
+  // 先删除子评论的 RAGFlow 文档
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    select: { replies: { select: { id: true } } },
+  })
+
+  if (comment) {
+    for (const reply of comment.replies) {
+      await deleteCommentRAGFlowDocuments(reply.id, userId)
+    }
+  }
+
+  // 删除当前评论的 RAGFlow 文档
+  try {
+    await deleteFromRAGFlow(userId, commentId, 'comment')
+    console.log(`[DELETE] Deleted RAGFlow document for comment: ${commentId}`)
+  } catch (error) {
+    console.error(`[DELETE] Failed to delete RAGFlow document for comment ${commentId}:`, error)
+  }
+}
+
 interface RouteContext {
   params: Promise<{ id: string }>
 }
@@ -331,8 +356,12 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
   }
 
-  // 递归删除所有关联评论（包括子评论）的媒体文件
+  // 递归删除所有关联评论（包括子评论）的 RAGFlow 文档和媒体文件
   for (const comment of existing.comments) {
+    // 删除 RAGFlow 文档（递归删除子评论的文档）
+    await deleteCommentRAGFlowDocuments(comment.id, session.user.id)
+
+    // 删除媒体文件
     const mediaUrls = await getAllCommentMediaUrls(comment.id)
     for (const mediaUrl of mediaUrls) {
       try {
@@ -359,7 +388,26 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     // 继续删除本地消息，不因 RAGFlow 删除失败而中断
   }
 
-  // 删除本地消息（会自动级联删除 Media 数据库记录）
+  // 显式删除所有相关的评论（包括子评论）
+  // Prisma 会级联删除评论的媒体、标签、转发等关联数据
+  const commentsDeleteResult = await prisma.comment.deleteMany({
+    where: { messageId: id },
+  })
+  console.log(`[DELETE Message] Deleted ${commentsDeleteResult.count} comments for message ${id}`)
+
+  // 删除所有引用此消息的其他消息（引用转发）
+  const quoteRetweetDeleteResult = await prisma.message.deleteMany({
+    where: { quotedMessageId: id },
+  })
+  console.log(`[DELETE Message] Deleted ${quoteRetweetDeleteResult.count} quote retweets for message ${id}`)
+
+  // 删除所有引用此消息的评论
+  const quoteCommentDeleteResult = await prisma.comment.deleteMany({
+    where: { quotedMessageId: id },
+  })
+  console.log(`[DELETE Message] Deleted ${quoteCommentDeleteResult.count} quote comments for message ${id}`)
+
+  // 删除本地消息（会自动级联删除 Media、MessageTag、MessageVersion 等数据库记录）
   await prisma.message.delete({
     where: { id },
   })
