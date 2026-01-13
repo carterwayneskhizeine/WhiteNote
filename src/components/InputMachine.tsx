@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { messagesApi } from "@/lib/api/messages"
+import { markMessageSending } from "@/hooks/useSocket"
 import { templatesApi } from "@/lib/api/templates"
 import { aiApi } from "@/lib/api"
 import { useSession } from "next-auth/react"
@@ -434,6 +435,9 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
 
   const handlePost = async () => {
     if (!editor || isPosting || (!hasContent && uploadedMedia.length === 0)) return
+
+    // ⚡ 立即标记：正在发送消息（在API调用之前）
+    markMessageSending()
 
     let content = editor.getMarkdown() // Store as Markdown instead of HTML
     const textContent = editor.getText() // Get plain text for @goldierill detection

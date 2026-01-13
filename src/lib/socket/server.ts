@@ -6,9 +6,15 @@ import { verifySessionToken } from "./auth"
 interface SocketData {
   userId: string
   userName: string
+  clientId?: string // 客户端会话ID
 }
 
-let io: SocketIOServer | null = null
+// 使用全局变量确保在开发模式下也能访问到同一个实例
+declare global {
+  var _io: SocketIOServer | undefined
+}
+
+let io: SocketIOServer | null = (typeof global !== 'undefined' ? global._io : null) || null
 
 export function initSocketServer(httpServer: HTTPServer) {
   if (io) {
@@ -24,6 +30,12 @@ export function initSocketServer(httpServer: HTTPServer) {
         : ["http://localhost:3005", "http://localhost:3000"],
       credentials: true,
     },
+    // Cloudflare Tunnel 优化配置
+    transports: ["websocket", "polling"],
+    pingTimeout: 30000,
+    pingInterval: 25000,
+    // 允许更长的握手超时（适应 Cloudflare Tunnel）
+    connectTimeout: 45000,
   })
 
   // Authentication middleware
@@ -72,9 +84,12 @@ export function initSocketServer(httpServer: HTTPServer) {
       socket.data = {
         userId: userData.userId,
         userName: userData.name || userData.email,
+        // 从查询参数获取客户端会话ID
+        clientId: socket.handshake.query.clientId as string,
       }
 
       console.log(`[Socket] User authenticated: ${userData.name || userData.email} (${userData.userId})`)
+      console.log(`[Socket] Client session ID: ${socket.data.clientId}`)
       next()
     } catch (error) {
       console.error("[Socket] Auth error:", error)
@@ -120,6 +135,11 @@ export function initSocketServer(httpServer: HTTPServer) {
       })
     })
 
+    // Debug: 监听消息创建事件（客户端测试用）
+    socket.on("debug:message-created", (data) => {
+      console.log(`[Socket] Debug: Message created event received from client:`, data)
+    })
+
     // Disconnect
     socket.on("disconnect", () => {
       console.log(`[Socket] Client disconnected: ${socket.id}`)
@@ -127,9 +147,19 @@ export function initSocketServer(httpServer: HTTPServer) {
   })
 
   console.log("[Socket] Server initialized")
+
+  // 保存到全局变量
+  if (typeof global !== 'undefined') {
+    global._io = io
+  }
+
   return io
 }
 
 export function getSocketServer() {
+  // 优先从全局变量获取
+  if (typeof global !== 'undefined' && global._io) {
+    return global._io
+  }
   return io
 }

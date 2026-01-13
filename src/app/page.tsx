@@ -4,17 +4,16 @@ import { InputMachine } from "@/components/InputMachine"
 import { MessagesList } from "@/components/MessagesList"
 import { NewMessageButton } from "@/components/NewMessageButton"
 import { useState } from "react"
-import { useSocket, markMessageSent } from "@/hooks/useSocket"
+import { useSocket } from "@/hooks/useSocket"
 import { useAppStore } from "@/store/useAppStore"
+import { useSession } from "next-auth/react"
 
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0)
   const { setHasNewMessages } = useAppStore()
+  const { data: session } = useSession()
 
   const handleMessageCreated = () => {
-    // 标记发送了消息，避免显示自己的消息提示
-    markMessageSent()
-
     // Trigger refresh of messages list
     setRefreshKey((prev) => prev + 1)
 
@@ -29,8 +28,10 @@ export default function Home() {
   // 监听来自其他设备的新消息
   useSocket({
     onNewMessage: (data) => {
-      console.log("New message from another device:", data)
+      console.log("✅ New message from another device:", data)
+      console.log("✅ Setting hasNewMessages to true")
       setHasNewMessages(true)
+      console.log("✅ hasNewMessages should be true now")
     },
   })
 
