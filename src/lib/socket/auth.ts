@@ -1,39 +1,46 @@
-import { jwtDecrypt } from "jose"
+import { decode } from "next-auth/jwt"
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || ""
-)
+interface UserData {
+  userId: string
+  email: string
+  name?: string | null
+  avatar?: string | null
+}
 
 /**
- * Verify NextAuth JWT session token and return user data
+ * Verify NextAuth session directly using next-auth/jwt decode
+ * This avoids internal HTTP calls and works within the Socket.IO middleware
  */
-export async function verifySessionToken(token: string) {
+export async function verifySessionToken(token: string, salt: string): Promise<UserData | null> {
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
+
+  if (!secret) {
+    console.error("[Socket] AUTH_SECRET is missing")
+    return null
+  }
+
   try {
-    const { payload } = await jwtDecrypt(token, JWT_SECRET)
+    // console.log("[Socket] Verifying token with salt:", salt)
+    
+    const decoded = await decode({
+      token,
+      secret,
+      salt,
+    })
 
-    // NextAuth v5 stores user data in the JWT payload
-    // The structure is: { user: { id, email, name, image }, exp, iat }
-    const user = payload.user as {
-      id: string
-      email: string
-      name?: string | null
-      image?: string | null
-    } | undefined
-
-    if (!user?.id) {
+    if (!decoded) {
+      console.warn("[Socket] Token decoding returned null")
       return null
     }
 
-    // Check if token has expired
-    if (payload.exp && payload.exp < Date.now() / 1000) {
-      return null
-    }
+    // console.log("[Socket] Token verified successfully for user:", decoded.sub)
 
+    // NextAuth v5 typically stores userId in 'sub'
     return {
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      avatar: user.image,
+      userId: decoded.sub as string,
+      email: decoded.email as string,
+      name: decoded.name as string | null,
+      avatar: decoded.picture as string | null,
     }
   } catch (error) {
     console.error("[Socket] Failed to verify token:", error)

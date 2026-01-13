@@ -1,3 +1,4 @@
+import "dotenv/config"  // 必须在所有其他导入之前
 import { createServer } from "http"
 import { parse } from "url"
 import next from "next"
@@ -13,6 +14,18 @@ const writeFile = promisify(fs.writeFile)
 const dev = process.env.NODE_ENV !== "production"
 const hostname = "localhost"
 const port = parseInt(process.env.PORT || "3005", 10)
+
+// 🔍 Debug: Verify AUTH_SECRET is loaded correctly
+const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
+console.log("============================================")
+console.log("[Server] AUTH_SECRET loaded:", !!authSecret)
+console.log("[Server] AUTH_SECRET length:", authSecret?.length || 0)
+if (authSecret && authSecret.length !== 64) {
+  console.error("❌ [Server] ERROR: AUTH_SECRET must be exactly 64 characters!")
+  console.error(`[Server] Current length: ${authSecret.length}, Expected: 64`)
+  console.error("[Server] First 80 chars:", authSecret.substring(0, 80))
+}
+console.log("============================================")
 
 const app = next({ dev, hostname, port })
 const handle = app.getRequestHandler()

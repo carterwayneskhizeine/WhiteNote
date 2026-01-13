@@ -2,18 +2,37 @@
 
 import { InputMachine } from "@/components/InputMachine"
 import { MessagesList } from "@/components/MessagesList"
+import { NewMessageButton } from "@/components/NewMessageButton"
 import { useState } from "react"
+import { useSocket, markMessageSent } from "@/hooks/useSocket"
+import { useAppStore } from "@/store/useAppStore"
 
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0)
+  const { setHasNewMessages } = useAppStore()
 
   const handleMessageCreated = () => {
+    // 标记发送了消息，避免显示自己的消息提示
+    markMessageSent()
+
     // Trigger refresh of messages list
     setRefreshKey((prev) => prev + 1)
 
     // Dispatch custom event to trigger auto-refresh after 5 seconds (for AI tags)
     window.dispatchEvent(new CustomEvent('message-posted'))
   }
+
+  const handleRefreshFromNotification = () => {
+    setRefreshKey((prev) => prev + 1)
+  }
+
+  // 监听来自其他设备的新消息
+  useSocket({
+    onNewMessage: (data) => {
+      console.log("New message from another device:", data)
+      setHasNewMessages(true)
+    },
+  })
 
   return (
     <div className="flex flex-col min-h-screen pt-[106px] desktop:pt-0">
@@ -32,6 +51,8 @@ export default function Home() {
       <InputMachine onSuccess={handleMessageCreated} />
 
       <MessagesList key={refreshKey} />
+
+      <NewMessageButton onRefresh={handleRefreshFromNotification} />
     </div>
   )
 }

@@ -32,21 +32,36 @@ export function initSocketServer(httpServer: HTTPServer) {
       const cookies = socket.handshake.headers.cookie
 
       if (!cookies) {
-        console.error("[Socket] No cookies provided")
+        console.error("[Socket] No cookies provided in handshake")
         return next(new Error("No cookies provided"))
       }
 
       // Parse cookies to get session token
       const parsed = parse(cookies)
-      const sessionToken = parsed["next-auth.session-token"] || parsed["__Secure-next-auth.session-token"]
+
+      // NextAuth v5 使用 authjs.session-token，v4 使用 next-auth.session-token
+      // We need to identify the salt (cookie name) to correctly decode the token
+      let sessionToken = parsed["authjs.session-token"]
+      let salt = "authjs.session-token"
+
+      if (!sessionToken && parsed["__Secure-authjs.session-token"]) {
+        sessionToken = parsed["__Secure-authjs.session-token"]
+        salt = "__Secure-authjs.session-token"
+      } else if (!sessionToken && parsed["next-auth.session-token"]) {
+        sessionToken = parsed["next-auth.session-token"]
+        salt = "next-auth.session-token"
+      } else if (!sessionToken && parsed["__Secure-next-auth.session-token"]) {
+        sessionToken = parsed["__Secure-next-auth.session-token"]
+        salt = "__Secure-next-auth.session-token"
+      }
 
       if (!sessionToken) {
-        console.error("[Socket] No session token found")
+        console.error("[Socket] No session token found in cookies")
         return next(new Error("No session token found"))
       }
 
-      // Verify the JWT token and get user data
-      const userData = await verifySessionToken(sessionToken)
+      // Verify the JWT token using the token and the salt
+      const userData = await verifySessionToken(sessionToken, salt)
 
       if (!userData) {
         console.error("[Socket] Invalid or expired session token")
@@ -69,6 +84,11 @@ export function initSocketServer(httpServer: HTTPServer) {
 
   io.on("connection", (socket) => {
     console.log(`[Socket] Client connected: ${socket.id}`)
+
+    // Join user-specific room for receiving notifications
+    const userRoom = `user:${socket.data.userId}`
+    socket.join(userRoom)
+    console.log(`[Socket] User ${socket.data.userId} joined room: ${userRoom}`)
 
     // Join message room for real-time editing
     socket.on("edit:start", ({ messageId }) => {

@@ -4,6 +4,7 @@ import { getPaginationParams } from "@/lib/validation"
 import { addTask } from "@/lib/queue"
 import { NextRequest } from "next/server"
 import { batchUpsertTags } from "@/lib/tag-utils"
+import { getSocketServer } from "@/lib/socket/server"
 
 /**
  * GET /api/messages
@@ -330,6 +331,16 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
         messageId: message.id,
       })
+    }
+
+    // 通知同用户的其他设备有新消息
+    const io = getSocketServer()
+    if (io) {
+      io.to(`user:${session.user.id}`).emit("message:created", {
+        messageId: message.id,
+        timestamp: Date.now(),
+      })
+      console.log(`[Socket] Broadcasted new message ${message.id} to user ${session.user.id}`)
     }
 
     return Response.json({ data: messageWithRetweetInfo }, { status: 201 })
