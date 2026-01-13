@@ -306,14 +306,21 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
       const data = await response.json()
 
       if (data.data?.result) {
-        // Replace editor content with AI result as Markdown
-        editor.commands.setContent(data.data.result, {
-          contentType: 'markdown',
-          parseOptions: {
-            preserveWhitespace: 'full',
-          },
-        })
-        setHasContent(true)
+        const result = data.data.result.trim()
+        // Use clearContent for empty result to avoid Markdown parser issues
+        if (!result) {
+          editor.commands.clearContent()
+          setHasContent(false)
+        } else {
+          // Replace editor content with AI result as Markdown
+          editor.commands.setContent(result, {
+            contentType: 'markdown',
+            parseOptions: {
+              preserveWhitespace: 'full',
+            },
+          })
+          setHasContent(true)
+        }
       }
     } catch (error) {
       console.error('AI enhance error:', error)

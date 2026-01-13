@@ -78,12 +78,17 @@ export function SimpleTipTapEditor({
   // Update editor content when value changes externally
   useEffect(() => {
     if (editor && value !== editor.getMarkdown()) {
-      editor.commands.setContent(value, {
-        contentType: 'markdown',
-        parseOptions: {
-          preserveWhitespace: 'full',
-        },
-      })
+      // Avoid setting empty content via Markdown parser, use clearContent instead
+      if (!value || value.trim() === '') {
+        editor.commands.clearContent()
+      } else {
+        editor.commands.setContent(value, {
+          contentType: 'markdown',
+          parseOptions: {
+            preserveWhitespace: 'full',
+          },
+        })
+      }
     }
   }, [value, editor])
 

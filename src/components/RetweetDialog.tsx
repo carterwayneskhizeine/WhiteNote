@@ -114,12 +114,18 @@ export function RetweetDialog({
 
             const data = await response.json()
             if (data.data?.result) {
-                editor.commands.setContent(data.data.result, {
-                    contentType: 'markdown',
-                    parseOptions: {
-                        preserveWhitespace: 'full',
-                    },
-                })
+                const result = data.data.result.trim()
+                // Use clearContent for empty result to avoid Markdown parser issues
+                if (!result) {
+                    editor.commands.clearContent()
+                } else {
+                    editor.commands.setContent(result, {
+                        contentType: 'markdown',
+                        parseOptions: {
+                            preserveWhitespace: 'full',
+                        },
+                    })
+                }
             }
         } catch (error) {
             console.error('AI enhance error:', error)
