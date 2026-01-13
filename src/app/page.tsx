@@ -10,6 +10,9 @@ export default function Home() {
   const handleMessageCreated = () => {
     // Trigger refresh of messages list
     setRefreshKey((prev) => prev + 1)
+
+    // Dispatch custom event to trigger auto-refresh after 5 seconds (for AI tags)
+    window.dispatchEvent(new CustomEvent('message-posted'))
   }
 
   return (

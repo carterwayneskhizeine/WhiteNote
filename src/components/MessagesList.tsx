@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react"
 import { MessageCard } from "@/components/MessageCard"
 import { Message, messagesApi } from "@/lib/api/messages"
-import { Loader2, RefreshCw } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Loader2 } from "lucide-react"
 
 interface MessagesListProps {
   filters?: {
@@ -18,14 +17,11 @@ interface MessagesListProps {
 export function MessagesList({ filters }: MessagesListProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchMessages = async (showLoading = true) => {
     if (showLoading) {
       setIsLoading(true)
-    } else {
-      setIsRefreshing(true)
     }
     setError(null)
 
@@ -45,12 +41,29 @@ export function MessagesList({ filters }: MessagesListProps) {
       setError("Failed to load messages")
     } finally {
       setIsLoading(false)
-      setIsRefreshing(false)
     }
   }
 
   useEffect(() => {
     fetchMessages()
+  }, [filters])
+
+  // Refresh after 5 seconds when a new message is posted (for AI tags)
+  useEffect(() => {
+    const handleMessagePosted = () => {
+      // Set a timeout to refresh after 5 seconds (giving AI time to generate tags)
+      const timeoutId = setTimeout(() => {
+        fetchMessages(false)
+      }, 5000)
+
+      return () => clearTimeout(timeoutId)
+    }
+
+    // Listen for custom event when a message is posted
+    window.addEventListener('message-posted', handleMessagePosted)
+    return () => {
+      window.removeEventListener('message-posted', handleMessagePosted)
+    }
   }, [filters])
 
   // Refresh when window gains focus (e.g., returning from detail page)
@@ -64,10 +77,6 @@ export function MessagesList({ filters }: MessagesListProps) {
       window.removeEventListener('focus', handleFocus)
     }
   }, [filters])
-
-  const handleRefresh = () => {
-    fetchMessages(false)
-  }
 
   const handleMessageUpdate = () => {
     // Refresh messages when a message is updated
@@ -100,15 +109,7 @@ export function MessagesList({ filters }: MessagesListProps) {
   if (error) {
     return (
       <div className="p-8 text-center">
-        <p className="text-muted-foreground mb-4">{error}</p>
-        <Button
-          variant="outline"
-          onClick={() => fetchMessages()}
-          className="gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          重试
-        </Button>
+        <p className="text-muted-foreground">{error}</p>
       </div>
     )
   }
@@ -126,20 +127,6 @@ export function MessagesList({ filters }: MessagesListProps) {
 
   return (
     <div className="flex flex-col">
-      {/* Refresh button */}
-      <div className="flex justify-end p-2 border-b">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-          刷新
-        </Button>
-      </div>
-
       {/* Messages */}
       {messages.map((message) => (
         <MessageCard

@@ -44,13 +44,20 @@ export async function GET(request: NextRequest) {
   }
 
   // 构建最终查询条件：用户的消息 OR 系统生成的晨报
-  // 系统消息也需要应用 rootOnly 过滤（如果设置了）
+  // 系统消息也需要应用 rootOnly、isStarred、isPinned 过滤器（如果设置了）
   const systemMessageWhere: Record<string, unknown> = {
     authorId: null,
     tags: { some: { tag: { name: "dailyreview" } } },  // 标签名在数据库中是小写
   }
   if (rootOnly) {
     systemMessageWhere.parentId = null
+  }
+  // 应用收藏和置顶过滤器到系统消息
+  if (isStarred !== undefined) {
+    systemMessageWhere.isStarred = isStarred
+  }
+  if (isPinned !== undefined) {
+    systemMessageWhere.isPinned = isPinned
   }
 
   const where: Record<string, unknown> = {

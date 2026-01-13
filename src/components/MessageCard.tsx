@@ -333,6 +333,8 @@ export function MessageCard({
           onUpdate?.()
           // Navigate to home to show the new message
           router.push('/')
+          // Trigger auto-refresh after 5 seconds (for AI tags)
+          window.dispatchEvent(new CustomEvent('message-posted'))
         }}
       />
 
