@@ -19,8 +19,8 @@ import { Edit2, Trash2, MoreVertical } from "lucide-react"
 
 export interface CommentItemProps {
   comment: Comment
-  // 点击行为
-  onClick?: () => void
+  // 双击行为（用于导航）
+  onDoubleClick?: () => void
   // 下拉菜单配置
   showMenu?: boolean
   onEditClick?: (e: React.MouseEvent) => void
@@ -81,7 +81,7 @@ const sizeConfig = {
 
 export function CommentItem({
   comment,
-  onClick,
+  onDoubleClick,
   showMenu = true,
   onEditClick,
   onDeleteClick,
@@ -103,8 +103,8 @@ export function CommentItem({
 
   return (
     <div
-      className={cn("p-4 border-b hover:bg-muted/5 transition-colors", onClick && "cursor-pointer", className)}
-      onClick={onClick}
+      className={cn("p-4 border-b hover:bg-muted/5 transition-colors", onDoubleClick && "cursor-pointer", className)}
+      onDoubleClick={onDoubleClick}
     >
       <div className="flex gap-3">
         {/* Avatar */}

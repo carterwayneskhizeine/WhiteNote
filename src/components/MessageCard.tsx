@@ -182,7 +182,7 @@ export function MessageCard({
     <>
       <div
         className="p-4 border-b border-border hover:bg-muted/10 transition-colors cursor-pointer"
-        onClick={() => { router.push(`/status/${message.id}`) }}
+        onDoubleClick={() => { router.push(`/status/${message.id}`) }}
       >
         <div className="flex gap-3">
           {/* Avatar Column - h-8 to match reply as standard */}
