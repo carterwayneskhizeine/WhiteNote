@@ -141,21 +141,14 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          console.log("Received audio chunk:", event.data.size, "bytes")
           chunks.push(event.data)
         }
       }
 
       recorder.onstop = async () => {
-        console.log("Recorder stopped, total chunks:", chunks.length)
 
         // Create blob with the actual MIME type
         const audioBlob = new Blob(chunks, { type: actualMimeType })
-
-        console.log("Created audio blob:", {
-          size: audioBlob.size,
-          type: audioBlob.type,
-        })
 
         // Stop all audio tracks
         stream.getTracks().forEach((track) => track.stop())
@@ -217,13 +210,6 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
       formData.append("file", file)
       formData.append("model", "TeleAI/TeleSpeechASR")
 
-      console.log("Sending ASR request:", {
-        url: apiUrl,
-        fileSize: audioBlob.size,
-        fileName: file.name,
-        mimeType: file.type,
-      })
-
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -232,8 +218,6 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
         body: formData,
       })
 
-      console.log("ASR response status:", response.status)
-
       if (!response.ok) {
         const errorText = await response.text()
         console.error("ASR error response:", errorText)
@@ -241,7 +225,6 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
       }
 
       const data = await response.json()
-      console.log("ASR response data:", data)
 
       if (data.text && editor) {
         // Insert text at cursor position
@@ -255,7 +238,6 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
         })
         setHasContent(true)
       } else {
-        console.warn("No text in ASR response:", data)
         alert("未能识别到语音内容，请重试")
       }
     } catch (error) {

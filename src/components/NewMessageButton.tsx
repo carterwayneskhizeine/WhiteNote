@@ -3,7 +3,6 @@
 import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAppStore } from "@/store/useAppStore"
-import { useEffect } from "react"
 
 interface NewMessageButtonProps {
   onRefresh: () => void
@@ -12,19 +11,11 @@ interface NewMessageButtonProps {
 export function NewMessageButton({ onRefresh }: NewMessageButtonProps) {
   const { hasNewMessages, acknowledgeNewMessages } = useAppStore()
 
-  useEffect(() => {
-    console.log("[NewMessageButton] hasNewMessages:", hasNewMessages)
-  }, [hasNewMessages])
-
   if (!hasNewMessages) {
-    console.log("[NewMessageButton] Not showing button (hasNewMessages is false)")
     return null
   }
 
-  console.log("[NewMessageButton] Rendering button!")
-
   const handleClick = () => {
-    console.log("[NewMessageButton] Button clicked!")
     acknowledgeNewMessages()
     onRefresh()
   }

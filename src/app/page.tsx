@@ -28,10 +28,7 @@ export default function Home() {
   // 监听来自其他设备的新消息
   useSocket({
     onNewMessage: (data) => {
-      console.log("✅ New message from another device:", data)
-      console.log("✅ Setting hasNewMessages to true")
       setHasNewMessages(true)
-      console.log("✅ hasNewMessages should be true now")
     },
   })
 

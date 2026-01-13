@@ -20,8 +20,6 @@ export async function verifySessionToken(token: string, salt: string): Promise<U
   }
 
   try {
-    // console.log("[Socket] Verifying token with salt:", salt)
-    
     const decoded = await decode({
       token,
       secret,
@@ -29,11 +27,8 @@ export async function verifySessionToken(token: string, salt: string): Promise<U
     })
 
     if (!decoded) {
-      console.warn("[Socket] Token decoding returned null")
       return null
     }
-
-    // console.log("[Socket] Token verified successfully for user:", decoded.sub)
 
     // NextAuth v5 typically stores userId in 'sub'
     return {

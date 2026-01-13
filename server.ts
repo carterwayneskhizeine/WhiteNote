@@ -15,18 +15,6 @@ const dev = process.env.NODE_ENV !== "production"
 const hostname = "localhost"
 const port = parseInt(process.env.PORT || "3005", 10)
 
-// 🔍 Debug: Verify AUTH_SECRET is loaded correctly
-const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
-console.log("============================================")
-console.log("[Server] AUTH_SECRET loaded:", !!authSecret)
-console.log("[Server] AUTH_SECRET length:", authSecret?.length || 0)
-if (authSecret && authSecret.length !== 64) {
-  console.error("❌ [Server] ERROR: AUTH_SECRET must be exactly 64 characters!")
-  console.error(`[Server] Current length: ${authSecret.length}, Expected: 64`)
-  console.error("[Server] First 80 chars:", authSecret.substring(0, 80))
-}
-console.log("============================================")
-
 const app = next({ dev, hostname, port })
 const handle = app.getRequestHandler()
 
@@ -181,33 +169,21 @@ async function handleUpload(req: any, res: any) {
         try {
           const tempFilePath = path.join(UPLOAD_DIR, `temp_${uniqueFileName}`)
 
-          console.log(`Processing video: ${uniqueFileName}`)
-
           await new Promise<void>((resolve, reject) => {
             let command = ffmpeg(filePath)
 
-            // Set ffmpeg path for Windows if needed
-            // command.setFfmpegPath('ffmpeg') // Uncomment if ffmpeg is not in PATH
-
             command
               .outputOptions([
-                '-c:v', 'libx264',     // Re-encode video with H.264
-                '-preset', 'fast',     // Use fast preset
-                '-crf', '23',          // Quality balance
-                '-c:a', 'aac',         // Re-encode audio with AAC
-                '-b:a', '128k',        // Audio bitrate
-                '-movflags', '+faststart' // Move moov atom to the beginning
+                '-c:v', 'libx264',
+                '-preset', 'fast',
+                '-crf', '23',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-movflags', '+faststart'
               ])
               .output(tempFilePath)
-              .on('start', (commandLine) => {
-                console.log('FFmpeg command:', commandLine)
-              })
-              .on('end', () => {
-                console.log(`Video processed successfully: ${uniqueFileName}`)
-                resolve()
-              })
               .on('error', (err: any) => {
-                console.error('FFmpeg error:', err?.message || err)
+                console.error('[FFmpeg] Processing error:', err?.message || err)
                 reject(err)
               })
               .run()
@@ -218,12 +194,9 @@ async function handleUpload(req: any, res: any) {
           await unlink(filePath)
           await writeFile(filePath, processedData)
           await unlink(tempFilePath)
-
-          console.log(`Replaced original file with processed version`)
         } catch (ffmpegError) {
-          console.error("FFmpeg processing error:", ffmpegError)
           // If ffmpeg fails, still use the original file
-          console.log("Using original file without processing")
+          console.error('[FFmpeg] Processing error:', ffmpegError)
         }
       }
 

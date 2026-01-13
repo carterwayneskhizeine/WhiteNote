@@ -334,33 +334,17 @@ export async function POST(request: NextRequest) {
     }
 
     // 通知同用户的其他设备有新消息
-    console.log("🔍 [DEBUG] Attempting to get Socket.IO server...")
     const io = getSocketServer()
-
-    if (!io) {
-      console.error("❌ [DEBUG] Socket.IO server is NULL!")
-      console.error("❌ [DEBUG] global._io:", typeof global !== 'undefined' ? global._io : 'global not defined')
-    } else {
-      console.log("✅ [DEBUG] Socket.IO server obtained successfully")
+    if (io) {
       const userRoom = `user:${session.user.id}`
-      const timestamp = Date.now()
-
       try {
-        // 获取发送请求的客户端ID（从请求头或cookie获取）
-        // 注意：这里我们无法直接获取客户端ID，所以广播给所有设备
-        // 由客户端根据session ID自己过滤
         const sockets = await io.in(userRoom).fetchSockets()
-        console.log(`📡 [Socket] Broadcasting to ${sockets.length} sockets in room ${userRoom}`)
-
-        // 广播给所有socket，让客户端自己判断
         io.to(userRoom).emit("message:created", {
           messageId: message.id,
-          timestamp: timestamp,
-          senderClientId: null, // 服务器无法获取发送者的client ID，由客户端过滤
+          timestamp: Date.now(),
         })
-        console.log(`✅ [Socket] Broadcasted new message ${message.id} to user ${session.user.id} at ${timestamp}`)
       } catch (error) {
-        console.error("❌ [Socket] Error broadcasting message:", error)
+        console.error("[Socket] Error broadcasting message:", error)
       }
     }
 

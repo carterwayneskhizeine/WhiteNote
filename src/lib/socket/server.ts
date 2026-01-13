@@ -6,7 +6,6 @@ import { verifySessionToken } from "./auth"
 interface SocketData {
   userId: string
   userName: string
-  clientId?: string // 客户端会话ID
 }
 
 // 使用全局变量确保在开发模式下也能访问到同一个实例
@@ -18,7 +17,6 @@ let io: SocketIOServer | null = (typeof global !== 'undefined' ? global._io : nu
 
 export function initSocketServer(httpServer: HTTPServer) {
   if (io) {
-    console.log("[Socket] Server already initialized")
     return io
   }
 
@@ -44,7 +42,6 @@ export function initSocketServer(httpServer: HTTPServer) {
       const cookies = socket.handshake.headers.cookie
 
       if (!cookies) {
-        console.error("[Socket] No cookies provided in handshake")
         return next(new Error("No cookies provided"))
       }
 
@@ -52,7 +49,6 @@ export function initSocketServer(httpServer: HTTPServer) {
       const parsed = parse(cookies)
 
       // NextAuth v5 使用 authjs.session-token，v4 使用 next-auth.session-token
-      // We need to identify the salt (cookie name) to correctly decode the token
       let sessionToken = parsed["authjs.session-token"]
       let salt = "authjs.session-token"
 
@@ -68,7 +64,6 @@ export function initSocketServer(httpServer: HTTPServer) {
       }
 
       if (!sessionToken) {
-        console.error("[Socket] No session token found in cookies")
         return next(new Error("No session token found"))
       }
 
@@ -76,7 +71,6 @@ export function initSocketServer(httpServer: HTTPServer) {
       const userData = await verifySessionToken(sessionToken, salt)
 
       if (!userData) {
-        console.error("[Socket] Invalid or expired session token")
         return next(new Error("Invalid or expired session"))
       }
 
@@ -84,12 +78,8 @@ export function initSocketServer(httpServer: HTTPServer) {
       socket.data = {
         userId: userData.userId,
         userName: userData.name || userData.email,
-        // 从查询参数获取客户端会话ID
-        clientId: socket.handshake.query.clientId as string,
       }
 
-      console.log(`[Socket] User authenticated: ${userData.name || userData.email} (${userData.userId})`)
-      console.log(`[Socket] Client session ID: ${socket.data.clientId}`)
       next()
     } catch (error) {
       console.error("[Socket] Auth error:", error)
@@ -98,12 +88,9 @@ export function initSocketServer(httpServer: HTTPServer) {
   })
 
   io.on("connection", (socket) => {
-    console.log(`[Socket] Client connected: ${socket.id}`)
-
     // Join user-specific room for receiving notifications
     const userRoom = `user:${socket.data.userId}`
     socket.join(userRoom)
-    console.log(`[Socket] User ${socket.data.userId} joined room: ${userRoom}`)
 
     // Join message room for real-time editing
     socket.on("edit:start", ({ messageId }) => {
@@ -113,7 +100,6 @@ export function initSocketServer(httpServer: HTTPServer) {
         userName: socket.data.userName,
         messageId,
       })
-      console.log(`[Socket] User ${socket.data.userId} started editing ${messageId}`)
     })
 
     // Stop editing
@@ -123,7 +109,6 @@ export function initSocketServer(httpServer: HTTPServer) {
         userId: socket.data.userId,
         messageId,
       })
-      console.log(`[Socket] User ${socket.data.userId} stopped editing ${messageId}`)
     })
 
     // Broadcast content changes
@@ -135,18 +120,11 @@ export function initSocketServer(httpServer: HTTPServer) {
       })
     })
 
-    // Debug: 监听消息创建事件（客户端测试用）
-    socket.on("debug:message-created", (data) => {
-      console.log(`[Socket] Debug: Message created event received from client:`, data)
-    })
-
     // Disconnect
     socket.on("disconnect", () => {
-      console.log(`[Socket] Client disconnected: ${socket.id}`)
+      // Cleanup if needed
     })
   })
-
-  console.log("[Socket] Server initialized")
 
   // 保存到全局变量
   if (typeof global !== 'undefined') {
