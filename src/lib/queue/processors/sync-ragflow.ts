@@ -29,6 +29,13 @@ export async function processSyncRAGFlow(job: Job<SyncRAGFlowJobData>) {
             tag: { name: 'asc' },
           },
         },
+        medias: {
+          select: {
+            id: true,
+            url: true,
+            type: true,
+          },
+        },
       },
     })
 
@@ -40,7 +47,10 @@ export async function processSyncRAGFlow(job: Job<SyncRAGFlowJobData>) {
         contentWithTags = `${tagLine}\n\n${message.content}`
       }
 
-      await syncToRAGFlow(userId, message.id, contentWithTags)
+      console.log("[SyncRAGFlow] Message medias count:", message.medias.length)
+      console.log("[SyncRAGFlow] Message medias:", JSON.stringify(message.medias))
+
+      await syncToRAGFlow(userId, message.id, contentWithTags, message.medias)
     }
   } else {
     // 处理评论
@@ -59,6 +69,13 @@ export async function processSyncRAGFlow(job: Job<SyncRAGFlowJobData>) {
             tag: { name: 'asc' },
           },
         },
+        medias: {
+          select: {
+            id: true,
+            url: true,
+            type: true,
+          },
+        },
       },
     })
 
@@ -70,7 +87,7 @@ export async function processSyncRAGFlow(job: Job<SyncRAGFlowJobData>) {
         contentWithTags = `${tagLine}\n\n${comment.content}`
       }
 
-      await syncToRAGFlow(userId, comment.id, contentWithTags)
+      await syncToRAGFlow(userId, comment.id, contentWithTags, comment.medias)
     }
   }
 

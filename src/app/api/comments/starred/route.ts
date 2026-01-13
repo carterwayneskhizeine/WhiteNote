@@ -19,6 +19,14 @@ export async function GET(request: NextRequest) {
         author: {
           select: { id: true, name: true, avatar: true, email: true },
         },
+        tags: {
+          include: {
+            tag: {
+              select: { id: true, name: true, color: true },
+            },
+          },
+        },
+        medias: true,
         message: {
           select: {
             id: true,
@@ -34,6 +42,7 @@ export async function GET(request: NextRequest) {
             author: {
               select: { id: true, name: true, avatar: true, email: true },
             },
+            medias: true,
           },
         },
         _count: {

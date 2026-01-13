@@ -5,13 +5,20 @@ import { useMemo, useState, useEffect } from "react"
 import { commentsApi } from "@/lib/api"
 import { Comment } from "@/types/api"
 import { Loader2 } from "lucide-react"
-import { TipTapViewer } from "@/components/TipTapViewer"
-import { GoldieAvatar } from "@/components/GoldieAvatar"
-import { cn, getHandle } from "@/lib/utils"
-import { formatDistanceToNow } from "date-fns"
-import { zhCN } from "date-fns/locale"
+import { CommentItem } from "@/components/CommentItem"
 import { useRouter } from "next/navigation"
-import { QuotedMessageCard } from "@/components/QuotedMessageCard"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { ReplyDialog } from "@/components/ReplyDialog"
+import { RetweetDialog } from "@/components/RetweetDialog"
 
 export default function FavoritesPage() {
   const router = useRouter()
@@ -20,6 +27,25 @@ export default function FavoritesPage() {
   const [starredComments, setStarredComments] = useState<Comment[]>([])
   const [loadingComments, setLoadingComments] = useState(true)
 
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [commentToDelete, setCommentToDelete] = useState<Comment | null>(null)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
+
+  // Reply dialog state
+  const [showReplyDialog, setShowReplyDialog] = useState(false)
+  const [replyTarget, setReplyTarget] = useState<Comment | null>(null)
+
+  // Retweet dialog state
+  const [showRetweetDialog, setShowRetweetDialog] = useState(false)
+  const [retweetTarget, setRetweetTarget] = useState<Comment | null>(null)
+
+  // Copy state
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  // Manage starred state for each comment
+  const [starredSet, setStarredSet] = useState<Set<string>>(new Set())
+
   useEffect(() => {
     const fetchStarredComments = async () => {
       setLoadingComments(true)
@@ -27,6 +53,12 @@ export default function FavoritesPage() {
         const result = await commentsApi.getStarredComments()
         if (result.data) {
           setStarredComments(result.data)
+          // Initialize starred state (all are starred since they come from starred API)
+          const starred = new Set<string>()
+          result.data.forEach(c => {
+            if (c.isStarred) starred.add(c.id)
+          })
+          setStarredSet(starred)
         }
       } catch (error) {
         console.error("Failed to fetch starred comments:", error)
@@ -38,15 +70,85 @@ export default function FavoritesPage() {
     fetchStarredComments()
   }, [])
 
-  const formatTime = (dateString: string) => {
+  // Handle delete comment
+  const handleDeleteClick = (comment: Comment, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setCommentToDelete(comment)
+    setShowDeleteDialog(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!commentToDelete) return
+    setDeletingCommentId(commentToDelete.id)
     try {
-      return formatDistanceToNow(new Date(dateString), {
-        addSuffix: true,
-        locale: zhCN,
-      })
-    } catch {
-      return ""
+      const result = await commentsApi.deleteComment(commentToDelete.id)
+      if (result.success) {
+        setStarredComments(starredComments.filter(c => c.id !== commentToDelete.id))
+      }
+    } catch (error) {
+      console.error("Failed to delete comment:", error)
+    } finally {
+      setDeletingCommentId(null)
+      setShowDeleteDialog(false)
+      setCommentToDelete(null)
     }
+  }
+
+  // Handle reply
+  const handleReply = (comment: Comment, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setReplyTarget(comment)
+    setShowReplyDialog(true)
+  }
+
+  // Handle copy
+  const handleCopy = async (comment: Comment, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await navigator.clipboard.writeText(comment.content)
+      setCopiedId(comment.id)
+      setTimeout(() => setCopiedId(null), 1000)
+    } catch (error) {
+      console.error("Failed to copy comment:", error)
+    }
+  }
+
+  // Handle retweet
+  const handleRetweet = (comment: Comment, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRetweetTarget(comment)
+    setShowRetweetDialog(true)
+  }
+
+  // Handle toggle star
+  const handleToggleStar = async (comment: Comment, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const result = await commentsApi.toggleStar(comment.id)
+      if (result.data) {
+        const { isStarred } = result.data
+        setStarredSet(prev => {
+          const newSet = new Set(prev)
+          if (isStarred) {
+            newSet.add(comment.id)
+          } else {
+            newSet.delete(comment.id)
+          }
+          return newSet
+        })
+        // If unstarred, remove from list
+        if (!isStarred) {
+          setStarredComments(starredComments.filter(c => c.id !== comment.id))
+        }
+      }
+    } catch (error) {
+      console.error("Failed to toggle star:", error)
+    }
+  }
+
+  // Get reply count
+  const getReplyCount = (comment: Comment) => {
+    return comment._count?.replies || 0
   }
 
   return (
@@ -67,48 +169,77 @@ export default function FavoritesPage() {
         ) : starredComments.length > 0 ? (
           <div>
             {starredComments.map((comment) => (
-              <div
+              <CommentItem
                 key={comment.id}
-                className="p-4 border-b hover:bg-muted/5 transition-colors cursor-pointer"
+                comment={comment}
                 onClick={() => router.push(`/status/${comment.messageId}/comment/${comment.id}`)}
-              >
-                <div className="flex gap-3">
-                  <GoldieAvatar
-                    name={comment.author?.name || null}
-                    avatar={comment.author?.avatar || null}
-                    size="lg"
-                  />
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <span className="font-bold text-sm hover:underline">
-                        {comment.author?.name || "GoldieRill"}
-                      </span>
-                      <span className="text-muted-foreground text-sm">
-                        @{getHandle(comment.author?.email || null, !!comment.author)}
-                      </span>
-                      <span className="text-muted-foreground text-sm">·</span>
-                      <span className="text-muted-foreground text-sm hover:underline">
-                        {formatTime(comment.createdAt)}
-                      </span>
-                      <span className="text-xs text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-full">
-                        收藏的评论
-                      </span>
-                    </div>
-                    <div className="mt-1 text-sm leading-normal">
-                      <TipTapViewer content={comment.content} />
-                    </div>
-
-                    {comment.quotedMessage && (
-                      <QuotedMessageCard message={comment.quotedMessage} className="mt-2" />
-                    )}
-                  </div>
-                </div>
-              </div>
+                onEditClick={(e) => {
+                  e.stopPropagation()
+                  router.push(`/status/${comment.messageId}/comment/${comment.id}/edit`)
+                }}
+                onDeleteClick={(e) => handleDeleteClick(comment, e)}
+                replyCount={getReplyCount(comment)}
+                onReply={(e) => handleReply(comment, e)}
+                copied={copiedId === comment.id}
+                onCopy={(e) => handleCopy(comment, e)}
+                retweetCount={comment.retweetCount ?? 0}
+                onRetweet={(e) => handleRetweet(comment, e)}
+                starred={starredSet.has(comment.id)}
+                onToggleStar={(e) => handleToggleStar(comment, e)}
+                size="md"
+                actionRowSize="sm"
+              />
             ))}
           </div>
         ) : null}
       </div>
+
+      {/* Reply Dialog */}
+      <ReplyDialog
+        open={showReplyDialog}
+        onOpenChange={setShowReplyDialog}
+        target={replyTarget}
+        messageId={replyTarget?.messageId || ""}
+        targetType="comment"
+        onSuccess={() => {
+          // Reply was successful, dialog will close automatically
+          setShowReplyDialog(false)
+        }}
+      />
+
+      {/* Retweet Dialog */}
+      <RetweetDialog
+        open={showRetweetDialog}
+        onOpenChange={setShowRetweetDialog}
+        target={retweetTarget}
+        targetType="comment"
+        onSuccess={() => {
+          // Navigate to home to show the new message
+          router.push('/')
+        }}
+      />
+
+      {/* Delete Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>删除评论</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除这条评论吗？此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deletingCommentId !== null}
+            >
+              {deletingCommentId ? "删除中..." : "删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
