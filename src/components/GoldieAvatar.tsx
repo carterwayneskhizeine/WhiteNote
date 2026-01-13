@@ -63,6 +63,7 @@ export function GoldieAvatar({
   if (isAI) {
     return (
       <Avatar className={cn(sizeClasses[size], className)}>
+        <AvatarImage src="/goldielogoL.svg" className="invert dark:invert-0" />
         <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold">
           AI
         </AvatarFallback>

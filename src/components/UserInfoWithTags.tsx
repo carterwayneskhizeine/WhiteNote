@@ -143,7 +143,7 @@ export function UserInfoWithTags({
           )}
           onClick={onNameClick}
         >
-          AI 助手
+          AI Assistant
         </span>
       )}
 
