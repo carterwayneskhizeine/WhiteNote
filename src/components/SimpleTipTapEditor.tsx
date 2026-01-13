@@ -1,0 +1,116 @@
+"use client"
+
+import { useEffect } from "react"
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Placeholder from '@tiptap/extension-placeholder'
+import { Markdown } from '@tiptap/markdown'
+import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
+import { common, createLowlight } from 'lowlight'
+import { SlashCommand } from '@/lib/editor/extensions/slash-command'
+import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+interface SimpleTipTapEditorProps {
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  disabled?: boolean
+  isProcessingAI?: boolean
+  className?: string
+  onAICommandSelect?: (action: string, editor: any) => void
+  minHeight?: string
+}
+
+export function SimpleTipTapEditor({
+  value,
+  onChange,
+  placeholder = "发生了什么？",
+  disabled = false,
+  isProcessingAI = false,
+  className,
+  onAICommandSelect,
+  minHeight = "50px",
+}: SimpleTipTapEditorProps) {
+  // Create lowlight instance for syntax highlighting
+  const lowlight = createLowlight(common)
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        codeBlock: false,
+        link: false,
+      }),
+      CodeBlockLowlight.configure({
+        lowlight,
+      }),
+      Markdown.configure({
+        markedOptions: {
+          gfm: true,
+          breaks: true,
+        },
+      }),
+      Placeholder.configure({
+        placeholder,
+      }),
+      SlashCommand.configure({
+        onCommandSelect: (action: string, editor: any) => {
+          if (onAICommandSelect) {
+            onAICommandSelect(action, editor)
+          }
+        },
+      }),
+    ],
+    immediatelyRender: false,
+    content: value,
+    editable: !disabled && !isProcessingAI,
+    editorProps: {
+      attributes: {
+        class: `prose prose-sm dark:prose-invert focus:outline-none w-full bg-transparent text-lg leading-6 placeholder:text-muted-foreground/60 whitespace-normal break-words overflow-wrap-anywhere ${isProcessingAI ? 'opacity-50 cursor-wait' : ''}`,
+        style: `min-height: ${minHeight}`,
+      },
+    },
+    onUpdate: ({ editor }) => {
+      onChange(editor.getMarkdown())
+    },
+  })
+
+  // Update editor content when value changes externally
+  useEffect(() => {
+    if (editor && value !== editor.getMarkdown()) {
+      editor.commands.setContent(value, {
+        contentType: 'markdown',
+        parseOptions: {
+          preserveWhitespace: 'full',
+        },
+      })
+    }
+  }, [value, editor])
+
+  // Update editor editable state when disabled/isProcessingAI changes
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(!disabled && !isProcessingAI)
+    }
+  }, [disabled, isProcessingAI, editor])
+
+  if (!editor) {
+    return null
+  }
+
+  return (
+    <div className={cn("relative w-full", className)}>
+      <EditorContent editor={editor} className="w-full" />
+
+      {/* AI Processing Overlay */}
+      {isProcessingAI && (
+        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center rounded-md z-10">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">AI 正在处理...</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { useSession } from "next-auth/react"
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
+import { SimpleTipTapEditor } from "@/components/SimpleTipTapEditor"
 import { Template } from "@/types/api"
 import { cn } from "@/lib/utils"
 
@@ -63,8 +64,47 @@ export function CompactReplyInput({
 }: CompactReplyInputProps) {
   const { data: session } = useSession()
   const mediaUploaderRef = useRef<MediaUploaderRef>(null)
+  const [isProcessingAI, setIsProcessingAI] = useState(false)
 
   const canSubmit = (value.trim() || media.length > 0) && !posting
+
+  // Handle AI command selection
+  const handleAICommand = async (action: string, editor: any) => {
+    if (!editor || isProcessingAI) return
+
+    const currentContent = editor.getMarkdown().trim()
+    if (!currentContent) return
+
+    setIsProcessingAI(true)
+    try {
+      const response = await fetch('/api/ai/enhance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action,
+          content: currentContent,
+        }),
+      })
+
+      if (!response.ok) throw new Error('AI request failed')
+
+      const data = await response.json()
+      if (data.data?.result) {
+        editor.commands.setContent(data.data.result, {
+          contentType: 'markdown',
+          parseOptions: {
+            preserveWhitespace: 'full',
+          },
+        })
+      }
+    } catch (error) {
+      console.error('AI enhance error:', error)
+    } finally {
+      setIsProcessingAI(false)
+    }
+  }
 
   return (
     <div className={cn("px-4 pb-4 border-b", className)}>
@@ -98,20 +138,16 @@ export function CompactReplyInput({
               </Button>
             </div>
           ) : (
-            /* Expanded mode */
+            /* Expanded mode - with SimpleTipTapEditor for SlashCommand support */
             <div className="flex flex-col gap-2">
-              <textarea
-                placeholder={placeholder}
-                className="w-full bg-transparent border-none focus:outline-none text-lg resize-none min-h-[40px] py-1 placeholder:text-muted-foreground"
+              <SimpleTipTapEditor
                 value={value}
-                onChange={(e) => {
-                  onChange(e.target.value)
-                  e.target.style.height = 'auto'
-                  e.target.style.height = e.target.scrollHeight + 'px'
-                }}
-                onFocus={() => onFocusedChange(true)}
+                onChange={onChange}
+                placeholder={placeholder}
                 disabled={posting}
-                rows={1}
+                isProcessingAI={isProcessingAI}
+                onAICommandSelect={handleAICommand}
+                minHeight="40px"
               />
 
               <MediaUploader

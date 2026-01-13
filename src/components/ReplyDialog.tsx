@@ -8,9 +8,8 @@ import {
 } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { commentsApi, aiApi } from "@/lib/api"
-import { Loader2, X } from "lucide-react"
+import { X } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { useSession } from "next-auth/react"
@@ -19,9 +18,10 @@ import { GoldieAvatar } from "@/components/GoldieAvatar"
 import { getHandle } from "@/lib/utils"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
 import { ActionButtons } from "@/components/ActionButtons"
+import { SimpleTipTapEditor } from "@/components/SimpleTipTapEditor"
 import { templatesApi } from "@/lib/api/templates"
 import { Template } from "@/types/api"
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 
 interface ReplyTarget {
     id: string
@@ -55,6 +55,7 @@ export function ReplyDialog({
     const [uploadedMedia, setUploadedMedia] = useState<MediaItem[]>([])
     const [isUploading, setIsUploading] = useState(false)
     const [templates, setTemplates] = useState<Template[]>([])
+    const [isProcessingAI, setIsProcessingAI] = useState(false)
     const mediaUploaderRef = useRef<MediaUploaderRef>(null)
     const wasOpen = useRef(false)
 
@@ -83,6 +84,44 @@ export function ReplyDialog({
     }, [open, target])
 
     if (!target) return null
+
+    // Handle AI command selection
+    const handleAICommand = async (action: string, editor: any) => {
+        if (!editor || isProcessingAI) return
+
+        const currentContent = editor.getMarkdown().trim()
+        if (!currentContent) return
+
+        setIsProcessingAI(true)
+        try {
+            const response = await fetch('/api/ai/enhance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action,
+                    content: currentContent,
+                }),
+            })
+
+            if (!response.ok) throw new Error('AI request failed')
+
+            const data = await response.json()
+            if (data.data?.result) {
+                editor.commands.setContent(data.data.result, {
+                    contentType: 'markdown',
+                    parseOptions: {
+                        preserveWhitespace: 'full',
+                    },
+                })
+            }
+        } catch (error) {
+            console.error('AI enhance error:', error)
+        } finally {
+            setIsProcessingAI(false)
+        }
+    }
 
     const handleReply = async () => {
         if ((!content.trim() && uploadedMedia.length === 0) || isSubmitting) return
@@ -194,12 +233,14 @@ export function ReplyDialog({
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 flex flex-col min-w-0 gap-2">
-                            <Textarea
-                                placeholder="发布你的回复"
-                                className="min-h-[120px] w-full bg-transparent border-none focus-visible:ring-0 text-lg p-0 resize-none placeholder:text-muted-foreground"
+                            <SimpleTipTapEditor
                                 value={content}
-                                onChange={(e) => setContent(e.target.value)}
-                                autoFocus
+                                onChange={setContent}
+                                placeholder="发布你的回复"
+                                disabled={isSubmitting}
+                                isProcessingAI={isProcessingAI}
+                                onAICommandSelect={handleAICommand}
+                                minHeight="120px"
                             />
                             <MediaUploader
                                 ref={mediaUploaderRef}

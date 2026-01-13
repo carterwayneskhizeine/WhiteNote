@@ -1,4 +1,4 @@
-import { Check, Sparkles } from 'lucide-react'
+import { Check } from 'lucide-react'
 import * as React from 'react'
 import { aiCommandsApi } from '@/lib/api'
 
@@ -78,9 +78,6 @@ export const AICommandList = React.forwardRef<any, AICommandListProps>(
     if (isLoading) {
       return (
         <div className="bg-popover text-popover-foreground border border-border rounded-lg shadow-lg p-2 min-w-[200px]">
-          <div className="text-xs font-semibold text-muted-foreground px-2 py-1 mb-1">
-            AI 助手
-          </div>
           <div className="px-2 py-3 text-sm text-muted-foreground">
             加载中...
           </div>
@@ -90,9 +87,6 @@ export const AICommandList = React.forwardRef<any, AICommandListProps>(
 
     return (
       <div className="bg-popover text-popover-foreground border border-border rounded-lg shadow-lg p-2 min-w-[200px] max-h-[300px] overflow-y-auto">
-        <div className="text-xs font-semibold text-muted-foreground px-2 py-1 mb-1">
-          AI 助手
-        </div>
         {commands.map((command, index) => {
           const isSelected = index === selectedIndex
 
@@ -106,7 +100,6 @@ export const AICommandList = React.forwardRef<any, AICommandListProps>(
               }`}
               onClick={() => selectItem(index)}
             >
-              <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
               <div className="flex-1 min-w-0">
                 <div className="font-medium">{command.label}</div>
                 <div className="text-xs text-muted-foreground truncate">
