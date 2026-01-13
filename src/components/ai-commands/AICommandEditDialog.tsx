@@ -123,7 +123,7 @@ export function AICommandEditDialog({
               className="min-h-[120px] font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              使用 {'{{content}}'} 作为占位符，它将被替换为用户输入的实际内容
+              使用 {'{content}'} 作为占位符，它将被替换为用户输入的实际内容
             </p>
           </div>
 
