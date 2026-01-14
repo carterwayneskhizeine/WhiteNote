@@ -7,29 +7,30 @@ import { batchUpsertTags, connectTagsToMessage } from "@/lib/tag-utils"
 export async function processDailyBriefing(job: Job) {
   console.log(`[DailyBriefing] Starting daily briefing generation`)
 
-  // 获取所有启用了晨报功能的用户
-  const usersWithBriefing = await prisma.user.findMany({
-    where: {
-      aiConfig: {
-        enableBriefing: true,
-      },
-    },
+  // 获取所有启用晨报的 Workspace
+  const workspacesWithBriefing = await prisma.workspace.findMany({
+    where: { enableBriefing: true },
     include: {
-      aiConfig: true,
-    },
-    orderBy: { createdAt: "asc" },
+      user: {
+        include: {
+          aiConfig: true
+        }
+      }
+    }
   })
 
-  if (usersWithBriefing.length === 0) {
-    console.log(`[DailyBriefing] No users with briefing enabled, skipping`)
+  if (workspacesWithBriefing.length === 0) {
+    console.log(`[DailyBriefing] No workspaces with briefing enabled, skipping`)
     return
   }
 
-  // 为每个用户生成晨报
-  for (const user of usersWithBriefing) {
-    console.log(`[DailyBriefing] Generating briefing for user: ${user.email}`)
+  console.log(`[DailyBriefing] Found ${workspacesWithBriefing.length} workspaces with briefing enabled`)
 
-    const config = user.aiConfig
+  // 为每个 Workspace 生成晨报
+  for (const workspace of workspacesWithBriefing) {
+    console.log(`[DailyBriefing] Generating briefing for workspace: ${workspace.name} (user: ${workspace.user.email})`)
+
+    const config = workspace.user.aiConfig
     if (!config) continue
 
     // 获取昨天的笔记
@@ -42,7 +43,7 @@ export async function processDailyBriefing(job: Job) {
 
     const messages = await prisma.message.findMany({
       where: {
-        authorId: user.id,
+        workspaceId: workspace.id,
         createdAt: {
           gte: yesterday,
           lt: today,
@@ -53,15 +54,17 @@ export async function processDailyBriefing(job: Job) {
     })
 
     if (messages.length === 0) {
-      console.log(`[DailyBriefing] No messages yesterday for user: ${user.email}`)
+      console.log(`[DailyBriefing] No messages yesterday for workspace: ${workspace.name}`)
       continue
     }
 
+    console.log(`[DailyBriefing] Found ${messages.length} messages for workspace: ${workspace.name}`)
+
     // 生成晨报
-    const systemPrompt = await buildSystemPrompt(user.id)
+    const systemPrompt = await buildSystemPrompt(workspace.userId)
     const contentSummary = messages.map((m) => m.content).join("\n---\n")
 
-    const briefingPrompt = `作为用户的第二大脑，请根据用户昨天的笔记内容生成一份简短的晨报。
+    const briefingPrompt = `请根据用户昨天的笔记内容生成一份简短的晨报。
 
 昨日笔记内容：
 ${contentSummary}
@@ -75,7 +78,7 @@ ${contentSummary}
 
     try {
       const briefingContent = await callOpenAI({
-        userId: user.id,
+        userId: workspace.userId,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: briefingPrompt },
@@ -91,6 +94,7 @@ ${contentSummary}
       if (dailyReviewTag) {
         await prisma.message.updateMany({
           where: {
+            workspaceId: workspace.id,
             authorId: null,  // 晨报的 authorId 为 null
             isPinned: true,
             tags: {
@@ -99,14 +103,15 @@ ${contentSummary}
           },
           data: { isPinned: false },
         })
-        console.log(`[DailyBriefing] Unpinned previous briefings for user: ${user.email}`)
+        console.log(`[DailyBriefing] Unpinned previous briefings for workspace: ${workspace.name}`)
       }
 
       // 创建晨报消息（authorId 为 null，表示由系统生成）
       const yesterdayStr = yesterday.toLocaleDateString("zh-CN")
       const briefing = await prisma.message.create({
         data: {
-          content: `# ☀️ 每日晨报 - ${yesterdayStr}\n\n${briefingContent}`,
+          content: `# ☀️ 每日晨报 - ${workspace.name} - ${yesterdayStr}\n\n${briefingContent}`,
+          workspaceId: workspace.id,
           authorId: null,  // 系统生成，没有作者
           isPinned: true,
         },
@@ -116,9 +121,9 @@ ${contentSummary}
       const tagIds = await batchUpsertTags(["DailyReview"])
       await connectTagsToMessage(briefing.id, tagIds)
 
-      console.log(`[DailyBriefing] Created briefing for ${user.email}: ${briefing.id}`)
+      console.log(`[DailyBriefing] Created briefing for ${workspace.name}: ${briefing.id}`)
     } catch (error) {
-      console.error(`[DailyBriefing] Failed for user ${user.email}:`, error)
+      console.error(`[DailyBriefing] Failed for workspace ${workspace.name}:`, error)
     }
   }
 

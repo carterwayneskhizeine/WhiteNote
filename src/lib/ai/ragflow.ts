@@ -60,13 +60,34 @@ export async function callRAGFlow(
     throw new Error("RAGFlow Chat ID not configured")
   }
 
+  return await callRAGFlowWithChatId(
+    config.ragflowBaseUrl,
+    config.ragflowApiKey,
+    config.ragflowChatId,
+    messages
+  )
+}
+
+/**
+ * 调用 RAGFlow OpenAI 兼容接口（使用指定的 chatId）
+ * @param ragflowBaseUrl RAGFlow 服务地址
+ * @param ragflowApiKey RAGFlow API Key
+ * @param chatId RAGFlow Chat ID
+ * @param messages 消息列表
+ */
+export async function callRAGFlowWithChatId(
+  ragflowBaseUrl: string,
+  ragflowApiKey: string,
+  chatId: string,
+  messages: RAGFlowMessage[]
+): Promise<{ content: string; references?: Array<{ content: string; source: string }> }> {
   const response = await fetch(
-    `${config.ragflowBaseUrl}/api/v1/chats_openai/${config.ragflowChatId}/chat/completions`,
+    `${ragflowBaseUrl}/api/v1/chats_openai/${chatId}/chat/completions`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.ragflowApiKey}`,
+        "Authorization": `Bearer ${ragflowApiKey}`,
       },
       body: JSON.stringify({
         model: "model",
@@ -279,6 +300,33 @@ export async function syncToRAGFlow(
     return
   }
 
+  return await syncToRAGFlowWithDatasetId(
+    config.ragflowBaseUrl,
+    config.ragflowApiKey,
+    config.ragflowDatasetId,
+    messageId,
+    content,
+    medias
+  )
+}
+
+/**
+ * 同步消息到 RAGFlow 知识库（使用指定的 datasetId）
+ * @param ragflowBaseUrl RAGFlow 服务地址
+ * @param ragflowApiKey RAGFlow API Key
+ * @param datasetId RAGFlow Dataset ID
+ * @param messageId 消息 ID
+ * @param content 消息内容
+ * @param medias 媒体文件
+ */
+export async function syncToRAGFlowWithDatasetId(
+  ragflowBaseUrl: string,
+  ragflowApiKey: string,
+  datasetId: string,
+  messageId: string,
+  content: string,
+  medias?: Media[]
+) {
   try {
     // 清理内容：移除 AI 助手提及
     const cleanedContent = cleanContentForRAGFlow(content)
@@ -289,11 +337,11 @@ export async function syncToRAGFlow(
     formData.append('file', blob, `message_${messageId}.md`)
 
     const response = await fetch(
-      `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/documents`,
+      `${ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${config.ragflowApiKey}`,
+          "Authorization": `Bearer ${ragflowApiKey}`,
           // 注意：不手动设置 Content-Type，让浏览器自动设置并添加 boundary
         },
         body: formData,
@@ -313,12 +361,12 @@ export async function syncToRAGFlow(
     if (result.data?.[0]?.id) {
       const documentId = result.data[0].id
       await fetch(
-        `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/chunks`,
+        `${ragflowBaseUrl}/api/v1/datasets/${datasetId}/chunks`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${config.ragflowApiKey}`,
+            "Authorization": `Bearer ${ragflowApiKey}`,
           },
           body: JSON.stringify({
             document_ids: [documentId],
@@ -338,7 +386,11 @@ export async function syncToRAGFlow(
         if (media.type === "image" || media.type.startsWith("image/")) {
           console.log("[RAGFlow] Processing image:", media.id)
 
-          const description = await uploadImageToRAGFlow(config, messageId, media)
+          const description = await uploadImageToRAGFlow(
+            { ragflowBaseUrl, ragflowApiKey, ragflowDatasetId: datasetId },
+            messageId,
+            media
+          )
 
           if (description) {
             // 更新 Media 记录的描述

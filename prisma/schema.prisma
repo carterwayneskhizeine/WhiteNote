@@ -23,6 +23,7 @@ model User {
   templates     Template[]
   retweets      Retweet[]
   aiCommands    AICommand[]
+  workspaces    Workspace[]
 }
 
 model Account {
@@ -59,6 +60,31 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model Workspace {
+  id                String    @id @default(cuid())
+  name              String
+  description       String?
+  isDefault         Boolean   @default(false)
+
+  // RAGFlow 配置 - 每个 Workspace 独立
+  ragflowDatasetId  String?
+  ragflowChatId     String?
+
+  // AI 功能配置
+  enableAutoTag     Boolean   @default(true)
+  enableBriefing    Boolean   @default(true)
+
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages          Message[]
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+  @@unique([userId, name])
+}
+
 model Message {
   id               String           @id @default(cuid())
   title            String?
@@ -71,6 +97,7 @@ model Message {
   parentId         String?
   quotedMessageId  String?
   quotedCommentId  String?
+  workspaceId      String?
   comments         Comment[]
   medias           Media[]
   author           User?            @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -80,6 +107,7 @@ model Message {
   quotedComment    Comment?         @relation("QuoteCommentByMessage", fields: [quotedCommentId], references: [id])
   quoteRetweets    Message[]        @relation("QuoteRetweet")
   quoteComments    Comment[]        @relation("QuoteComment")
+  workspace        Workspace?       @relation(fields: [workspaceId], references: [id])
   tags             MessageTag[]
   versions         MessageVersion[]
   reminders        Reminder[]
@@ -90,6 +118,7 @@ model Message {
   @@index([isPinned, createdAt(sort: Desc)])
   @@index([quotedMessageId])
   @@index([quotedCommentId])
+  @@index([workspaceId])
 }
 
 model Tag {
@@ -220,16 +249,11 @@ model AiConfig {
   openaiBaseUrl        String    @default("http://localhost:4000")
   openaiApiKey         String    @default("")
   openaiModel          String    @default("gpt-3.5-turbo")
-  enableRag            Boolean   @default(false)
   ragflowBaseUrl       String    @default("http://localhost:4154")
   ragflowApiKey        String    @default("")
-  ragflowChatId        String    @default("")
-  ragflowDatasetId     String    @default("")
   ragTimeFilterStart   DateTime?
   ragTimeFilterEnd     DateTime?
-  enableAutoTag        Boolean   @default(true)
   autoTagModel         String    @default("gpt-3.5-turbo")
-  enableBriefing       Boolean   @default(true)
   briefingModel        String    @default("gpt-3.5-turbo")
   briefingTime         String    @default("08:00")
   aiPersonality        String    @default("friendly")

@@ -1,17 +1,40 @@
 import { Job } from "bullmq"
 import prisma from "@/lib/prisma"
-import { syncToRAGFlow } from "@/lib/ai/ragflow"
+import { syncToRAGFlowWithDatasetId } from "@/lib/ai/ragflow"
 
 interface SyncRAGFlowJobData {
   userId: string
+  workspaceId: string
   messageId: string
   contentType?: 'message' | 'comment'
 }
 
 export async function processSyncRAGFlow(job: Job<SyncRAGFlowJobData>) {
-  const { userId, messageId, contentType = 'message' } = job.data
+  const { userId, workspaceId, messageId, contentType = 'message' } = job.data
 
-  console.log(`[SyncRAGFlow] Processing ${contentType}: ${messageId}`)
+  console.log(`[SyncRAGFlow] Processing ${contentType}: ${messageId} (workspace: ${workspaceId})`)
+
+  // 获取 Workspace 的 datasetId
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { ragflowDatasetId: true }
+  })
+
+  if (!workspace?.ragflowDatasetId) {
+    console.warn(`[SyncRAGFlow] Workspace ${workspaceId} has no RAGFlow dataset, skipping sync`)
+    return
+  }
+
+  // 获取用户的 RAGFlow 配置
+  const config = await prisma.aiConfig.findUnique({
+    where: { userId },
+    select: { ragflowBaseUrl: true, ragflowApiKey: true }
+  })
+
+  if (!config?.ragflowBaseUrl || !config.ragflowApiKey) {
+    console.warn(`[SyncRAGFlow] User ${userId} has no RAGFlow config, skipping sync`)
+    return
+  }
 
   if (contentType === 'message') {
     const message = await prisma.message.findUnique({
@@ -50,7 +73,14 @@ export async function processSyncRAGFlow(job: Job<SyncRAGFlowJobData>) {
       console.log("[SyncRAGFlow] Message medias count:", message.medias.length)
       console.log("[SyncRAGFlow] Message medias:", JSON.stringify(message.medias))
 
-      await syncToRAGFlow(userId, message.id, contentWithTags, message.medias)
+      await syncToRAGFlowWithDatasetId(
+        config.ragflowBaseUrl,
+        config.ragflowApiKey,
+        workspace.ragflowDatasetId,
+        messageId,
+        contentWithTags,
+        message.medias
+      )
     }
   } else {
     // 处理评论
@@ -87,7 +117,14 @@ export async function processSyncRAGFlow(job: Job<SyncRAGFlowJobData>) {
         contentWithTags = `${tagLine}\n\n${comment.content}`
       }
 
-      await syncToRAGFlow(userId, comment.id, contentWithTags, comment.medias)
+      await syncToRAGFlowWithDatasetId(
+        config.ragflowBaseUrl,
+        config.ragflowApiKey,
+        workspace.ragflowDatasetId,
+        messageId,
+        contentWithTags,
+        comment.medias
+      )
     }
   }
 

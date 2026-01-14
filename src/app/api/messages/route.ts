@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
   const isPinned = searchParams.get("isPinned") === "true" ? true : undefined
   const parentId = searchParams.get("parentId")
   const rootOnly = searchParams.get("rootOnly") === "true"
+  const workspaceId = searchParams.get("workspaceId")
 
   // 构建基础查询条件
   const baseWhere: Record<string, unknown> = {}
@@ -42,6 +43,9 @@ export async function GET(request: NextRequest) {
     baseWhere.parentId = parentId
   } else if (rootOnly) {
     baseWhere.parentId = null
+  }
+  if (workspaceId) {
+    baseWhere.workspaceId = workspaceId
   }
 
   // 构建最终查询条件：用户的消息 OR 系统生成的晨报
@@ -172,7 +176,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { content, title, parentId, tags, quotedMessageId, quotedCommentId, media } = body
+    const { content, title, parentId, tags, quotedMessageId, quotedCommentId, media, workspaceId } = body
 
     // Allow empty content if media is provided
     if ((!content || content.trim() === "") && (!media || media.length === 0)) {
@@ -180,6 +184,29 @@ export async function POST(request: NextRequest) {
         { error: "Content or media is required" },
         { status: 400 }
       )
+    }
+
+    // 如果没有指定 workspaceId，使用用户的默认 Workspace
+    let targetWorkspaceId = workspaceId
+    if (!targetWorkspaceId) {
+      const defaultWorkspace = await prisma.workspace.findFirst({
+        where: { userId: session.user.id, isDefault: true },
+        select: { id: true },
+      })
+      targetWorkspaceId = defaultWorkspace?.id || null
+    }
+
+    // 如果指定了 workspaceId，验证 Workspace 存在且属于当前用户
+    if (targetWorkspaceId) {
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: targetWorkspaceId },
+      })
+      if (!workspace || workspace.userId !== session.user.id) {
+        return Response.json(
+          { error: "Workspace not found" },
+          { status: 404 }
+        )
+      }
     }
 
     // 验证父消息存在 (如果指定)
@@ -233,6 +260,7 @@ export async function POST(request: NextRequest) {
         title: title?.trim() || null,
         content: content?.trim() || "",
         authorId: session.user.id,
+        workspaceId: targetWorkspaceId,
         parentId: parentId || null,
         quotedMessageId: quotedMessageId || null,
         quotedCommentId: quotedCommentId || null,
@@ -313,22 +341,27 @@ export async function POST(request: NextRequest) {
       isRetweeted: message.retweets.length > 0,
     }
 
-    // 获取用户 AI 配置
-    const config = await prisma.aiConfig.findUnique({
-      where: { userId: session.user.id },
-    })
+    // 获取 Workspace 的 AI 配置
+    const workspace = targetWorkspaceId
+      ? await prisma.workspace.findUnique({
+          where: { id: targetWorkspaceId },
+          select: { enableAutoTag: true },
+        })
+      : null
 
     // 添加自动打标签任务（如果启用）
     // 注意：auto-tag 完成后会自动触发 sync-ragflow，确保标签被包含
-    if (config?.enableAutoTag) {
+    if (workspace?.enableAutoTag) {
       await addTask("auto-tag", {
         userId: session.user.id,
+        workspaceId: targetWorkspaceId,
         messageId: message.id,
       })
-    } else {
+    } else if (targetWorkspaceId) {
       // 如果未启用自动打标签，直接同步到 RAGFlow
       await addTask("sync-ragflow", {
         userId: session.user.id,
+        workspaceId: targetWorkspaceId,
         messageId: message.id,
       })
     }

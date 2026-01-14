@@ -1,7 +1,7 @@
 import { requireAuth, AuthError } from "@/lib/api-auth"
 import prisma from "@/lib/prisma"
 import { buildSystemPrompt, callOpenAI } from "@/lib/ai/openai"
-import { callRAGFlow } from "@/lib/ai/ragflow"
+import { callRAGFlowWithChatId } from "@/lib/ai/ragflow"
 import { getAiConfig } from "@/lib/ai/config"
 import { NextRequest } from "next/server"
 import { addTask } from "@/lib/queue"
@@ -19,13 +19,14 @@ export const runtime = 'nodejs'
 
 /**
  * POST /api/ai/chat
- * AI 聊天接口 (配置热更新)
+ * AI 聊天接口 (支持双提及模式: @goldierill | @ragflow)
  */
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth()
     const body = await request.json()
-    const { messageId, content } = body
+    const { messageId, content, mode = 'goldierill' } = body
+    // mode: 'goldierill' | 'ragflow'
 
     if (!messageId || !content) {
       return Response.json(
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
     // 获取消息上下文（数据隔离：用户只能对自己创建的消息使用 AI）
     const message = await prisma.message.findUnique({
       where: { id: messageId, authorId: session.user.id },
+      include: { workspace: true },
     })
 
     if (!message) {
@@ -50,10 +52,29 @@ export async function POST(request: NextRequest) {
     let references: Array<{ content: string; source: string }> | undefined
     let quotedMessageId: string | undefined
 
-    if (config.enableRag && config.ragflowApiKey && config.ragflowChatId) {
-      // RAG 模式
+    if (mode === 'ragflow') {
+      // RAGFlow 模式：使用 Workspace 的 chatId 检索知识库
+      if (!message.workspace?.ragflowChatId) {
+        return Response.json(
+          { error: "Workspace RAGFlow not configured. 请先在设置中配置 RAGFlow API Key，然后创建新 Workspace。" },
+          { status: 400 }
+        )
+      }
+
+      if (!config.ragflowBaseUrl || !config.ragflowApiKey) {
+        return Response.json(
+          { error: "请先在 AI 配置中设置 RAGFlow Base URL 和 API Key" },
+          { status: 400 }
+        )
+      }
+
       const messages = [{ role: "user" as const, content }]
-      const result = await callRAGFlow(session.user.id, messages)
+      const result = await callRAGFlowWithChatId(
+        config.ragflowBaseUrl,
+        config.ragflowApiKey,
+        message.workspace.ragflowChatId,
+        messages
+      )
       aiResponse = result.content
       references = result.references
 
@@ -62,7 +83,7 @@ export async function POST(request: NextRequest) {
         quotedMessageId = extractMessageIdFromDocument(references[0].source) || undefined
       }
     } else {
-      // 标准模式
+      // OpenAI 模式（@goldierill）：直接使用 OpenAI，上下文仅为当前帖子
       const systemPrompt = await buildSystemPrompt(session.user.id)
       const messages = [
         { role: "system" as const, content: systemPrompt },
@@ -94,16 +115,25 @@ export async function POST(request: NextRequest) {
 
     // AI 评论也需要自动打标签并推送到知识库
     // 注意：AI 评论的 authorId 为 null，所以使用消息作者的用户 ID
-    if (config?.enableAutoTag) {
+    // 检查 Workspace 的 enableAutoTag 配置
+    const workspace = message.workspace
+      ? await prisma.workspace.findUnique({
+          where: { id: message.workspace.id },
+          select: { enableAutoTag: true },
+        })
+      : null
+
+    if (workspace?.enableAutoTag) {
       await addTask("auto-tag-comment", {
         userId: session.user.id,
         commentId: comment.id,
         contentType: 'comment',
       })
-    } else {
+    } else if (message.workspaceId) {
       // 如果未启用自动打标签，直接同步到 RAGFlow
       await addTask("sync-ragflow", {
         userId: session.user.id,
+        workspaceId: message.workspaceId,
         messageId: comment.id,
         contentType: 'comment',
       })

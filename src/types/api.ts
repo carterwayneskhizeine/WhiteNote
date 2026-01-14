@@ -10,6 +10,7 @@ export interface MessageFilters {
   isStarred?: boolean
   isPinned?: boolean
   parentId?: string | null  // null = 仅根消息
+  workspaceId?: string | null  // Workspace ID 过滤
   search?: string
 }
 
@@ -19,6 +20,10 @@ export interface CreateMessageInput {
   title?: string
   parentId?: string
   tags?: string[]  // 标签名称数组
+  workspaceId?: string  // Workspace ID
+  quotedMessageId?: string
+  quotedCommentId?: string
+  media?: Array<{ url: string; type: string }>
 }
 
 // 更新消息参数
@@ -51,11 +56,16 @@ export interface MessageWithRelations {
   isPinned: boolean
   authorId: string | null
   parentId: string | null
+  workspaceId: string | null
   author: {
     id: string
     name: string | null
     avatar: string | null
     email: string | null
+  } | null
+  workspace?: {
+    id: string
+    name: string
   } | null
   tags: Array<{
     tag: {
@@ -230,16 +240,11 @@ export interface AIConfig {
   openaiBaseUrl: string
   openaiApiKey: string
   openaiModel: string
-  enableRag: boolean
   ragTimeFilterStart: Date | null
   ragTimeFilterEnd: Date | null
   ragflowBaseUrl: string
   ragflowApiKey: string
-  ragflowChatId: string
-  ragflowDatasetId: string
-  enableAutoTag: boolean
   autoTagModel: string
-  enableBriefing: boolean
   briefingModel: string
   briefingTime: string
   aiPersonality: string
@@ -254,16 +259,11 @@ export interface UpdateAIConfigInput {
   openaiBaseUrl?: string
   openaiApiKey?: string
   openaiModel?: string
-  enableRag?: boolean
   ragflowBaseUrl?: string
   ragflowApiKey?: string
-  ragflowChatId?: string
-  ragflowDatasetId?: string
   ragTimeFilterStart?: string
   ragTimeFilterEnd?: string
-  enableAutoTag?: boolean
   autoTagModel?: string
-  enableBriefing?: boolean
   briefingModel?: string
   briefingTime?: string
   aiPersonality?: string
@@ -283,6 +283,7 @@ export interface AIConfigResponse {
 export interface AIChatInput {
   messageId: string
   content: string
+  mode?: 'goldierill' | 'ragflow'  // 新增：AI 调用模式
 }
 
 export interface AIChatResponse {
@@ -348,5 +349,42 @@ export interface AICommandsResponse {
 
 export interface AICommandResponse {
   data?: AICommand
+  error?: string
+}
+
+// ==================== Workspaces ====================
+export interface Workspace {
+  id: string
+  name: string
+  description: string | null
+  isDefault: boolean
+  ragflowDatasetId: string | null
+  ragflowChatId: string | null
+  enableAutoTag: boolean
+  enableBriefing: boolean
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CreateWorkspaceInput {
+  name: string
+  description?: string
+}
+
+export interface UpdateWorkspaceInput {
+  name?: string
+  description?: string
+  enableAutoTag?: boolean
+  enableBriefing?: boolean
+}
+
+export interface WorkspacesResponse {
+  data: Workspace[]
+  error?: string
+}
+
+export interface WorkspaceResponse {
+  data?: Workspace
   error?: string
 }

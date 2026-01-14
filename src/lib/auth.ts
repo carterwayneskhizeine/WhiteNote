@@ -39,6 +39,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null
         }
 
+        // 使用 Prisma 事务创建 AiConfig 和默认 Workspace
+        await prisma.$transaction(async (tx) => {
+          // 创建 AiConfig（如果不存在）
+          let aiConfig = await tx.aiConfig.findUnique({
+            where: { userId: user.id }
+          })
+
+          if (!aiConfig) {
+            aiConfig = await tx.aiConfig.create({
+              data: { userId: user.id }
+            })
+          }
+
+          // 检查是否已有默认 Workspace
+          const existingWorkspace = await tx.workspace.findFirst({
+            where: { userId: user.id, isDefault: true }
+          })
+
+          if (!existingWorkspace) {
+            await tx.workspace.create({
+              data: {
+                name: '默认',
+                isDefault: true,
+                userId: user.id,
+                // RAGFlow 资源稍后由用户在设置中配置后创建
+              }
+            })
+          }
+        })
+
         return {
           id: user.id,
           email: user.email,
