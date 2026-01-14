@@ -1,5 +1,5 @@
 import { requireAuth, AuthError } from "@/lib/api-auth"
-import { getAiConfig, updateAiConfig } from "@/lib/ai/config"
+import { getAiConfig, updateAiConfig, UserNotFoundError } from "@/lib/ai/config"
 import { NextRequest } from "next/server"
 
 export const runtime = 'nodejs'
@@ -33,7 +33,7 @@ export async function GET() {
     },
   })
   } catch (error) {
-    if (error instanceof AuthError) {
+    if (error instanceof AuthError || error instanceof UserNotFoundError) {
       return Response.json({ error: error.message }, { status: 401 })
     }
     // 不要直接抛出错误，避免泄露内部实现细节
@@ -96,7 +96,7 @@ export async function PUT(request: NextRequest) {
       message: "Configuration updated successfully. Changes take effect immediately.",
     })
   } catch (error) {
-    if (error instanceof AuthError) {
+    if (error instanceof AuthError || error instanceof UserNotFoundError) {
       return Response.json({ error: error.message }, { status: 401 })
     }
     console.error("Failed to update config:", error)
@@ -142,7 +142,7 @@ export async function POST() {
       })
     }
   } catch (error) {
-    if (error instanceof AuthError) {
+    if (error instanceof AuthError || error instanceof UserNotFoundError) {
       return Response.json({ error: error.message }, { status: 401 })
     }
     console.error("RAGFlow connection test failed:", error)

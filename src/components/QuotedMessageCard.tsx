@@ -4,7 +4,6 @@ import { useState } from "react"
 import { TipTapViewer } from "@/components/TipTapViewer"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { GoldieAvatar } from "@/components/GoldieAvatar"
 import { MediaGrid } from "@/components/MediaGrid"
 import { UserInfoWithTags } from "@/components/UserInfoWithTags"
 import { ImageLightbox } from "@/components/ImageLightbox"
@@ -72,13 +71,7 @@ export function QuotedMessageCard({ message, className }: QuotedMessageCardProps
       )}
     >
       {/* Header: Author info */}
-      <div className="flex items-center gap-2 text-sm mb-2 flex-wrap">
-        <GoldieAvatar
-          name={message.author?.name || null}
-          avatar={message.author?.avatar || null}
-          size="sm"
-          isAI={!message.author}
-        />
+      <div className="flex items-center text-sm mb-2">
         <UserInfoWithTags
           author={message.author}
           createdAt={message.createdAt}

@@ -1,6 +1,15 @@
 import prisma from "@/lib/prisma"
 import { encrypt, decrypt, isEncrypted } from "@/lib/crypto"
 import type { AiConfig } from "@prisma/client"
+import { Prisma } from "@prisma/client"
+
+// 用户不存在错误（当数据库中找不到对应的用户记录时抛出）
+export class UserNotFoundError extends Error {
+  constructor(message: string = "User not found in database") {
+    super(message)
+    this.name = "UserNotFoundError"
+  }
+}
 
 // 需要加密的字段列表
 const ENCRYPTED_FIELDS = [
@@ -27,9 +36,20 @@ async function getAiConfigFromDb(userId: string) {
 
   // 如果用户没有配置，创建默认配置
   if (!config) {
-    config = await prisma.aiConfig.create({
-      data: { userId },
-    })
+    try {
+      config = await prisma.aiConfig.create({
+        data: { userId },
+      })
+    } catch (error) {
+      // 捕获外键约束错误，说明用户不存在
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new UserNotFoundError(`User with ID ${userId} does not exist in database`)
+      }
+      throw error
+    }
   }
 
   // 解密敏感字段
@@ -119,11 +139,23 @@ export async function updateAiConfig(userId: string, data: Partial<{
     }
   }
 
-  const config = await prisma.aiConfig.upsert({
-    where: { userId },
-    update: dataToStore,
-    create: { userId, ...dataToStore },
-  })
+  let config
+  try {
+    config = await prisma.aiConfig.upsert({
+      where: { userId },
+      update: dataToStore,
+      create: { userId, ...dataToStore },
+    })
+  } catch (error) {
+    // 捕获外键约束错误，说明用户不存在
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2003'
+    ) {
+      throw new UserNotFoundError(`User with ID ${userId} does not exist in database`)
+    }
+    throw error
+  }
 
   // 清除缓存，确保下次调用获取最新配置
   invalidateConfigCache(userId)

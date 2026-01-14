@@ -7,12 +7,27 @@ import {
 
 const API_BASE = '/api'
 
+/**
+ * 检查响应状态，如果是 401 则跳转到登录页
+ */
+async function handleResponse(response: Response): Promise<Response> {
+  if (response.status === 401) {
+    // 跳转到登录页
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login'
+    }
+    throw new Error('Unauthorized')
+  }
+  return response
+}
+
 export const configApi = {
   /**
    * Get AI configuration
    */
   async getConfig(): Promise<AIConfigResponse> {
     const response = await fetch(`${API_BASE}/config`)
+    await handleResponse(response)
     return response.json()
   },
 
@@ -25,6 +40,7 @@ export const configApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     })
+    await handleResponse(response)
     return response.json()
   },
 
@@ -35,6 +51,7 @@ export const configApi = {
     const response = await fetch(`${API_BASE}/config`, {
       method: 'POST',
     })
+    await handleResponse(response)
     return response.json()
   },
 }
