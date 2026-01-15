@@ -54,10 +54,13 @@ export const tagsApi = {
 
   /**
    * Get popular tags (sorted by usage count)
+   * @param limit - Maximum number of tags to return
+   * @param workspaceId - Optional workspace ID to filter tags by
    */
-  async getPopularTags(limit?: number): Promise<ApiResponse<Array<Tag & { count: number }>>> {
+  async getPopularTags(limit?: number, workspaceId?: string | null): Promise<ApiResponse<Array<Tag & { count: number }>>> {
     const searchParams = new URLSearchParams()
     if (limit) searchParams.set('limit', limit.toString())
+    if (workspaceId) searchParams.set('workspaceId', workspaceId)
 
     const response = await fetch(
       `${API_BASE}/tags/popular?${searchParams.toString()}`

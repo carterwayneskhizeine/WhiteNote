@@ -9,6 +9,7 @@ import { searchApi } from "@/lib/api/search"
 import { tagsApi } from "@/lib/api/tags"
 import { MessageWithRelations } from "@/types/api"
 import { useRouter } from "next/navigation"
+import { useWorkspaceStore } from "@/store/useWorkspaceStore"
 
 type SearchHistoryItem = {
   id: string
@@ -26,6 +27,7 @@ type PopularTag = {
 export function RightSidebar() {
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { currentWorkspaceId } = useWorkspaceStore()
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<MessageWithRelations[]>([])
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([])
@@ -55,7 +57,7 @@ export function RightSidebar() {
   const loadPopularTags = useCallback(async () => {
     setIsLoadingPopularTags(true)
     try {
-      const result = await tagsApi.getPopularTags(5)
+      const result = await tagsApi.getPopularTags(5, currentWorkspaceId)
       if (result.data) {
         setPopularTags(result.data)
       }
@@ -64,9 +66,9 @@ export function RightSidebar() {
     } finally {
       setIsLoadingPopularTags(false)
     }
-  }, [])
+  }, [currentWorkspaceId])
 
-  // 初始化时加载热门标签
+  // 初始化时加载热门标签，并在 workspace 切换时重新加载
   useEffect(() => {
     loadPopularTags()
   }, [loadPopularTags])
