@@ -9,7 +9,6 @@ export interface MessageFilters {
   tagId?: string
   isStarred?: boolean
   isPinned?: boolean
-  parentId?: string | null  // null = 仅根消息
   workspaceId?: string | null  // Workspace ID 过滤
   search?: string
 }
@@ -18,7 +17,6 @@ export interface MessageFilters {
 export interface CreateMessageInput {
   content: string
   title?: string
-  parentId?: string
   tags?: string[]  // 标签名称数组
   workspaceId?: string  // Workspace ID
   quotedMessageId?: string
@@ -55,7 +53,6 @@ export interface MessageWithRelations {
   isStarred: boolean
   isPinned: boolean
   authorId: string | null
-  parentId: string | null
   workspaceId: string | null
   author: {
     id: string
@@ -75,7 +72,6 @@ export interface MessageWithRelations {
     }
   }>
   _count: {
-    children: number
     comments: number
   }
   retweetCount?: number

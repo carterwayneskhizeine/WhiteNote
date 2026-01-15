@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
           },
         },
         _count: {
-          select: { children: true, comments: true },
+          select: { comments: true },
         },
       },
       orderBy: { updatedAt: "desc" },

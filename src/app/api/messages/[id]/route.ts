@@ -149,13 +149,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
       medias: {
         select: { id: true, url: true, type: true, description: true },
       },
-      children: {
-        include: {
-          author: { select: { id: true, name: true, avatar: true, email: true } },
-          _count: { select: { children: true, comments: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      },
       comments: {
         include: {
           author: { select: { id: true, name: true, avatar: true, email: true } },
@@ -163,7 +156,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         orderBy: { createdAt: "asc" },
       },
       _count: {
-        select: { children: true, comments: true, versions: true, retweets: true },
+        select: { comments: true, versions: true, retweets: true },
       },
       retweets: {
         where: { userId: session.user.id },
@@ -274,7 +267,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
             tag: { select: { id: true, name: true, color: true } },
           },
         },
-        _count: { select: { children: true, comments: true } },
+        _count: { select: { comments: true } },
       },
     })
 

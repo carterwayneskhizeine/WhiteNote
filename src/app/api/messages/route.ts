@@ -23,8 +23,6 @@ export async function GET(request: NextRequest) {
   const tagId = searchParams.get("tagId")
   const isStarred = searchParams.get("isStarred") === "true" ? true : undefined
   const isPinned = searchParams.get("isPinned") === "true" ? true : undefined
-  const parentId = searchParams.get("parentId")
-  const rootOnly = searchParams.get("rootOnly") === "true"
   const workspaceId = searchParams.get("workspaceId")
 
   // 构建基础查询条件
@@ -39,23 +37,15 @@ export async function GET(request: NextRequest) {
   if (isPinned !== undefined) {
     baseWhere.isPinned = isPinned
   }
-  if (parentId) {
-    baseWhere.parentId = parentId
-  } else if (rootOnly) {
-    baseWhere.parentId = null
-  }
   if (workspaceId) {
     baseWhere.workspaceId = workspaceId
   }
 
   // 构建最终查询条件：用户的消息 OR 系统生成的晨报
-  // 系统消息也需要应用 rootOnly、isStarred、isPinned、workspaceId 过滤器（如果设置了）
+  // 系统消息也需要应用 isStarred、isPinned、workspaceId 过滤器（如果设置了）
   const systemMessageWhere: Record<string, unknown> = {
     authorId: null,
     tags: { some: { tag: { name: "dailyreview" } } },  // 标签名在数据库中是小写
-  }
-  if (rootOnly) {
-    systemMessageWhere.parentId = null
   }
   // 应用收藏和置顶过滤器到系统消息
   if (isStarred !== undefined) {
@@ -120,7 +110,7 @@ export async function GET(request: NextRequest) {
           select: { id: true, url: true, type: true, description: true },
         },
         _count: {
-          select: { children: true, comments: true, retweets: true },
+          select: { comments: true, retweets: true },
         },
         retweets: {
           where: { userId: session.user.id },
@@ -180,7 +170,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { content, title, parentId, tags, quotedMessageId, quotedCommentId, media, workspaceId } = body
+    const { content, title, tags, quotedMessageId, quotedCommentId, media, workspaceId } = body
 
     // Allow empty content if media is provided
     if ((!content || content.trim() === "") && (!media || media.length === 0)) {
@@ -208,19 +198,6 @@ export async function POST(request: NextRequest) {
       if (!workspace || workspace.userId !== session.user.id) {
         return Response.json(
           { error: "Workspace not found" },
-          { status: 404 }
-        )
-      }
-    }
-
-    // 验证父消息存在 (如果指定)
-    if (parentId) {
-      const parent = await prisma.message.findUnique({
-        where: { id: parentId },
-      })
-      if (!parent) {
-        return Response.json(
-          { error: "Parent message not found" },
           { status: 404 }
         )
       }
@@ -265,7 +242,6 @@ export async function POST(request: NextRequest) {
         content: content?.trim() || "",
         authorId: session.user.id,
         workspaceId: targetWorkspaceId,
-        parentId: parentId || null,
         quotedMessageId: quotedMessageId || null,
         quotedCommentId: quotedCommentId || null,
         // 批量关联标签（使用优化后的批量查询）
@@ -324,7 +300,7 @@ export async function POST(request: NextRequest) {
           select: { id: true, url: true, type: true, description: true },
         },
         _count: {
-          select: { children: true, comments: true, retweets: true },
+          select: { comments: true, retweets: true },
         },
         retweets: {
           where: { userId: session.user.id },

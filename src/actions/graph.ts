@@ -11,7 +11,6 @@ export async function getGraphData(workspaceId?: string): Promise<GraphData> {
             id: true,
             title: true,
             content: true,
-            parentId: true,
             quotedMessageId: true,
             quotedCommentId: true,
             tags: {
@@ -26,7 +25,6 @@ export async function getGraphData(workspaceId?: string): Promise<GraphData> {
             },
             _count: {
                 select: {
-                    children: true,
                     retweets: true,
                     comments: true
                 }
@@ -62,10 +60,7 @@ export async function getGraphData(workspaceId?: string): Promise<GraphData> {
     // Create Message nodes
     const messageNodes: GraphNode[] = messages.map((msg) => {
         const primaryTag = msg.tags[0]?.tag
-        const connections =
-            msg._count.children +
-            msg._count.retweets +
-            msg._count.comments
+        const connections = msg._count.retweets + msg._count.comments
 
         return {
             id: msg.id,

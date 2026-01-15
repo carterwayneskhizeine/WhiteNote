@@ -30,7 +30,6 @@ export function MessagesList({ filters }: MessagesListProps) {
 
     try {
       const result = await messagesApi.getMessages({
-        rootOnly: true, // Default to true, but allow override
         ...filters,
         workspaceId: filters?.workspaceId || currentWorkspaceId || undefined, // Use current workspace ID
       })

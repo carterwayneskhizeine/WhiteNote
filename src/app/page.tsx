@@ -3,7 +3,7 @@
 import { InputMachine } from "@/components/InputMachine"
 import { MessagesList } from "@/components/MessagesList"
 import { NewMessageButton } from "@/components/NewMessageButton"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSocket } from "@/hooks/useSocket"
 import { useAppStore } from "@/store/useAppStore"
 import { useWorkspaceStore } from "@/store/useWorkspaceStore"
@@ -13,7 +13,7 @@ import { workspacesApi } from "@/lib/api/workspaces"
 import type { Workspace } from "@/types/api"
 import { ChevronDown, Loader2 } from "lucide-react"
 
-export default function Home() {
+function HomeContent() {
   const [refreshKey, setRefreshKey] = useState(0)
   const { setHasNewMessages } = useAppStore()
   const { data: session } = useSession()
@@ -142,5 +142,17 @@ export default function Home() {
 
       <NewMessageButton onRefresh={handleRefreshFromNotification} />
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col min-h-screen pt-[106px] desktop:pt-0 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   )
 }

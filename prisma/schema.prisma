@@ -94,15 +94,12 @@ model Message {
   isStarred        Boolean          @default(false)
   isPinned         Boolean          @default(false)
   authorId         String?
-  parentId         String?
   quotedMessageId  String?
   quotedCommentId  String?
   workspaceId      String?
   comments         Comment[]
   medias           Media[]
   author           User?            @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  parent           Message?         @relation("Thread", fields: [parentId], references: [id])
-  children         Message[]        @relation("Thread")
   quotedMessage    Message?         @relation("QuoteRetweet", fields: [quotedMessageId], references: [id])
   quotedComment    Comment?         @relation("QuoteCommentByMessage", fields: [quotedCommentId], references: [id])
   quoteRetweets    Message[]        @relation("QuoteRetweet")

@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             tag: { select: { id: true, name: true, color: true } },
           },
         },
-        _count: { select: { children: true, comments: true } },
+        _count: { select: { comments: true } },
       },
       orderBy: { createdAt: "desc" },
       skip,
