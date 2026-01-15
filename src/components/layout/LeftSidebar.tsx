@@ -12,6 +12,7 @@ import {
 import { cn, getAvatarUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { PostDialog } from "@/components/PostDialog"
 
 interface LeftSidebarProps {
   isMobile?: boolean
@@ -81,6 +82,7 @@ export function LeftSidebar({ isMobile, collapsed }: LeftSidebarProps) {
   const router = useRouter()
   const { data: session } = useSession()
   const [showMenu, setShowMenu] = useState(false)
+  const [showPostDialog, setShowPostDialog] = useState(false)
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/login" })
@@ -158,6 +160,7 @@ export function LeftSidebar({ isMobile, collapsed }: LeftSidebarProps) {
           <div className="my-4">
             <Button
               size="lg"
+              onClick={() => setShowPostDialog(true)}
               className={cn(
                 "rounded-full font-bold text-[17px] shadow-lg bg-white hover:bg-gray-100 text-black transition-all duration-200 border border-border",
                 collapsed ? "w-[52px] h-[52px] p-0" : "w-[225px] h-[52px]"
@@ -216,6 +219,18 @@ export function LeftSidebar({ isMobile, collapsed }: LeftSidebarProps) {
             </div>
           )}
         </div>
+      )}
+
+      {/* Post Dialog */}
+      {!isMobile && (
+        <PostDialog
+          open={showPostDialog}
+          onOpenChange={setShowPostDialog}
+          onSuccess={() => {
+            // Refresh the page to show new post
+            router.refresh()
+          }}
+        />
       )}
     </aside>
   )
