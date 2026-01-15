@@ -62,11 +62,13 @@ export interface Message {
 
 export interface CreateMessageInput {
   content: string
+  title?: string
   parentId?: string
   quotedMessageId?: string
   quotedCommentId?: string
   tags?: string[]
   media?: Array<{ url: string; type: string }>
+  workspaceId?: string
 }
 
 export interface UpdateMessageInput {
@@ -105,6 +107,7 @@ export const messagesApi = {
     isPinned?: boolean
     parentId?: string
     rootOnly?: boolean
+    workspaceId?: string
   }): Promise<MessagesResponse> {
     const searchParams = new URLSearchParams()
     if (params?.page) searchParams.set('page', params.page.toString())
@@ -114,6 +117,7 @@ export const messagesApi = {
     if (params?.isPinned !== undefined) searchParams.set('isPinned', params.isPinned.toString())
     if (params?.parentId) searchParams.set('parentId', params.parentId)
     if (params?.rootOnly) searchParams.set('rootOnly', 'true')
+    if (params?.workspaceId) searchParams.set('workspaceId', params.workspaceId)
 
     const response = await fetch(`${API_BASE}/messages?${searchParams.toString()}`)
     return response.json()

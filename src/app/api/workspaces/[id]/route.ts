@@ -6,10 +6,11 @@ import { getAiConfig } from "@/lib/ai/config"
 // PATCH /api/workspaces/[id] - 更新 Workspace
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
+    const { id } = await params
 
     if (!session?.user?.id) {
       return Response.json({ error: "Unauthorized" }, { status: 401 })
@@ -19,7 +20,7 @@ export async function PATCH(
 
     // 验证 Workspace 是否存在且属于当前用户
     const existingWorkspace = await prisma.workspace.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingWorkspace) {
@@ -31,7 +32,7 @@ export async function PATCH(
     }
 
     const workspace = await prisma.workspace.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(name !== undefined && { name }),
         ...(description !== undefined && { description }),
@@ -54,17 +55,18 @@ export async function PATCH(
 // DELETE /api/workspaces/[id] - 删除 Workspace（同时删除 RAGFlow 资源）
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
+    const { id } = await params
 
     if (!session?.user?.id) {
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const workspace = await prisma.workspace.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!workspace) {
@@ -117,7 +119,7 @@ export async function DELETE(
 
     // 3. 删除数据库中的 Workspace（级联删除 Messages）
     await prisma.workspace.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     console.log(`[Workspaces API] Deleted workspace: ${workspace.id}`)

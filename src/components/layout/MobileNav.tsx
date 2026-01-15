@@ -16,7 +16,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { authApi } from "@/lib/api"
 
 // Helper for X-style icons
 const XIcon = ({ icon: Icon, filled, size = 26, className }: any) => (
@@ -51,39 +50,13 @@ export function MobileNav() {
   const { data: session } = useSession()
   const [isVisible, setIsVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
-  const [userData, setUserData] = useState<{ name: string; email: string; avatar: string } | null>(null)
 
-  // Fetch fresh user data from API
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const result = await authApi.getCurrentUser()
-        if (result.data) {
-          setUserData({
-            name: result.data.name || "User Name",
-            email: result.data.email || "",
-            avatar: result.data.avatar || ""
-          })
-        }
-      } catch (error) {
-        // 401 错误会触发自动跳转到登录页，不需要额外处理
-        // 其他错误静默处理，避免控制台错误
-        if (error?.message !== 'Unauthorized') {
-          console.error('Failed to load user data:', error)
-        }
-      }
-    }
-    loadUserData()
-  }, [])
-
-  // Use API data if available, otherwise fall back to session
-  const userName = userData?.name || session?.user?.name || "User Name"
-  const userEmail = userData?.email
-    ? `@${userData.email.split("@")[0]}`
-    : session?.user?.email
-      ? `@${session.user.email.split("@")[0]}`
-      : "@username"
-  const userAvatar = userData?.avatar || session?.user?.image || ""
+  // Use session data directly
+  const userName = session?.user?.name || "User Name"
+  const userEmail = session?.user?.email
+    ? `@${session.user.email.split("@")[0]}`
+    : "@username"
+  const userAvatar = session?.user?.image || ""
   const userInitials = userName?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "CN"
 
   const handleSignOut = async () => {

@@ -75,10 +75,10 @@ export async function POST(request: NextRequest) {
         openaiModel: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
         autoTagModel: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
         briefingModel: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
+        briefingTime: "08:00",
         ragflowBaseUrl: process.env.RAGFLOW_BASE_URL || "http://localhost:4154",
         ragflowApiKey: process.env.RAGFLOW_API_KEY || "",
-        ragflowChatId: process.env.RAGFLOW_CHAT_ID || "",
-        ragflowDatasetId: process.env.RAGFLOW_DATASET_ID || "",
+        aiPersonality: "friendly",
       },
     })
 

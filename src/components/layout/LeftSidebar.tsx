@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   Hash, Bell, Bookmark,
   MoreHorizontal, PenLine, LogOut, UserCircle
@@ -12,7 +12,6 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { authApi } from "@/lib/api"
 
 interface LeftSidebarProps {
   isMobile?: boolean
@@ -82,43 +81,17 @@ export function LeftSidebar({ isMobile, collapsed }: LeftSidebarProps) {
   const router = useRouter()
   const { data: session } = useSession()
   const [showMenu, setShowMenu] = useState(false)
-  const [userData, setUserData] = useState<{ name: string; email: string; avatar: string } | null>(null)
-
-  // Fetch fresh user data from API
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const result = await authApi.getCurrentUser()
-        if (result.data) {
-          setUserData({
-            name: result.data.name || "User Name",
-            email: result.data.email || "",
-            avatar: result.data.avatar || ""
-          })
-        }
-      } catch (error) {
-        // 401 错误会触发自动跳转到登录页，不需要额外处理
-        // 其他错误静默处理
-        if (error?.message !== 'Unauthorized') {
-          console.error('Failed to load user data:', error)
-        }
-      }
-    }
-    loadUserData()
-  }, [])
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/login" })
   }
 
-  // Use API data if available, otherwise fall back to session
-  const userName = userData?.name || session?.user?.name || "User Name"
-  const userEmail = userData?.email
-    ? `@${userData.email.split("@")[0]}`
-    : session?.user?.email
-      ? `@${session.user.email.split("@")[0]}`
-      : "@username"
-  const userAvatar = userData?.avatar || session?.user?.image || ""
+  // Use session data directly
+  const userName = session?.user?.name || "User Name"
+  const userEmail = session?.user?.email
+    ? `@${session.user.email.split("@")[0]}`
+    : "@username"
+  const userAvatar = session?.user?.image || ""
   const userInitials = userName?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "CN"
 
   return (

@@ -108,16 +108,11 @@ export async function updateAiConfig(userId: string, data: Partial<{
   openaiBaseUrl: string
   openaiApiKey: string
   openaiModel: string
-  enableRag: boolean
   ragflowBaseUrl: string
   ragflowApiKey: string
-  ragflowChatId: string
-  ragflowDatasetId: string
   ragTimeFilterStart: Date | null
   ragTimeFilterEnd: Date | null
-  enableAutoTag: boolean
   autoTagModel: string
-  enableBriefing: boolean
   briefingModel: string
   briefingTime: string
   aiPersonality: string

@@ -212,6 +212,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       data: updateData,
       include: {
         author: { select: { id: true, name: true, avatar: true, email: true } },
+        message: {
+          select: {
+            workspace: { select: { ragflowDatasetId: true } }
+          }
+        },
         quotedMessage: {
           select: {
             id: true,
@@ -247,10 +252,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       // 获取更新后的完整内容（包含标签）
       const contentWithTags = await buildContentWithTags('comment', id)
 
-      // 异步更新，不阻塞响应
-      updateInKnowledgeBase(session.user.id, 'comment', id).catch((error) => {
-        console.error("Failed to update comment in RAGFlow:", error)
-      })
+      // 只有当 Workspace 配置了 RAGFlow Dataset 时才同步
+      if (updatedComment.message?.workspace?.ragflowDatasetId) {
+        updateInKnowledgeBase(session.user.id, updatedComment.message.workspace.ragflowDatasetId, 'comment', id).catch((error) => {
+          console.error("Failed to update comment in RAGFlow:", error)
+        })
+      }
     }
 
     return Response.json({ data: updatedComment })

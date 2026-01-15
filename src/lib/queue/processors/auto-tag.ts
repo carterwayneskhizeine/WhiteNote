@@ -5,11 +5,12 @@ import { addTask } from "@/lib/queue"
 
 interface AutoTagJobData {
   userId: string
+  workspaceId: string
   messageId: string
 }
 
 export async function processAutoTag(job: Job<AutoTagJobData>) {
-  const { userId, messageId } = job.data
+  const { userId, workspaceId, messageId } = job.data
 
   console.log(`[AutoTag] Processing message: ${messageId}`)
 
@@ -29,18 +30,24 @@ export async function processAutoTag(job: Job<AutoTagJobData>) {
     return
   }
 
-  // 获取用户配置
+  // 获取 Workspace 配置
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { enableAutoTag: true },
+  })
+
+  if (!workspace?.enableAutoTag) {
+    console.log(`[AutoTag] Auto-tagging disabled for workspace: ${workspaceId}`)
+    return
+  }
+
+  // 获取用户配置（用于获取 autoTagModel）
   const config = await prisma.aiConfig.findUnique({
     where: { userId: message.authorId },
   })
 
-  if (!config?.enableAutoTag) {
-    console.log(`[AutoTag] Auto-tagging disabled for user: ${message.authorId}`)
-    return
-  }
-
   // 调用自动打标签
-  await applyAutoTags(userId, messageId, config.autoTagModel)
+  await applyAutoTags(userId, messageId, config?.autoTagModel)
 
   console.log(`[AutoTag] Completed for message: ${messageId}`)
 
@@ -48,6 +55,7 @@ export async function processAutoTag(job: Job<AutoTagJobData>) {
   try {
     const job = await addTask("sync-ragflow", {
       userId,
+      workspaceId,
       messageId,
     })
     console.log(`[AutoTag] Triggered sync-ragflow job:`, job?.id)

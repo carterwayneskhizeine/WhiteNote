@@ -17,7 +17,7 @@ export const workspacesApi = {
       return data
     } catch (error) {
       console.error("[Workspaces API] Error fetching workspaces:", error)
-      return { error: "Failed to fetch workspaces" }
+      return { data: [], error: "Failed to fetch workspaces" }
     }
   },
 

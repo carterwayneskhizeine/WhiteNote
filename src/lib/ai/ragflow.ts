@@ -42,33 +42,6 @@ interface RAGFlowResponse {
 }
 
 /**
- * 调用 RAGFlow OpenAI 兼容接口
- * 配置从数据库实时读取 (热更新)
- */
-export async function callRAGFlow(
-  userId: string,
-  messages: RAGFlowMessage[]
-): Promise<{ content: string; references?: Array<{ content: string; source: string }> }> {
-  // 每次调用获取最新配置 (热更新核心)
-  const config = await getAiConfig(userId)
-
-  if (!config.ragflowApiKey) {
-    throw new Error("RAGFlow API key not configured")
-  }
-
-  if (!config.ragflowChatId) {
-    throw new Error("RAGFlow Chat ID not configured")
-  }
-
-  return await callRAGFlowWithChatId(
-    config.ragflowBaseUrl,
-    config.ragflowApiKey,
-    config.ragflowChatId,
-    messages
-  )
-}
-
-/**
  * 调用 RAGFlow OpenAI 兼容接口（使用指定的 chatId）
  * @param ragflowBaseUrl RAGFlow 服务地址
  * @param ragflowApiKey RAGFlow API Key
@@ -285,25 +258,26 @@ async function uploadImageToRAGFlow(
 }
 
 /**
- * 同步消息到 RAGFlow 知识库 (热更新)
+ * 同步消息到 RAGFlow 知识库
  */
 export async function syncToRAGFlow(
   userId: string,
+  datasetId: string,
   messageId: string,
   content: string,
   medias?: Media[]
 ) {
   const config = await getAiConfig(userId)
 
-  if (!config.ragflowApiKey || !config.ragflowDatasetId) {
-    console.warn("RAGFlow not configured, skipping sync")
+  if (!config.ragflowApiKey) {
+    console.warn("RAGFlow API key not configured, skipping sync")
     return
   }
 
   return await syncToRAGFlowWithDatasetId(
     config.ragflowBaseUrl,
     config.ragflowApiKey,
-    config.ragflowDatasetId,
+    datasetId,
     messageId,
     content,
     medias
@@ -416,14 +390,20 @@ export async function syncToRAGFlowWithDatasetId(
 /**
  * 从 RAGFlow 删除文档（通用函数，支持消息和评论）
  * @param userId 用户 ID
+ * @param datasetId RAGFlow Dataset ID
  * @param id 消息 ID 或评论 ID
  * @param contentType 内容类型 ('message' | 'comment')
  */
-export async function deleteFromRAGFlow(userId: string, id: string, contentType: 'message' | 'comment' = 'message') {
+export async function deleteFromRAGFlow(
+  userId: string,
+  datasetId: string,
+  id: string,
+  contentType: 'message' | 'comment' = 'message'
+) {
   const config = await getAiConfig(userId)
 
-  if (!config.ragflowApiKey || !config.ragflowDatasetId) {
-    console.warn(`[RAGFlow] Not configured, skipping delete for ${contentType}`)
+  if (!config.ragflowApiKey) {
+    console.warn(`[RAGFlow] API key not configured, skipping delete for ${contentType}`)
     return
   }
 
@@ -432,7 +412,7 @@ export async function deleteFromRAGFlow(userId: string, id: string, contentType:
     const documentName = `message_${id}.md`
 
     const listResponse = await fetch(
-      `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/documents?name=${encodeURIComponent(documentName)}`,
+      `${config.ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents?name=${encodeURIComponent(documentName)}`,
       {
         method: "GET",
         headers: {
@@ -448,7 +428,7 @@ export async function deleteFromRAGFlow(userId: string, id: string, contentType:
         const documentIds = listResult.data.docs.map((doc: any) => doc.id)
 
         const deleteResponse = await fetch(
-          `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/documents`,
+          `${config.ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
           {
             method: "DELETE",
             headers: {
@@ -474,7 +454,7 @@ export async function deleteFromRAGFlow(userId: string, id: string, contentType:
     // 2. 删除图片文档（文档名格式：image_{id}_{mediaId}.png）
     // 通过列出所有文档并过滤匹配的文档来删除
     const allDocsResponse = await fetch(
-      `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/documents`,
+      `${config.ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
       {
         method: "GET",
         headers: {
@@ -497,7 +477,7 @@ export async function deleteFromRAGFlow(userId: string, id: string, contentType:
         const imageDocIds = imageDocs.map((doc: any) => doc.id)
 
         const deleteImagesResponse = await fetch(
-          `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/documents`,
+          `${config.ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
           {
             method: "DELETE",
             headers: {
@@ -528,14 +508,20 @@ export async function deleteFromRAGFlow(userId: string, id: string, contentType:
 /**
  * 更新 RAGFlow 中的文档（先删除旧文档，再上传新文档）
  * @param userId 用户 ID
+ * @param datasetId RAGFlow Dataset ID
  * @param messageId 消息 ID
  * @param content 新的消息内容
  */
-export async function updateRAGFlow(userId: string, messageId: string, content: string) {
+export async function updateRAGFlow(
+  userId: string,
+  datasetId: string,
+  messageId: string,
+  content: string
+) {
   const config = await getAiConfig(userId)
 
-  if (!config.ragflowApiKey || !config.ragflowDatasetId) {
-    console.warn("[RAGFlow] Not configured, skipping update")
+  if (!config.ragflowApiKey) {
+    console.warn("[RAGFlow] API key not configured, skipping update")
     return
   }
 
@@ -543,7 +529,7 @@ export async function updateRAGFlow(userId: string, messageId: string, content: 
     console.log("[RAGFlow] Updating message:", messageId)
 
     // 1. 先删除旧文档
-    await deleteFromRAGFlow(userId, messageId)
+    await deleteFromRAGFlow(userId, datasetId, messageId)
 
     // 2. 清理内容：移除 AI 助手提及
     const cleanedContent = cleanContentForRAGFlow(content)
@@ -554,7 +540,7 @@ export async function updateRAGFlow(userId: string, messageId: string, content: 
     formData.append('file', blob, `message_${messageId}.md`)
 
     const response = await fetch(
-      `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/documents`,
+      `${config.ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
       {
         method: "POST",
         headers: {
@@ -577,7 +563,7 @@ export async function updateRAGFlow(userId: string, messageId: string, content: 
     if (result.data?.[0]?.id) {
       const documentId = result.data[0].id
       await fetch(
-        `${config.ragflowBaseUrl}/api/v1/datasets/${config.ragflowDatasetId}/chunks`,
+        `${config.ragflowBaseUrl}/api/v1/datasets/${datasetId}/chunks`,
         {
           method: "POST",
           headers: {

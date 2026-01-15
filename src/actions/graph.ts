@@ -1,3 +1,4 @@
+'use server'
 
 import prisma from "@/lib/prisma"
 import { GraphData, GraphNode, GraphLink } from '@/types/graph'

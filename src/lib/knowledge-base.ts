@@ -22,14 +22,7 @@ export async function syncToKnowledgeBase(
   enableAutoTag: boolean = true
 ) {
   try {
-    // 获取用户配置
-    const config = await prisma.aiConfig.findUnique({
-      where: { userId },
-    })
-
-    const shouldAutoTag = enableAutoTag && config?.enableAutoTag
-
-    if (shouldAutoTag) {
+    if (enableAutoTag) {
       // 添加自动打标签任务
       // 注意：auto-tag 完成后会自动触发 sync-ragflow
       await addTask("auto-tag", {
@@ -116,18 +109,20 @@ export async function buildContentWithTags(
 /**
  * 删除知识库中的内容
  * @param userId 用户 ID
+ * @param datasetId RAGFlow Dataset ID
  * @param type 内容类型 (message | comment)
  * @param contentId 内容 ID
  */
 export async function deleteFromKnowledgeBase(
   userId: string,
+  datasetId: string,
   type: ContentType,
   contentId: string
 ) {
   try {
     // 导入 RAGFlow 删除函数
     const { deleteFromRAGFlow } = await import("./ai/ragflow")
-    await deleteFromRAGFlow(userId, contentId)
+    await deleteFromRAGFlow(userId, datasetId, contentId, type)
     console.log(`[KnowledgeBase] Deleted ${type} ${contentId} from RAGFlow`)
   } catch (error) {
     console.error(`[KnowledgeBase] Failed to delete ${type} ${contentId} from RAGFlow:`, error)
@@ -137,11 +132,13 @@ export async function deleteFromKnowledgeBase(
 /**
  * 更新知识库中的内容
  * @param userId 用户 ID
+ * @param datasetId RAGFlow Dataset ID
  * @param type 内容类型 (message | comment)
  * @param contentId 内容 ID
  */
 export async function updateInKnowledgeBase(
   userId: string,
+  datasetId: string,
   type: ContentType,
   contentId: string
 ) {
@@ -152,7 +149,7 @@ export async function updateInKnowledgeBase(
     // 获取更新后的完整内容（包含标签）
     const contentWithTags = await buildContentWithTags(type, contentId)
 
-    await updateRAGFlow(userId, contentId, contentWithTags)
+    await updateRAGFlow(userId, datasetId, contentId, contentWithTags)
     console.log(`[KnowledgeBase] Updated ${type} ${contentId} in RAGFlow`)
   } catch (error) {
     console.error(`[KnowledgeBase] Failed to update ${type} ${contentId} in RAGFlow:`, error)

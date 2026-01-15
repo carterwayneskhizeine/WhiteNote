@@ -258,6 +258,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       },
       include: {
         author: { select: { id: true, name: true, avatar: true } },
+        workspace: { select: { ragflowDatasetId: true } },
         quotedMessage: {
           select: {
             id: true,
@@ -286,9 +287,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       // 获取更新后的完整内容（包含标签）
       const contentWithTags = await buildContentWithTags(id)
 
-      updateRAGFlow(session.user.id, id, contentWithTags).catch((error) => {
-        console.error("Failed to update RAGFlow document:", error)
-      })
+      // 只有当 Workspace 配置了 RAGFlow Dataset 时才同步
+      if (message.workspace?.ragflowDatasetId) {
+        updateRAGFlow(session.user.id, message.workspace.ragflowDatasetId, id, contentWithTags).catch((error) => {
+          console.error("Failed to update RAGFlow document:", error)
+        })
+      }
     }
 
     return Response.json({ data: message })
@@ -316,6 +320,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   const existing = await prisma.message.findUnique({
     where: { id },
     include: {
+      workspace: { select: { ragflowDatasetId: true } },
       medias: {
         select: { id: true, url: true },
       },
@@ -382,7 +387,9 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
   // 先从 RAGFlow 删除对应的文档
   try {
-    await deleteFromRAGFlow(session.user.id, id)
+    if (existing.workspace?.ragflowDatasetId) {
+      await deleteFromRAGFlow(session.user.id, existing.workspace.ragflowDatasetId, id)
+    }
   } catch (error) {
     console.error("Failed to delete from RAGFlow:", error)
     // 继续删除本地消息，不因 RAGFlow 删除失败而中断

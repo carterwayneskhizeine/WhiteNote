@@ -127,22 +127,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     })
 
-    // 获取用户 AI 配置
-    const config = await prisma.aiConfig.findUnique({
-      where: { userId: session.user.id },
+    // 获取消息所属的 Workspace 配置
+    const messageWithWorkspace = await prisma.message.findUnique({
+      where: { id },
+      select: {
+        workspace: {
+          select: { enableAutoTag: true, ragflowDatasetId: true },
+        },
+      },
     })
 
-    // 添加自动打标签任务（如果启用）
-    if (config?.enableAutoTag) {
+    // 添加自动打标签任务（如果 Workspace 启用）
+    if (messageWithWorkspace?.workspace?.enableAutoTag) {
       await addTask("auto-tag-comment", {
         userId: session.user.id,
+        workspaceId: message.workspaceId,
         commentId: comment.id,
         contentType: 'comment',
       })
-    } else {
-      // 如果未启用自动打标签，直接同步到 RAGFlow
+    }
+
+    // 同步到 RAGFlow（如果 Workspace 配置了知识库）
+    if (messageWithWorkspace?.workspace?.ragflowDatasetId) {
       await addTask("sync-ragflow", {
         userId: session.user.id,
+        workspaceId: message.workspaceId,
         messageId: comment.id,
         contentType: 'comment',
       })

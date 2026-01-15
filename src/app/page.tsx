@@ -46,7 +46,7 @@ export default function Home() {
       }
     }
     fetchWorkspaces()
-  }, [session, currentWorkspaceId, setCurrentWorkspaceId])
+  }, [session, currentWorkspaceId])
 
   const handleMessageCreated = () => {
     // Trigger refresh of messages list

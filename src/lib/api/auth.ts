@@ -39,7 +39,7 @@ export async function register(data: {
     return { data: result.data }
   } catch (error) {
     console.error("Register error:", error)
-    if (error.message === 'Unauthorized') {
+    if (error instanceof Error && error.message === 'Unauthorized') {
       throw error
     }
     return { error: "网络错误，请重试" }
@@ -63,7 +63,7 @@ export async function getCurrentUser() {
     return { data: result.data }
   } catch (error) {
     console.error("Get current user error:", error)
-    if (error.message === 'Unauthorized') {
+    if (error instanceof Error && error.message === 'Unauthorized') {
       throw error
     }
     return { error: "网络错误，请重试" }
@@ -94,7 +94,7 @@ export async function updateProfile(data: {
     return { data: result.data }
   } catch (error) {
     console.error("Update profile error:", error)
-    if (error.message === 'Unauthorized') {
+    if (error instanceof Error && error.message === 'Unauthorized') {
       throw error
     }
     return { error: "网络错误，请重试" }

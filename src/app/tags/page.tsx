@@ -5,9 +5,10 @@ import { getGraphData } from "@/actions/graph"
 import { GraphView } from "@/components/GraphView"
 import { useWorkspaceStore } from "@/store/useWorkspaceStore"
 import { Loader2 } from "lucide-react"
+import type { GraphData } from "@/types/graph"
 
 export default function TagsPage() {
-  const [data, setData] = useState<ReturnType<typeof getGraphData> extends Promise<infer T> ? T : never>(undefined)
+  const [data, setData] = useState<GraphData | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(false)
   const { currentWorkspaceId } = useWorkspaceStore()
 
@@ -37,7 +38,7 @@ export default function TagsPage() {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <GraphView data={data} className="flex-1" />
+        data && <GraphView data={data} className="flex-1" />
       )}
     </div>
   )

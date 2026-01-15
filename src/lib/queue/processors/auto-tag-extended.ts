@@ -5,6 +5,7 @@ import { addTask } from "@/lib/queue"
 
 interface AutoTagJobData {
   userId: string
+  workspaceId: string
   messageId?: string
   commentId?: string
   contentType: 'message' | 'comment'
@@ -14,7 +15,7 @@ interface AutoTagJobData {
  * 扩展的自动打标签处理器，同时支持消息和评论
  */
 export async function processAutoTagExtended(job: Job<AutoTagJobData>) {
-  const { userId, messageId, commentId, contentType } = job.data
+  const { userId, workspaceId, messageId, commentId, contentType } = job.data
 
   const contentId = messageId || commentId
   if (!contentId) {
@@ -57,16 +58,23 @@ export async function processAutoTagExtended(job: Job<AutoTagJobData>) {
   // userId 是消息作者（触发 AI 回复的用户）
   const targetUserId = authorId || userId
 
-  // 获取用户配置
+  // 获取 Workspace 配置
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { enableAutoTag: true },
+  })
+
+  // 获取用户配置（用于获取 autoTagModel）
   const config = await prisma.aiConfig.findUnique({
     where: { userId: targetUserId },
   })
 
-  if (!config?.enableAutoTag) {
-    console.log(`[AutoTagExtended] Auto-tagging disabled for user: ${targetUserId}`)
+  if (!workspace?.enableAutoTag) {
+    console.log(`[AutoTagExtended] Auto-tagging disabled for workspace: ${workspaceId}`)
     // 即使未启用自动打标签，也要同步到 RAGFlow
     await addTask("sync-ragflow", {
       userId: targetUserId,
+      workspaceId,
       messageId: contentId,
       contentType,
     })
@@ -77,11 +85,13 @@ export async function processAutoTagExtended(job: Job<AutoTagJobData>) {
   try {
     // 使用消息 ID 调用现有的 applyAutoTags
     // 注意：这会尝试将标签添加到 MessageTag 表，对于评论我们需要单独处理
+    const autoTagModel = config?.autoTagModel
+
     if (contentType === 'message') {
-      await applyAutoTags(targetUserId, contentId, config.autoTagModel)
+      await applyAutoTags(targetUserId, contentId, autoTagModel)
     } else {
       // 评论的自动打标签 - 复用相同的逻辑
-      await applyAutoTagsToComment(targetUserId, contentId, config.autoTagModel)
+      await applyAutoTagsToComment(targetUserId, contentId, autoTagModel)
     }
 
     console.log(`[AutoTagExtended] Completed for ${contentType}: ${contentId}`)
@@ -90,6 +100,7 @@ export async function processAutoTagExtended(job: Job<AutoTagJobData>) {
     try {
       const syncJob = await addTask("sync-ragflow", {
         userId: targetUserId,
+        workspaceId,
         messageId: contentId,
         contentType,
       })
