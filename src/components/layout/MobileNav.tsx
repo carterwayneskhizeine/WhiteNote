@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
-import { Hash, Bell, Bookmark, List, Settings, PenLine, LogOut, ChevronDown, Loader2, Layers } from "lucide-react"
+import { Hash, Bell, Bookmark, List, Settings, PenLine, LogOut, ChevronDown, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn, getAvatarUrl } from "@/lib/utils"
@@ -19,6 +19,9 @@ import {
 import { useWorkspaceStore } from "@/store/useWorkspaceStore"
 import { workspacesApi } from "@/lib/api/workspaces"
 import type { Workspace } from "@/types/api"
+
+// Maximum workspaces to show as buttons before showing dropdown
+const MAX_VISIBLE_WORKSPACES = 3
 
 // Helper for X-style icons
 const XIcon = ({ icon: Icon, filled, size = 26, className }: any) => (
@@ -57,9 +60,6 @@ export function MobileNav() {
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false)
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(true)
   const { currentWorkspaceId, setCurrentWorkspaceId } = useWorkspaceStore()
-
-  // 获取当前选中的 Workspace
-  const currentWorkspace = workspaces.find((w) => w.id === currentWorkspaceId)
 
   // 加载用户的 Workspace 列表
   useEffect(() => {
@@ -204,49 +204,89 @@ export function MobileNav() {
         </div>
 
         {/* Workspace Switcher Row (Only on Home) */}
-        {pathname === "/" && (
+        {pathname === "/" && workspaces.length > 0 && (
           <div className="flex w-full border-t border-border bg-background/85 backdrop-blur-md relative">
-            {/* Workspace 下拉菜单触发器 */}
-            <button
-              className="flex-1 py-3 hover:bg-secondary/50 transition-colors relative flex justify-center items-center gap-2"
-              onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
-            >
-              {isLoadingWorkspaces ? (
+            {isLoadingWorkspaces ? (
+              <div className="flex-1 flex justify-center items-center py-3">
                 <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <span className="font-bold text-sm">
-                    {currentWorkspace?.name || '选择工作区'}
-                  </span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${showWorkspaceMenu ? 'rotate-180' : ''}`} />
-                </>
-              )}
-              <div className="absolute bottom-0 h-1 w-14 bg-primary rounded-full" />
-            </button>
-
-            {/* Workspace 下拉菜单 */}
-            {showWorkspaceMenu && (
-              <div className="absolute top-full left-0 w-full bg-background border border-b border-x border-border rounded-b-lg shadow-lg z-50">
-                {workspaces.map((ws) => (
-                  <button
-                    key={ws.id}
-                    className={`w-full px-4 py-3 text-center hover:bg-secondary/50 transition-colors ${
-                      currentWorkspaceId === ws.id ? 'bg-secondary/30' : ''
-                    }`}
-                    onClick={() => {
-                      setCurrentWorkspaceId(ws.id)
-                      setShowWorkspaceMenu(false)
-                    }}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="font-medium text-sm">{ws.name}</span>
-                      {ws.isDefault && (
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">默认</span>
-                      )}
-                    </div>
-                  </button>
-                ))}
               </div>
+            ) : (
+              <>
+                {/* First workspace (fixed) */}
+                {workspaces[0] && (
+                  <button
+                    className={`flex-1 py-3 hover:bg-secondary/50 transition-colors relative flex justify-center items-center gap-2 ${
+                      currentWorkspaceId === workspaces[0].id ? 'bg-secondary/30' : ''
+                    }`}
+                    onClick={() => setCurrentWorkspaceId(workspaces[0].id)}
+                  >
+                    <span className="font-bold text-sm">{workspaces[0].name}</span>
+                    {currentWorkspaceId === workspaces[0].id && (
+                      <div className="absolute bottom-0 h-1 w-14 bg-primary rounded-full" />
+                    )}
+                  </button>
+                )}
+
+                {/* Second workspace (fixed) */}
+                {workspaces[1] && (
+                  <button
+                    className={`flex-1 py-3 hover:bg-secondary/50 transition-colors relative flex justify-center items-center gap-2 ${
+                      currentWorkspaceId === workspaces[1].id ? 'bg-secondary/30' : ''
+                    }`}
+                    onClick={() => setCurrentWorkspaceId(workspaces[1].id)}
+                  >
+                    <span className="font-bold text-sm">{workspaces[1].name}</span>
+                    {currentWorkspaceId === workspaces[1].id && (
+                      <div className="absolute bottom-0 h-1 w-14 bg-primary rounded-full" />
+                    )}
+                  </button>
+                )}
+
+                {/* Third workspace slot - shows current workspace with dropdown */}
+                {workspaces.length > 2 && (
+                  <div className="relative flex-1">
+                    <button
+                      className={`w-full py-3 hover:bg-secondary/50 transition-colors relative flex justify-center items-center gap-1 ${
+                        currentWorkspaceId !== workspaces[0].id && currentWorkspaceId !== workspaces[1].id ? 'bg-secondary/30' : ''
+                      }`}
+                      onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
+                    >
+                      <span className="font-bold text-sm">
+                        {workspaces.find((w) => w.id === currentWorkspaceId)?.name || workspaces[2].name}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${showWorkspaceMenu ? 'rotate-180' : ''}`} />
+                      {currentWorkspaceId !== workspaces[0].id && currentWorkspaceId !== workspaces[1].id && (
+                        <div className="absolute bottom-0 h-1 w-14 bg-primary rounded-full" />
+                      )}
+                    </button>
+
+                    {/* Dropdown menu for workspaces from index 2 onwards */}
+                    {showWorkspaceMenu && (
+                      <div className="absolute top-full left-0 w-full bg-background border border-b border-x border-border rounded-b-lg shadow-lg z-50">
+                        {workspaces.slice(2).map((ws) => (
+                          <button
+                            key={ws.id}
+                            className={`w-full px-4 py-3 text-center hover:bg-secondary/50 transition-colors ${
+                              currentWorkspaceId === ws.id ? 'bg-secondary/30' : ''
+                            }`}
+                            onClick={() => {
+                              setCurrentWorkspaceId(ws.id)
+                              setShowWorkspaceMenu(false)
+                            }}
+                          >
+                            <div className="flex items-center justify-center gap-2">
+                              <span className="font-medium text-sm">{ws.name}</span>
+                              {ws.isDefault && (
+                                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">默认</span>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
