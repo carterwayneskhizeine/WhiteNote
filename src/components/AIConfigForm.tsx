@@ -64,13 +64,8 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
       const updateData: any = {
         openaiBaseUrl: config.openaiBaseUrl,
         openaiModel: config.openaiModel,
-        enableRag: config.enableRag,
         ragflowBaseUrl: config.ragflowBaseUrl,
-        ragflowChatId: config.ragflowChatId,
-        ragflowDatasetId: config.ragflowDatasetId,
-        enableAutoTag: config.enableAutoTag,
         autoTagModel: config.autoTagModel,
-        enableBriefing: config.enableBriefing,
         briefingModel: config.briefingModel,
         briefingTime: config.briefingTime,
         aiPersonality: config.aiPersonality,
@@ -232,7 +227,12 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
       {/* RAGFlow Configuration */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">RAGFlow 配置</h3>
+          <div>
+            <h3 className="text-lg font-bold">RAGFlow 配置</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              💡 提示：RAGFlow 知识库由每个工作区自动管理，无需手动配置 Chat ID 和 Dataset ID
+            </p>
+          </div>
           <div className="flex items-center gap-2">
             {testResult && (
               <div
@@ -265,15 +265,6 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
           </div>
         </div>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">启用 RAG 模式</label>
-            <Switch
-              checked={config.enableRag}
-              onCheckedChange={(checked) =>
-                setConfig({ ...config, enableRag: checked })
-              }
-            />
-          </div>
           <div>
             <label className="text-sm font-medium mb-1 block">Base URL</label>
             <Input
@@ -299,80 +290,57 @@ export function AIConfigForm({ onSuccess }: AIConfigFormProps) {
               <p className="text-xs text-muted-foreground mt-1">✓ API Key 已配置</p>
             )}
           </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Chat ID</label>
-            <Input
-              value={config.ragflowChatId}
-              onChange={(e) =>
-                setConfig({ ...config, ragflowChatId: e.target.value })
-              }
-              placeholder="1c4db240e66011f09080b2cef1c18441"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Dataset ID</label>
-            <Input
-              value={config.ragflowDatasetId}
-              onChange={(e) =>
-                setConfig({ ...config, ragflowDatasetId: e.target.value })
-              }
-              placeholder="96b74969e65411f09f5fb2cef1c18441"
-            />
-          </div>
         </div>
       </Card>
 
       {/* AI Features */}
       <Card className="p-6">
         <h3 className="text-lg font-bold mb-4">AI 功能</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          💡 提示：自动打标签和每日晨报功能可在各工作区的设置中单独开启/关闭
+        </p>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium">自动打标</div>
-              <div className="text-xs text-muted-foreground">
-                使用 AI 自动为消息添加标签
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={config.enableAutoTag}
-                onCheckedChange={(checked) =>
-                  setConfig({ ...config, enableAutoTag: checked })
-                }
-              />
-            </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">自动打标签模型</label>
+            <Input
+              value={config.autoTagModel}
+              onChange={(e) =>
+                setConfig({ ...config, autoTagModel: e.target.value })
+              }
+              placeholder={config.openaiModel}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              留空则使用 OpenAI 配置中的模型
+            </p>
           </div>
-          {config.enableAutoTag && (
-            <div>
-              <label className="text-sm font-medium mb-1 block">自动打标签模型</label>
-              <Input
-                value={config.autoTagModel}
-                onChange={(e) =>
-                  setConfig({ ...config, autoTagModel: e.target.value })
-                }
-                placeholder={config.openaiModel}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                留空则使用 OpenAI 配置中的模型
-              </p>
-            </div>
-          )}
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium">每日晨报</div>
-              <div className="text-xs text-muted-foreground">
-                自动生成每日摘要
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={config.enableBriefing}
-                onCheckedChange={(checked) =>
-                  setConfig({ ...config, enableBriefing: checked })
-                }
-              />
-            </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">每日晨报模型</label>
+            <Input
+              value={config.briefingModel}
+              onChange={(e) =>
+                setConfig({ ...config, briefingModel: e.target.value })
+              }
+              placeholder={config.openaiModel}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              留空则使用 OpenAI 配置中的模型
+            </p>
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">每日晨报时间</label>
+            <Input
+              value={config.briefingTime}
+              onChange={(e) =>
+                setConfig({ ...config, briefingTime: e.target.value })
+              }
+              placeholder="08:00"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              格式：HH:MM（24小时制）
+            </p>
           </div>
           <div className="flex items-center justify-between">
             <div>

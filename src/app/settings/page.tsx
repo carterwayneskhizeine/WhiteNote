@@ -3,11 +3,12 @@
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Moon, Sun, Monitor, Sparkles, User, Palette, Shield, Bell, Globe, HelpCircle, Wand2 } from "lucide-react"
+import { Moon, Sun, Monitor, Sparkles, User, Palette, Shield, Bell, Globe, HelpCircle, Wand2, Layers } from "lucide-react"
 import { AIConfigForm } from "@/components/AIConfigForm"
 import { ProfileEditForm } from "@/components/ProfileEditForm"
 import { TemplateManager } from "@/components/templates/TemplateManager"
 import { AICommandManager } from "@/components/ai-commands/AICommandManager"
+import { WorkspaceManager } from "@/components/WorkspaceManager"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { FileText } from "lucide-react"
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   // Settings navigation items
   const navItems = [
     { id: 'profile', label: '个人资料', icon: User },
+    { id: 'workspaces', label: '工作区管理', icon: Layers },
     { id: 'ai', label: 'AI 配置', icon: Sparkles },
     { id: 'ai-commands', label: 'AI 命令', icon: Wand2 },
     { id: 'templates', label: '模板管理', icon: FileText },
@@ -71,6 +73,17 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground">管理您的个人资料信息</p>
               </div>
               <ProfileEditForm />
+            </div>
+          )}
+
+          {/* Workspaces Tab */}
+          {currentTab === 'workspaces' && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold">工作区管理</h2>
+                <p className="text-muted-foreground">创建和管理您的工作区，每个工作区有独立的知识库和设置</p>
+              </div>
+              <WorkspaceManager />
             </div>
           )}
 
@@ -312,6 +325,17 @@ export default function SettingsPage() {
                     <p className="text-muted-foreground">管理您的个人资料信息</p>
                   </div>
                   <ProfileEditForm />
+                </div>
+              )}
+
+              {/* Workspaces Tab */}
+              {currentTab === 'workspaces' && (
+                <div>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold">工作区管理</h2>
+                    <p className="text-muted-foreground">创建和管理您的工作区，每个工作区有独立的知识库和设置</p>
+                  </div>
+                  <WorkspaceManager />
                 </div>
               )}
 

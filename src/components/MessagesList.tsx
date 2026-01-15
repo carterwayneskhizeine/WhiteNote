@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { MessageCard } from "@/components/MessageCard"
 import { Message, messagesApi } from "@/lib/api/messages"
 import { Loader2 } from "lucide-react"
+import { useWorkspaceStore } from "@/store/useWorkspaceStore"
 
 interface MessagesListProps {
   filters?: {
@@ -11,6 +12,7 @@ interface MessagesListProps {
     isStarred?: boolean
     isPinned?: boolean
     rootOnly?: boolean
+    workspaceId?: string // Add workspaceId to filters
   }
 }
 
@@ -18,6 +20,7 @@ export function MessagesList({ filters }: MessagesListProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { currentWorkspaceId } = useWorkspaceStore()
 
   const fetchMessages = async (showLoading = true) => {
     if (showLoading) {
@@ -29,6 +32,7 @@ export function MessagesList({ filters }: MessagesListProps) {
       const result = await messagesApi.getMessages({
         rootOnly: true, // Default to true, but allow override
         ...filters,
+        workspaceId: filters?.workspaceId || currentWorkspaceId || undefined, // Use current workspace ID
       })
 
       if (result.error) {
@@ -46,7 +50,7 @@ export function MessagesList({ filters }: MessagesListProps) {
 
   useEffect(() => {
     fetchMessages()
-  }, [filters])
+  }, [filters, currentWorkspaceId])
 
   // Refresh after 5 seconds when a new message is posted (for AI tags)
   useEffect(() => {
@@ -64,7 +68,7 @@ export function MessagesList({ filters }: MessagesListProps) {
     return () => {
       window.removeEventListener('message-posted', handleMessagePosted)
     }
-  }, [filters])
+  }, [filters, currentWorkspaceId])
 
   // Refresh when window gains focus (e.g., returning from detail page)
   useEffect(() => {
@@ -76,7 +80,7 @@ export function MessagesList({ filters }: MessagesListProps) {
     return () => {
       window.removeEventListener('focus', handleFocus)
     }
-  }, [filters])
+  }, [filters, currentWorkspaceId])
 
   const handleMessageUpdate = () => {
     // Refresh messages when a message is updated

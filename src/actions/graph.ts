@@ -2,9 +2,10 @@
 import prisma from "@/lib/prisma"
 import { GraphData, GraphNode, GraphLink } from '@/types/graph'
 
-export async function getGraphData(): Promise<GraphData> {
-    // Fetch all messages with their relationships
+export async function getGraphData(workspaceId?: string): Promise<GraphData> {
+    // Fetch messages with optional workspace filtering
     const messages = await prisma.message.findMany({
+        where: workspaceId ? { workspaceId } : undefined,
         select: {
             id: true,
             title: true,

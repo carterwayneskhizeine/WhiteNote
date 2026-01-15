@@ -29,6 +29,7 @@ import { useRef } from "react"
 import { Template } from "@/types/api"
 import { SlashCommand } from "@/lib/editor/extensions/slash-command"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
+import { useWorkspaceStore } from "@/store/useWorkspaceStore"
 
 interface InputMachineProps {
   onSuccess?: () => void
@@ -36,6 +37,7 @@ interface InputMachineProps {
 
 export function InputMachine({ onSuccess }: InputMachineProps) {
   const { data: session } = useSession()
+  const { currentWorkspaceId } = useWorkspaceStore()
   const [isPosting, setIsPosting] = useState(false)
   const [hasContent, setHasContent] = useState(false)
   const [isProcessingAI, setIsProcessingAI] = useState(false)
@@ -468,16 +470,28 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
         content: content || "", // Allow empty content if media is present
         tags,
         media: uploadedMedia.map(m => ({ url: m.url, type: m.type })),
+        workspaceId: currentWorkspaceId || undefined, // Pass current workspace ID
       })
 
       if (result.data) {
-        // Check if message contains @goldierill and trigger AI reply
-        if (textContent.includes('@goldierill')) {
+        // Detect AI mode from @mentions
+        // @goldierill = direct OpenAI mode (current post context only)
+        // @ragflow = RAGFlow mode (knowledge base retrieval)
+        const hasGoldierillMention = /@goldierill/i.test(textContent)
+        const hasRagflowMention = /@ragflow/i.test(textContent)
+
+        // Only trigger AI if exactly one mention is present (or prioritize @ragflow if both)
+        if (hasRagflowMention || hasGoldierillMention) {
           try {
-            const question = textContent.replace('@goldierill', '').trim()
+            const mode = hasRagflowMention ? 'ragflow' : 'goldierill'
+            // Remove the @mention from the question
+            const mentionToRemove = hasRagflowMention ? /@ragflow/gi : /@goldierill/gi
+            const question = textContent.replace(mentionToRemove, '').trim()
+
             await aiApi.chat({
               messageId: result.data.id,
               content: question || '请回复这条消息',
+              mode, // Add mode parameter
             })
           } catch (aiError) {
             console.error("Failed to get AI reply:", aiError)

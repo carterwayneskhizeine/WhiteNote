@@ -23,6 +23,7 @@ import { SimpleTipTapEditor } from "@/components/SimpleTipTapEditor"
 import { templatesApi } from "@/lib/api/templates"
 import { Template } from "@/types/api"
 import { useState, useEffect, useRef } from "react"
+import { useWorkspaceStore } from "@/store/useWorkspaceStore"
 
 interface RetweetTarget {
     id: string
@@ -57,6 +58,7 @@ export function RetweetDialog({
     targetType = 'message',
 }: RetweetDialogProps) {
     const { data: session } = useSession()
+    const { currentWorkspaceId } = useWorkspaceStore()
     const [content, setContent] = useState("")
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [uploadedMedia, setUploadedMedia] = useState<MediaItem[]>([])
@@ -150,9 +152,10 @@ export function RetweetDialog({
         setIsSubmitting(true)
         try {
             // 1. 创建一条新的主消息，根据 targetType 使用不同的引用字段
-            const createData: { content: string; quotedMessageId?: string; quotedCommentId?: string; media?: Array<{ url: string; type: string }> } = {
+            const createData: { content: string; quotedMessageId?: string; quotedCommentId?: string; media?: Array<{ url: string; type: string }>; workspaceId?: string } = {
                 content: content.trim(),
                 media: uploadedMedia.map(m => ({ url: m.url, type: m.type })),
+                workspaceId: currentWorkspaceId || undefined, // Pass current workspace ID
             }
 
             if (targetType === 'message') {
