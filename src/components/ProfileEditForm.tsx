@@ -1,19 +1,21 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { authApi } from "@/lib/api"
-import { Loader2 } from "lucide-react"
+import { Loader2, Upload } from "lucide-react"
 
 export function ProfileEditForm() {
   const { data: session, update } = useSession()
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [initializing, setInitializing] = useState(true)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Form state
   const [name, setName] = useState("")
@@ -103,6 +105,50 @@ export function ProfileEditForm() {
     setMessage(null)
   }
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"]
+    if (!allowedTypes.includes(file.type)) {
+      setMessage({ type: "error", text: "只支持 JPG、PNG、WebP、GIF 格式的图片" })
+      return
+    }
+
+    // Validate file size (5MB)
+    const maxSize = 5 * 1024 * 1024
+    if (file.size > maxSize) {
+      setMessage({ type: "error", text: "图片大小不能超过 5MB" })
+      return
+    }
+
+    setUploading(true)
+    setMessage(null)
+
+    const result = await authApi.uploadAvatar(file)
+
+    if (result.error) {
+      setMessage({ type: "error", text: result.error })
+      setUploading(false)
+    } else if (result.data?.url) {
+      // Update avatar URL with the uploaded file URL
+      setAvatar(result.data.url)
+      setMessage({ type: "success", text: "图片上传成功" })
+      setUploading(false)
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setMessage(null)
+      }, 3000)
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
   if (initializing) {
     return (
       <Card>
@@ -127,12 +173,37 @@ export function ProfileEditForm() {
               <AvatarFallback className="text-2xl">{userInitials}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className="text-sm text-muted-foreground mb-2">
+              <p className="text-sm text-muted-foreground mb-3">
                 头像会显示在你的个人资料和消息旁边
               </p>
-              <p className="text-xs text-muted-foreground">
-                支持 URL 链接或使用默认头像
-              </p>
+              <div className="flex gap-2 flex-wrap">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      上传中
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      上传图片
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -160,7 +231,7 @@ export function ProfileEditForm() {
       {/* Avatar URL Field */}
       <Card>
         <CardHeader>
-          <CardTitle>头像链接</CardTitle>
+          <CardTitle>头像链接（可选）</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Input
@@ -171,9 +242,9 @@ export function ProfileEditForm() {
             className="max-w-md"
           />
           <p className="text-sm text-muted-foreground">
-            输入图片 URL 作为你的头像
+            或者输入图片 URL 作为你的头像
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               type="button"
               variant="outline"

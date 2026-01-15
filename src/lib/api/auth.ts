@@ -101,8 +101,39 @@ export async function updateProfile(data: {
   }
 }
 
+/**
+ * 上传用户头像
+ */
+export async function uploadAvatar(file: File) {
+  try {
+    const formData = new FormData()
+    formData.append("file", file)
+
+    const response = await fetch(`${API_BASE}/upload/avatar`, {
+      method: "POST",
+      body: formData,
+    })
+
+    await handleResponse(response)
+    const result = await response.json()
+
+    if (!response.ok) {
+      return { error: result.error || "上传头像失败" }
+    }
+
+    return { data: result.data }
+  } catch (error) {
+    console.error("Upload avatar error:", error)
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      throw error
+    }
+    return { error: "网络错误，请重试" }
+  }
+}
+
 export const authApi = {
   register,
   getCurrentUser,
   updateProfile,
+  uploadAvatar,
 }
