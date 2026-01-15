@@ -8,6 +8,7 @@ import { useSocket } from "@/hooks/useSocket"
 import { useAppStore } from "@/store/useAppStore"
 import { useWorkspaceStore } from "@/store/useWorkspaceStore"
 import { useSession } from "next-auth/react"
+import { useSearchParams } from "next/navigation"
 import { workspacesApi } from "@/lib/api/workspaces"
 import type { Workspace } from "@/types/api"
 import { ChevronDown, Loader2 } from "lucide-react"
@@ -20,6 +21,7 @@ export default function Home() {
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const { currentWorkspaceId, setCurrentWorkspaceId } = useWorkspaceStore()
+  const searchParams = useSearchParams()
 
   // 获取当前选中的 Workspace
   const currentWorkspace = workspaces.find((w) => w.id === currentWorkspaceId)
@@ -69,6 +71,20 @@ export default function Home() {
       setHasNewMessages(true)
     },
   })
+
+  // Handle scrolling to specific message from URL parameter
+  useEffect(() => {
+    const scrolltoId = searchParams.get('scrollto')
+    if (scrolltoId) {
+      // Wait for messages to load, then scroll
+      setTimeout(() => {
+        const element = document.getElementById(`message-${scrolltoId}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 300) // Wait for messages list to render
+    }
+  }, [searchParams, refreshKey])
 
   return (
     <div className="flex flex-col min-h-screen pt-[106px] desktop:pt-0">

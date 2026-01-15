@@ -4,19 +4,20 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 
 interface CommentBreadcrumbProps {
-  messageId: string
   parentId?: string | null
   onNavigateBack: (targetId: string) => void
+  onNavigateToMessage: () => void
+  onNavigateHome: () => void
 }
 
-export function CommentBreadcrumb({ messageId, parentId, onNavigateBack }: CommentBreadcrumbProps) {
+export function CommentBreadcrumb({ parentId, onNavigateBack, onNavigateToMessage, onNavigateHome }: CommentBreadcrumbProps) {
   const handleBack = () => {
     if (parentId) {
       // 返回到父评论页
       onNavigateBack(parentId)
     } else {
-      // 返回到主消息页
-      onNavigateBack(messageId)
+      // 顶级评论：返回到帖子详情页
+      onNavigateToMessage()
     }
   }
 

@@ -360,16 +360,12 @@ export default function CommentDetailPage() {
       {/* Header with Breadcrumb */}
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <CommentBreadcrumb
-          messageId={id}
           parentId={comment.parentId}
           onNavigateBack={(targetId) => {
-            // 检查是否是主消息ID
-            if (targetId === id) {
-              router.push(`/status/${id}`)
-            } else {
-              router.push(`/status/${id}/comment/${targetId}`)
-            }
+            router.push(`/status/${id}/comment/${targetId}`)
           }}
+          onNavigateToMessage={() => router.push(`/status/${id}`)}
+          onNavigateHome={() => router.push(`/?scrollto=${id}`)}
         />
       </div>
 

@@ -170,7 +170,7 @@ export default function StatusPage() {
                     variant="ghost"
                     size="icon"
                     className="mr-4 rounded-full"
-                    onClick={() => router.push('/')}
+                    onClick={() => router.push(`/?scrollto=${id}`)}
                 >
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
