@@ -95,7 +95,7 @@ export default function Home() {
               {workspaces.map((ws) => (
                 <button
                   key={ws.id}
-                  className={`w-full px-4 py-3 text-left hover:bg-secondary/50 transition-colors ${
+                  className={`w-full px-4 py-3 text-center hover:bg-secondary/50 transition-colors ${
                     currentWorkspaceId === ws.id ? 'bg-secondary/30' : ''
                   }`}
                   onClick={() => {
@@ -104,7 +104,7 @@ export default function Home() {
                     setRefreshKey((prev) => prev + 1) // 刷新消息列表
                   }}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-center gap-2">
                     <span className="font-medium">{ws.name}</span>
                     {ws.isDefault && (
                       <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">默认</span>

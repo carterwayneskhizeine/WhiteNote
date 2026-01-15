@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
-import { Hash, Bell, Bookmark, List, Settings, PenLine, LogOut } from "lucide-react"
+import { Hash, Bell, Bookmark, List, Settings, PenLine, LogOut, ChevronDown, Loader2, Layers } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn, getAvatarUrl } from "@/lib/utils"
@@ -16,6 +16,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { useWorkspaceStore } from "@/store/useWorkspaceStore"
+import { workspacesApi } from "@/lib/api/workspaces"
+import type { Workspace } from "@/types/api"
 
 // Helper for X-style icons
 const XIcon = ({ icon: Icon, filled, size = 26, className }: any) => (
@@ -50,6 +53,37 @@ export function MobileNav() {
   const { data: session } = useSession()
   const [isVisible, setIsVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false)
+  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(true)
+  const { currentWorkspaceId, setCurrentWorkspaceId } = useWorkspaceStore()
+
+  // 获取当前选中的 Workspace
+  const currentWorkspace = workspaces.find((w) => w.id === currentWorkspaceId)
+
+  // 加载用户的 Workspace 列表
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      if (session?.user) {
+        try {
+          const result = await workspacesApi.getWorkspaces()
+          if (result.data) {
+            setWorkspaces(result.data)
+            // 如果没有选中的 Workspace 且有默认 Workspace，自动选中
+            if (!currentWorkspaceId && result.data.length > 0) {
+              const defaultWorkspace = result.data.find((w) => w.isDefault) || result.data[0]
+              setCurrentWorkspaceId(defaultWorkspace.id)
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch workspaces:", error)
+        } finally {
+          setIsLoadingWorkspaces(false)
+        }
+      }
+    }
+    fetchWorkspaces()
+  }, [session, currentWorkspaceId, setCurrentWorkspaceId])
 
   // Use session data directly
   const userName = session?.user?.name || "User Name"
@@ -169,16 +203,51 @@ export function MobileNav() {
           </Link>
         </div>
 
-        {/* Tabs Row (Only on Home) */}
+        {/* Workspace Switcher Row (Only on Home) */}
         {pathname === "/" && (
-          <div className="flex w-full border-t border-border bg-background/85 backdrop-blur-md">
-            <button className="flex-1 py-3 hover:bg-secondary/50 transition-colors relative flex justify-center items-center">
-              <span className="font-bold text-sm">推荐</span>
-              <div className="absolute bottom-0 h-1 w-10 bg-primary rounded-full" />
+          <div className="flex w-full border-t border-border bg-background/85 backdrop-blur-md relative">
+            {/* Workspace 下拉菜单触发器 */}
+            <button
+              className="flex-1 py-3 hover:bg-secondary/50 transition-colors relative flex justify-center items-center gap-2"
+              onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
+            >
+              {isLoadingWorkspaces ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <span className="font-bold text-sm">
+                    {currentWorkspace?.name || '选择工作区'}
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showWorkspaceMenu ? 'rotate-180' : ''}`} />
+                </>
+              )}
+              <div className="absolute bottom-0 h-1 w-14 bg-primary rounded-full" />
             </button>
-            <button className="flex-1 py-3 hover:bg-secondary/50 transition-colors flex justify-center items-center">
-              <span className="font-bold text-sm text-muted-foreground">关注</span>
-            </button>
+
+            {/* Workspace 下拉菜单 */}
+            {showWorkspaceMenu && (
+              <div className="absolute top-full left-0 w-full bg-background border border-b border-x border-border rounded-b-lg shadow-lg z-50">
+                {workspaces.map((ws) => (
+                  <button
+                    key={ws.id}
+                    className={`w-full px-4 py-3 text-center hover:bg-secondary/50 transition-colors ${
+                      currentWorkspaceId === ws.id ? 'bg-secondary/30' : ''
+                    }`}
+                    onClick={() => {
+                      setCurrentWorkspaceId(ws.id)
+                      setShowWorkspaceMenu(false)
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="font-medium text-sm">{ws.name}</span>
+                      {ws.isDefault && (
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">默认</span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
