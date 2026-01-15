@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Hash, Bell, Bookmark, List, Settings, PenLine, LogOut } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
+import { cn, getAvatarUrl } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Sheet,
@@ -56,7 +56,7 @@ export function MobileNav() {
   const userEmail = session?.user?.email
     ? `@${session.user.email.split("@")[0]}`
     : "@username"
-  const userAvatar = session?.user?.image || ""
+  const userAvatar = getAvatarUrl(session?.user?.name || null, session?.user?.image || null) || ""
   const userInitials = userName?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "CN"
 
   const handleSignOut = async () => {

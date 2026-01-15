@@ -9,7 +9,7 @@ import {
   MoreHorizontal, PenLine, LogOut, UserCircle
 } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { cn, getAvatarUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -91,7 +91,7 @@ export function LeftSidebar({ isMobile, collapsed }: LeftSidebarProps) {
   const userEmail = session?.user?.email
     ? `@${session.user.email.split("@")[0]}`
     : "@username"
-  const userAvatar = session?.user?.image || ""
+  const userAvatar = getAvatarUrl(session?.user?.name || null, session?.user?.image || null) || ""
   const userInitials = userName?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "CN"
 
   return (

@@ -30,6 +30,7 @@ import { Template } from "@/types/api"
 import { SlashCommand } from "@/lib/editor/extensions/slash-command"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
 import { useWorkspaceStore } from "@/store/useWorkspaceStore"
+import { getAvatarUrl } from "@/lib/utils"
 
 interface InputMachineProps {
   onSuccess?: () => void
@@ -536,7 +537,7 @@ export function InputMachine({ onSuccess }: InputMachineProps) {
       <div className="flex gap-4">
         {/* User avatar */}
         <Avatar className="h-10 w-10 shrink-0">
-          <AvatarImage src={session?.user?.image || undefined} />
+          <AvatarImage src={getAvatarUrl(session?.user?.name || null, session?.user?.image || null) || undefined} />
           <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
             {getInitials(session?.user?.name)}
           </AvatarFallback>

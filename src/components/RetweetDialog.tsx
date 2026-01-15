@@ -16,7 +16,7 @@ import { useSession } from "next-auth/react"
 import { TipTapViewer } from "@/components/TipTapViewer"
 import { GoldieAvatar } from "@/components/GoldieAvatar"
 import { MediaGrid } from "@/components/MediaGrid"
-import { getHandle } from "@/lib/utils"
+import { getHandle, getAvatarUrl } from "@/lib/utils"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
 import { ActionButtons } from "@/components/ActionButtons"
 import { SimpleTipTapEditor } from "@/components/SimpleTipTapEditor"
@@ -242,7 +242,7 @@ export function RetweetDialog({
 
                     <div className="flex gap-3">
                         <Avatar className="h-8 w-8 shrink-0">
-                            <AvatarImage src={session?.user?.image || undefined} />
+                            <AvatarImage src={getAvatarUrl(session?.user?.name || null, session?.user?.image || null) || undefined} />
                             <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                                 {session?.user?.name?.slice(0, 2) || "U"}
                             </AvatarFallback>

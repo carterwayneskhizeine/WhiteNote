@@ -15,7 +15,7 @@ import { zhCN } from "date-fns/locale"
 import { useSession } from "next-auth/react"
 import { TipTapViewer } from "@/components/TipTapViewer"
 import { GoldieAvatar } from "@/components/GoldieAvatar"
-import { getHandle } from "@/lib/utils"
+import { getHandle, getAvatarUrl } from "@/lib/utils"
 import { MediaUploader, MediaItem, MediaUploaderRef } from "@/components/MediaUploader"
 import { ActionButtons } from "@/components/ActionButtons"
 import { SimpleTipTapEditor } from "@/components/SimpleTipTapEditor"
@@ -237,7 +237,7 @@ export function ReplyDialog({
 
                     <div className="flex gap-3 mt-4">
                         <Avatar className="h-8 w-8 shrink-0">
-                            <AvatarImage src={session?.user?.image || undefined} />
+                            <AvatarImage src={getAvatarUrl(session?.user?.name || null, session?.user?.image || null) || undefined} />
                             <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                                 {session?.user?.name?.slice(0, 2) || "U"}
                             </AvatarFallback>
