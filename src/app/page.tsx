@@ -54,6 +54,9 @@ export default function Home() {
 
     // Dispatch custom event to trigger auto-refresh after 5 seconds (for AI tags)
     window.dispatchEvent(new CustomEvent('message-posted'))
+
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleRefreshFromNotification = () => {

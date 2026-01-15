@@ -198,6 +198,7 @@ export function MessageCard({
   return (
     <>
       <div
+        id={`message-${message.id}`}
         className="p-4 border-b border-border hover:bg-muted/10 transition-colors cursor-pointer"
         onClick={handleClick}
       >
@@ -320,6 +321,11 @@ export function MessageCard({
         messageId={message.id}
         onSuccess={() => {
           onUpdate?.()
+          // Scroll to the replied message
+          setTimeout(() => {
+            const element = document.getElementById(`message-${message.id}`)
+            element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }, 100)
         }}
       />
 
@@ -335,6 +341,10 @@ export function MessageCard({
           router.push('/')
           // Trigger auto-refresh after 5 seconds (for AI tags)
           window.dispatchEvent(new CustomEvent('message-posted'))
+          // Scroll to top to show the new retweet message
+          setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }, 100)
         }}
       />
 

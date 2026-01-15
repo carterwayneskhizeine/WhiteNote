@@ -377,6 +377,11 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
           // Refresh comments list
           fetchComments()
           onCommentAdded?.()
+          // Scroll to the message containing the replied comment
+          setTimeout(() => {
+            const element = document.getElementById(`message-${messageId}`)
+            element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }, 100)
         }}
       />
 
@@ -389,6 +394,10 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
         onSuccess={() => {
           // Navigate to home to show the new message
           router.push('/')
+          // Scroll to top to show the new retweet message
+          setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }, 100)
         }}
       />
 
