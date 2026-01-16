@@ -136,7 +136,7 @@ export async function importFromLocal(fileName: string) {
   const contentRaw = fs.readFileSync(filePath, "utf-8")
   const { tags, content } = parseMdFile(contentRaw)
 
-  // 1. Update DB Content
+  // 1. Update DB Content and Tags
   const record = await prisma.$transaction(async (tx) => {
     let data: any
     if (meta.type === "message") {
@@ -145,10 +145,28 @@ export async function importFromLocal(fileName: string) {
         include: { author: true }
       })
       if (data) {
+        // Update content
         await tx.message.update({
           where: { id: meta.id },
           data: { content }
         })
+
+        // Update tags if tags are present in MD file
+        if (tags.length > 0) {
+          const { batchUpsertTags } = await import("@/lib/tag-utils")
+          const tagIds = await batchUpsertTags(tags)
+
+          // Delete existing tags and create new ones
+          await tx.message.update({
+            where: { id: meta.id },
+            data: {
+              tags: {
+                deleteMany: {},
+                create: tagIds.map((tagId) => ({ tagId }))
+              }
+            }
+          })
+        }
       }
     } else {
       data = await tx.comment.findUnique({
@@ -156,10 +174,28 @@ export async function importFromLocal(fileName: string) {
         include: { author: true }
       })
       if (data) {
+        // Update content
         await tx.comment.update({
           where: { id: meta.id },
           data: { content }
         })
+
+        // Update tags if tags are present in MD file
+        if (tags.length > 0) {
+          const { batchUpsertTags } = await import("@/lib/tag-utils")
+          const tagIds = await batchUpsertTags(tags)
+
+          // Delete existing tags and create new ones
+          await tx.comment.update({
+            where: { id: meta.id },
+            data: {
+              tags: {
+                deleteMany: {},
+                create: tagIds.map((tagId) => ({ tagId }))
+              }
+            }
+          })
+        }
       }
     }
     return data
@@ -170,9 +206,12 @@ export async function importFromLocal(fileName: string) {
     return
   }
 
-  // 2. Update Workspace JSON with new modified time
+  // 2. Update Workspace JSON with new modified time and tags
   meta.updated_at = lastModified
+  meta.tags = tags.map(t => `#${t}`).join(" ")
   saveWorkspaceData(ws)
+
+  console.log(`[SyncUtils] Imported ${fileName} to DB with ${tags.length} tags and triggered RAGFlow sync`)
 
   // 3. Trigger RAGFlow Sync
   // Find workspace associated with this content

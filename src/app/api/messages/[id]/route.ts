@@ -6,6 +6,8 @@ import { batchUpsertTags, cleanupUnusedTags } from "@/lib/tag-utils"
 import { unlink } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
+import { exportToLocal } from "@/lib/sync-utils"
+import { addTask } from "@/lib/queue"
 
 // Upload directory outside the codebase
 const UPLOAD_DIR = process.env.UPLOAD_DIR || join(process.cwd(), "..", "whitenote-data", "uploads")
@@ -281,6 +283,16 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           console.error("Failed to update RAGFlow document:", error)
         })
       }
+    }
+
+    // 检查是否启用 MD 同步，更新本地 MD 文件
+    const aiConfig = await prisma.aiConfig.findUnique({
+      where: { userId: session.user.id }
+    })
+
+    if (aiConfig?.enableMdSync && (contentChanged || tagsChanged)) {
+      // 立即导出到本地文件（不需要延迟，因为是直接编辑）
+      await exportToLocal("message", id)
     }
 
     return Response.json({ data: message })

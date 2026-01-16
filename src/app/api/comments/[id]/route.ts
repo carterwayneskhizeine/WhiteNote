@@ -6,6 +6,7 @@ import { join } from "path"
 import { existsSync } from "fs"
 import { batchUpsertTags } from "@/lib/tag-utils"
 import { deleteFromRAGFlow } from "@/lib/ai/ragflow"
+import { exportToLocal } from "@/lib/sync-utils"
 
 // Upload directory outside the codebase
 const UPLOAD_DIR = process.env.UPLOAD_DIR || join(process.cwd(), "..", "whitenote-data", "uploads")
@@ -307,6 +308,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           console.error("Failed to update comment in RAGFlow:", error)
         })
       }
+    }
+
+    // 检查是否启用 MD 同步，更新本地 MD 文件
+    const aiConfig = await prisma.aiConfig.findUnique({
+      where: { userId: session.user.id }
+    })
+
+    if (aiConfig?.enableMdSync && (contentChanged || tagsChanged)) {
+      // 立即导出到本地文件（不需要延迟，因为是直接编辑）
+      await exportToLocal("comment", id)
     }
 
     return Response.json({ data: updatedComment })

@@ -334,6 +334,7 @@ export async function syncToRAGFlow(
 
 /**
  * 同步消息到 RAGFlow 知识库（使用指定的 datasetId）
+ * 总是先删除旧文档，再上传新文档，避免重复
  * @param ragflowBaseUrl RAGFlow 服务地址
  * @param ragflowApiKey RAGFlow API Key
  * @param datasetId RAGFlow Dataset ID
@@ -350,7 +351,12 @@ export async function syncToRAGFlowWithDatasetId(
   medias?: Media[]
 ) {
   try {
-    // 清理内容：移除 AI 助手提及
+    console.log("[RAGFlow] Syncing message:", messageId, "to dataset:", datasetId)
+
+    // 1. 先删除旧文档（避免重复）
+    await deleteRAGFlowDocuments(ragflowBaseUrl, ragflowApiKey, datasetId, messageId)
+
+    // 2. 清理内容：移除 AI 助手提及
     const cleanedContent = cleanContentForRAGFlow(content)
 
     // 使用 FormData 上传文件（RAGFlow API 要求 multipart/form-data）
@@ -455,16 +461,34 @@ export async function deleteFromRAGFlow(
     return
   }
 
+  await deleteRAGFlowDocuments(config.ragflowBaseUrl, config.ragflowApiKey, datasetId, id, contentType)
+}
+
+/**
+ * 从 RAGFlow 删除文档（底层函数，直接使用 API 配置）
+ * @param ragflowBaseUrl RAGFlow 服务地址
+ * @param ragflowApiKey RAGFlow API Key
+ * @param datasetId RAGFlow Dataset ID
+ * @param id 消息 ID 或评论 ID
+ * @param contentType 内容类型 ('message' | 'comment')
+ */
+async function deleteRAGFlowDocuments(
+  ragflowBaseUrl: string,
+  ragflowApiKey: string,
+  datasetId: string,
+  id: string,
+  contentType: 'message' | 'comment' = 'message'
+) {
   try {
     // 1. 删除文本文档（文档名格式：message_{id}.md）
     const documentName = `message_${id}.md`
 
     const listResponse = await fetch(
-      `${config.ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents?name=${encodeURIComponent(documentName)}`,
+      `${ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents?name=${encodeURIComponent(documentName)}`,
       {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${config.ragflowApiKey}`,
+          "Authorization": `Bearer ${ragflowApiKey}`,
         },
       }
     )
@@ -476,12 +500,12 @@ export async function deleteFromRAGFlow(
         const documentIds = listResult.data.docs.map((doc: any) => doc.id)
 
         const deleteResponse = await fetch(
-          `${config.ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
+          `${ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
           {
             method: "DELETE",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${config.ragflowApiKey}`,
+              "Authorization": `Bearer ${ragflowApiKey}`,
             },
             body: JSON.stringify({
               ids: documentIds,
@@ -502,11 +526,11 @@ export async function deleteFromRAGFlow(
     // 2. 删除图片文档（文档名格式：image_{id}_{mediaId}.png）
     // 通过列出所有文档并过滤匹配的文档来删除
     const allDocsResponse = await fetch(
-      `${config.ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
+      `${ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
       {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${config.ragflowApiKey}`,
+          "Authorization": `Bearer ${ragflowApiKey}`,
         },
       }
     )
@@ -525,12 +549,12 @@ export async function deleteFromRAGFlow(
         const imageDocIds = imageDocs.map((doc: any) => doc.id)
 
         const deleteImagesResponse = await fetch(
-          `${config.ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
+          `${ragflowBaseUrl}/api/v1/datasets/${datasetId}/documents`,
           {
             method: "DELETE",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${config.ragflowApiKey}`,
+              "Authorization": `Bearer ${ragflowApiKey}`,
             },
             body: JSON.stringify({
               ids: imageDocIds,
