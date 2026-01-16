@@ -222,10 +222,10 @@ export function TipTapViewer({ content, className }: TipTapViewerProps) {
           z-index: 10;
         }
 
-        /* Light mode (default) - black button */
+        /* Light mode (default) - white button */
         .tipTap-viewer .ProseMirror pre .code-copy-btn,
         :not(.dark) .tipTap-viewer .ProseMirror pre .code-copy-btn {
-          color: #000000;
+          color: #ffffff;
         }
 
         /* Dark mode - white button */
@@ -306,14 +306,14 @@ export function TipTapViewer({ content, className }: TipTapViewerProps) {
 
         .tipTap-viewer .ProseMirror .hljs-comment,
         .tipTap-viewer .ProseMirror .hljs-quote {
-          color: hsl(var(--muted-foreground));
+          color: #7ee787;
           font-style: italic;
         }
 
         .tipTap-viewer .ProseMirror .hljs-keyword,
         .tipTap-viewer .ProseMirror .hljs-selector-tag,
         .tipTap-viewer .ProseMirror .hljs-subst {
-          color: #d73a49;
+          color: #ff7b72;
         }
 
         .tipTap-viewer .ProseMirror .hljs-number,
@@ -321,50 +321,50 @@ export function TipTapViewer({ content, className }: TipTapViewerProps) {
         .tipTap-viewer .ProseMirror .hljs-variable,
         .tipTap-viewer .ProseMirror .hljs-template-variable,
         .tipTap-viewer .ProseMirror .hljs-tag .hljs-attr {
-          color: #005cc5;
+          color: #79c0ff;
         }
 
         .tipTap-viewer .ProseMirror .hljs-string,
         .tipTap-viewer .ProseMirror .hljs-doctag {
-          color: #032f62;
+          color: #a5d6ff;
         }
 
         .tipTap-viewer .ProseMirror .hljs-title,
         .tipTap-viewer .ProseMirror .hljs-section,
         .tipTap-viewer .ProseMirror .hljs-selector-id {
-          color: #6f42c1;
+          color: #d2a8ff;
           font-weight: bold;
         }
 
         .tipTap-viewer .ProseMirror .hljs-type,
         .tipTap-viewer .ProseMirror .hljs-class .hljs-title {
-          color: #6f42c1;
+          color: #d2a8ff;
         }
 
         .tipTap-viewer .ProseMirror .hljs-tag,
         .tipTap-viewer .ProseMirror .hljs-name,
         .tipTap-viewer .ProseMirror .hljs-attribute {
-          color: #22863a;
+          color: #7ee787;
           font-weight: normal;
         }
 
         .tipTap-viewer .ProseMirror .hljs-regexp,
         .tipTap-viewer .ProseMirror .hljs-link {
-          color: #e36209;
+          color: #ffa657;
         }
 
         .tipTap-viewer .ProseMirror .hljs-symbol,
         .tipTap-viewer .ProseMirror .hljs-bullet {
-          color: #005cc5;
+          color: #79c0ff;
         }
 
         .tipTap-viewer .ProseMirror .hljs-built_in,
         .tipTap-viewer .ProseMirror .hljs-builtin-name {
-          color: #005cc5;
+          color: #ffa657;
         }
 
         .tipTap-viewer .ProseMirror .hljs-meta {
-          color: #22863a;
+          color: #7ee787;
         }
 
         .tipTap-viewer .ProseMirror .hljs-deletion {
