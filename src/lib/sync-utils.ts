@@ -7,14 +7,16 @@ const SYNC_DIR = "D:\\Code\\whitenote-data\\link_md"
 const WORKSPACE_DIR = path.join(SYNC_DIR, ".whitenote")
 const WORKSPACE_FILE = path.join(WORKSPACE_DIR, "workspace.json")
 
-// Ensure directories exist
-if (!fs.existsSync(WORKSPACE_DIR)) {
-  fs.mkdirSync(WORKSPACE_DIR, { recursive: true })
+// Helper: Ensure directory exists
+function ensureDirectoryExists(dirPath: string) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true })
+  }
 }
 
-if (!fs.existsSync(SYNC_DIR)) {
-  fs.mkdirSync(SYNC_DIR, { recursive: true })
-}
+// Ensure directories exist at module load time
+ensureDirectoryExists(SYNC_DIR)
+ensureDirectoryExists(WORKSPACE_DIR)
 
 interface FileMeta {
   type: "message" | "comment"
@@ -41,6 +43,10 @@ export function getWorkspaceData(): WorkspaceData {
 
 // Helper: Write Workspace JSON
 function saveWorkspaceData(data: WorkspaceData) {
+  // Ensure directory exists before writing
+  if (!fs.existsSync(WORKSPACE_DIR)) {
+    fs.mkdirSync(WORKSPACE_DIR, { recursive: true })
+  }
   fs.writeFileSync(WORKSPACE_FILE, JSON.stringify(data, null, 2))
 }
 
@@ -96,6 +102,7 @@ export async function exportToLocal(type: "message" | "comment", id: string) {
   const filePath = path.join(SYNC_DIR, fileName)
 
   // Write File
+  ensureDirectoryExists(SYNC_DIR)  // Ensure directory exists before writing
   fs.writeFileSync(filePath, fileContent)
 
   // Update Workspace JSON
@@ -222,6 +229,13 @@ export async function importFromLocal(fileName: string) {
       select: { workspaceId: true }
     })
     workspaceId = msg?.workspaceId || null
+  } else if (meta.type === "comment") {
+    // Comments need to get workspace through the associated message
+    const comment = await prisma.comment.findUnique({
+      where: { id: meta.id },
+      select: { message: { select: { workspaceId: true } } }
+    })
+    workspaceId = comment?.message?.workspaceId || null
   }
 
   if (workspaceId) {
