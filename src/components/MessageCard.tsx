@@ -218,6 +218,7 @@ export function MessageCard({
               <UserInfoWithTags
                 author={message.author}
                 createdAt={message.createdAt}
+                updatedAt={message.updatedAt}
                 tags={message.tags}
                 size="md"
                 align="baseline"

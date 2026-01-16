@@ -154,6 +154,7 @@ export function CommentItem({
             <UserInfoWithTags
               author={comment.author}
               createdAt={comment.createdAt}
+              updatedAt={comment.updatedAt}
               tags={comment.tags}
               isAIBot={comment.isAIBot}
               size={size}

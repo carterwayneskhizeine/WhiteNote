@@ -204,6 +204,12 @@ export default function StatusPage() {
                         <span className="text-muted-foreground">
                             {format(new Date(message.createdAt), "a h:mm · yyyy'年'M'月'd'日'", { locale: zhCN })}
                         </span>
+                        {message.updatedAt && new Date(message.updatedAt).getTime() > new Date(message.createdAt).getTime() + 1000 && (
+                            <>
+                                <span className="text-muted-foreground px-1">·</span>
+                                <span className="text-muted-foreground">已编辑</span>
+                            </>
+                        )}
 
                         {/* Tags displayed after user info */}
                         {message.tags.length > 0 && (

@@ -12,6 +12,7 @@ interface QuotedMessage {
   id: string
   content: string
   createdAt: string
+  updatedAt?: string
   messageId?: string
   author: {
     id: string
@@ -75,6 +76,7 @@ export function QuotedMessageCard({ message, className }: QuotedMessageCardProps
         <UserInfoWithTags
           author={message.author}
           createdAt={message.createdAt}
+          updatedAt={message.updatedAt}
           tags={message.tags}
           size="sm"
           align="center"

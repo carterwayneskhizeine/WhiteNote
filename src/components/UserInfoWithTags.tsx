@@ -14,6 +14,7 @@ export interface UserInfoWithTagsProps {
     email: string | null
   } | null
   createdAt: string
+  updatedAt?: string
   tags?: Array<{
     tag: {
       id: string
@@ -71,6 +72,7 @@ const sizeConfig = {
 export function UserInfoWithTags({
   author,
   createdAt,
+  updatedAt,
   tags,
   isAIBot,
   showAIIndicator = true,
@@ -98,6 +100,9 @@ export function UserInfoWithTags({
       return ""
     }
   }
+
+  // Check if content has been edited
+  const isEdited = updatedAt && new Date(updatedAt).getTime() > new Date(createdAt).getTime() + 1000
 
   // Check if this is an AI assistant
   const isAI = isAIBot || !author
@@ -166,6 +171,16 @@ export function UserInfoWithTags({
       >
         {formatTime(createdAt)}
       </span>
+
+      {/* Edited indicator */}
+      {isEdited && (
+        <>
+          <span className={cn("text-muted-foreground", config.time)}>·</span>
+          <span className={cn("text-muted-foreground", config.time)}>
+            已编辑
+          </span>
+        </>
+      )}
 
       {/* AI Bot Indicator */}
       {isAI && showAIIndicator && size !== "sm" && (

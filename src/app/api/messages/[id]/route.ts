@@ -174,21 +174,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return Response.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  // 添加转发相关字段
+  // 添加转发相关字段（只统计 Retweet 表的记录，避免与引用转发重复计数）
   const retweetCount = (message as any)._count.retweets
   const isRetweeted = (message as any).retweets.length > 0
-
-  // 获取引用转发数量
-  const quoteRetweetCount = await prisma.message.count({
-    where: { quotedMessageId: id },
-  })
 
   // @ts-ignore - retweets is included in the query
   const { retweets, ...messageData } = message
 
   const messageWithRetweetInfo = {
     ...messageData,
-    retweetCount: retweetCount + quoteRetweetCount,
+    retweetCount,
     isRetweeted,
   }
 

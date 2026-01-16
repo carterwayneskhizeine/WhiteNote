@@ -54,16 +54,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       isRetweeted = true
     }
 
-    // 获取转发总数（包括简单转发和引用转发）
-    const [simpleRetweetCount, quoteRetweetCount] = await Promise.all([
-      prisma.retweet.count({
-        where: { messageId: id },
-      }),
-      prisma.message.count({
-        where: { quotedMessageId: id },
-      }),
-    ])
-    const retweetCount = simpleRetweetCount + quoteRetweetCount
+    // 获取转发总数（只统计 Retweet 表的记录，避免与引用转发重复计数）
+    const retweetCount = await prisma.retweet.count({
+      where: { messageId: id },
+    })
 
     return Response.json({
       data: {

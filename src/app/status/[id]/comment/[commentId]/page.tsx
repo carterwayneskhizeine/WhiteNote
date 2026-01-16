@@ -396,6 +396,12 @@ export default function CommentDetailPage() {
             <span className="text-muted-foreground">
               {formatTime(comment.createdAt)}
             </span>
+            {comment.updatedAt && new Date(comment.updatedAt).getTime() > new Date(comment.createdAt).getTime() + 1000 && (
+              <>
+                <span className="text-muted-foreground px-1">·</span>
+                <span className="text-muted-foreground">已编辑</span>
+              </>
+            )}
             {comment.isAIBot && (
               <Bot className="h-4 w-4 text-primary ml-1" />
             )}

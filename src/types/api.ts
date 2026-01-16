@@ -106,6 +106,7 @@ export interface QuotedMessage {
   id: string
   content: string
   createdAt: string
+  updatedAt?: string
   messageId?: string
   author: {
     id: string
