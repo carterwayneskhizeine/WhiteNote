@@ -256,22 +256,20 @@ export async function importFromLocal(workspaceId: string, fileName: string) {
           data: { content }
         })
 
-        // Update tags if tags are present in MD file
-        if (tags.length > 0) {
-          const { batchUpsertTags } = await import("@/lib/tag-utils")
-          const tagIds = await batchUpsertTags(tags)
+        // Always update tags (even if empty - to remove all tags)
+        const { batchUpsertTags } = await import("@/lib/tag-utils")
+        const tagIds = tags.length > 0 ? await batchUpsertTags(tags) : []
 
-          // Delete existing tags and create new ones
-          await tx.message.update({
-            where: { id: meta.id },
-            data: {
-              tags: {
-                deleteMany: {},
-                create: tagIds.map((tagId) => ({ tagId }))
-              }
+        // Delete existing tags and create new ones (or none if tagIds is empty)
+        await tx.message.update({
+          where: { id: meta.id },
+          data: {
+            tags: {
+              deleteMany: {},
+              create: tagIds.map((tagId) => ({ tagId }))
             }
-          })
-        }
+          }
+        })
       }
     } else {
       data = await tx.comment.findUnique({
@@ -285,22 +283,20 @@ export async function importFromLocal(workspaceId: string, fileName: string) {
           data: { content }
         })
 
-        // Update tags if tags are present in MD file
-        if (tags.length > 0) {
-          const { batchUpsertTags } = await import("@/lib/tag-utils")
-          const tagIds = await batchUpsertTags(tags)
+        // Always update tags (even if empty - to remove all tags)
+        const { batchUpsertTags } = await import("@/lib/tag-utils")
+        const tagIds = tags.length > 0 ? await batchUpsertTags(tags) : []
 
-          // Delete existing tags and create new ones
-          await tx.comment.update({
-            where: { id: meta.id },
-            data: {
-              tags: {
-                deleteMany: {},
-                create: tagIds.map((tagId) => ({ tagId }))
-              }
+        // Delete existing tags and create new ones (or none if tagIds is empty)
+        await tx.comment.update({
+          where: { id: meta.id },
+          data: {
+            tags: {
+              deleteMany: {},
+              create: tagIds.map((tagId) => ({ tagId }))
             }
-          })
-        }
+          }
+        })
       }
     }
     return data
