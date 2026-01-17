@@ -137,6 +137,34 @@ export function initSocketServer(httpServer: HTTPServer) {
   const SYNC_DIR = "D:\\Code\\whitenote-data\\link_md"
   let watcher: ReturnType<typeof chokidar.watch> | null = null
 
+  // Queue for serializing file imports to prevent database transaction timeout
+  const importQueue: Array<{ workspaceId: string, fileName: string }> = []
+  let isProcessingQueue = false
+
+  async function processImportQueue() {
+    if (isProcessingQueue || importQueue.length === 0) {
+      return
+    }
+
+    isProcessingQueue = true
+
+    while (importQueue.length > 0) {
+      const item = importQueue.shift()
+      if (item) {
+        try {
+          console.log(`[FileWatcher] Processing ${item.workspaceId}/${item.fileName}`)
+          await importFromLocal(item.workspaceId, item.fileName)
+        } catch (error) {
+          console.error(`[FileWatcher] Error importing ${item.workspaceId}/${item.fileName}:`, error)
+        }
+      }
+      // Small delay between imports to avoid overwhelming the database
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
+    isProcessingQueue = false
+  }
+
   try {
     // Watch the entire directory recursively
     watcher = chokidar.watch(SYNC_DIR, {
@@ -162,14 +190,13 @@ export function initSocketServer(httpServer: HTTPServer) {
       const fileName = pathParts.pop() // Get filename (handle both / and \)
       const workspaceId = pathParts.pop() // Get workspace ID
 
-      console.log(`[FileWatcher] Parsed - Workspace: ${workspaceId}, File: ${fileName}`)
-
       if (fileName && workspaceId) {
-        try {
-          await importFromLocal(workspaceId, fileName)
-        } catch (error) {
-          console.error(`[FileWatcher] Error importing ${workspaceId}/${fileName}:`, error)
-        }
+        // Add to queue instead of processing immediately
+        importQueue.push({ workspaceId, fileName })
+        console.log(`[FileWatcher] Queued ${workspaceId}/${fileName} (queue size: ${importQueue.length})`)
+
+        // Start processing the queue
+        processImportQueue()
       }
     })
 
