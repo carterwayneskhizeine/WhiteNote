@@ -76,9 +76,16 @@ export function MobileNav() {
           const result = await workspacesApi.getWorkspaces()
           if (result.data) {
             setWorkspaces(result.data)
-            // 初始化上次第三区域选中的工作区（默认为第3个工作区）
+            // 初始化上次第三区域选中的工作区
             if (result.data.length > 2 && !lastThirdAreaWorkspaceId) {
-              setLastThirdAreaWorkspaceId(result.data[2].id)
+              // 如果当前选中的工作区在第3个区域（index >= 2），使用它
+              const currentIndex = result.data.findIndex((w) => w.id === currentWorkspaceId)
+              if (currentIndex >= 2) {
+                setLastThirdAreaWorkspaceId(currentWorkspaceId)
+              } else {
+                // 否则使用第3个工作区
+                setLastThirdAreaWorkspaceId(result.data[2].id)
+              }
             }
             // 如果没有选中的 Workspace 且有默认 Workspace，自动选中
             if (!currentWorkspaceId && result.data.length > 0) {
