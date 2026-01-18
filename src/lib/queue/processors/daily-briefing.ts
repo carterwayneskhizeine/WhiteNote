@@ -86,7 +86,7 @@ ${contentSummary}
         model: config.briefingModel,
       })
 
-      // 取消之前的晨报道顶（查找带有 DailyReview 标签的置顶消息）
+      // 取消之前的晨报道顶（查找带有 DailyReview 标签的消息）
       const dailyReviewTag = await prisma.tag.findUnique({
         where: { name: "DailyReview" },
       })
@@ -96,7 +96,6 @@ ${contentSummary}
           where: {
             workspaceId: workspace.id,
             authorId: null,  // 晨报的 authorId 为 null
-            isPinned: true,
             tags: {
               some: { tagId: dailyReviewTag.id },
             },
