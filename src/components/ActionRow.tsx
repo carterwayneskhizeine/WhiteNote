@@ -130,7 +130,7 @@ export function ActionRow({
 
       {/* Share Button */}
       {onShare && (
-        <div className="group flex items-center cursor-pointer">
+        <div className="group flex items-center cursor-pointer" onClick={onShare}>
           <div className={cn(config.padding, "rounded-full group-hover:bg-blue-500/10 group-hover:text-blue-500 transition-colors")}>
             <Share className={cn(config.icon, "text-muted-foreground group-hover:text-blue-500 transition-colors")} />
           </div>

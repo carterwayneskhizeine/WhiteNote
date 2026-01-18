@@ -28,12 +28,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
-import { CommentsList } from "@/components/CommentsList"
 import { ReplyDialog } from "@/components/ReplyDialog"
 import { RetweetDialog } from "@/components/RetweetDialog"
 import { QuotedMessageCard } from "@/components/QuotedMessageCard"
+import { ShareDialog } from "@/components/ShareDialog"
 import { GoldieAvatar } from "@/components/GoldieAvatar"
-import { cn, getHandle } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { TipTapViewer } from "@/components/TipTapViewer"
 import { ImageLightbox } from "@/components/ImageLightbox"
@@ -47,22 +47,20 @@ interface MessageCardProps {
   message: Message
   onUpdate?: () => void
   onDelete?: (deletedId: string) => void
-  onReply?: () => void
 }
 
 export function MessageCard({
   message,
   onUpdate,
   onDelete,
-  onReply,
 }: MessageCardProps) {
   const isMobile = useMobile()
   const [isStarred, setIsStarred] = useState(message.isStarred)
-  const [starCount, setStarCount] = useState(0) // Mock count or real if available
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showReplyDialog, setShowReplyDialog] = useState(false)
   const [showRetweetDialog, setShowRetweetDialog] = useState(false)
+  const [showShareDialog, setShowShareDialog] = useState(false)
   const [copied, setCopied] = useState(false)
   const router = useRouter()
   const [isExpanded, setIsExpanded] = useState(false)
@@ -110,7 +108,6 @@ export function MessageCard({
       const result = await messagesApi.toggleStar(message.id)
       if (result.data) {
         setIsStarred(result.data.isStarred)
-        setStarCount(prev => result.data?.isStarred ? prev + 1 : prev - 1)
         onUpdate?.()
       }
     } catch (error) {
@@ -185,6 +182,12 @@ export function MessageCard({
     e.stopPropagation()
     setLightboxIndex(index)
     setLightboxOpen(true)
+  }
+
+  // Handle share - open share dialog
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowShareDialog(true)
   }
 
   // 移动端单击、桌面端双击（1秒内）
@@ -304,7 +307,7 @@ export function MessageCard({
               onRetweet={handleRetweet}
               starred={isStarred}
               onToggleStar={handleToggleStar}
-              onShare={undefined}
+              onShare={handleShare}
               size="md"
               className="mt-3"
             />
@@ -345,6 +348,13 @@ export function MessageCard({
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }, 100)
         }}
+      />
+
+      {/* Share Dialog */}
+      <ShareDialog
+        messageId={message.id}
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
       />
 
       {/* Delete Dialog */}

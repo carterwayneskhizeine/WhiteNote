@@ -31,6 +31,7 @@ import { cn, getHandle } from "@/lib/utils"
 import { ReplyDialog } from "@/components/ReplyDialog"
 import { RetweetDialog } from "@/components/RetweetDialog"
 import { QuotedMessageCard } from "@/components/QuotedMessageCard"
+import { ShareDialog } from "@/components/ShareDialog"
 import { ImageLightbox } from "@/components/ImageLightbox"
 import { ActionRow } from "@/components/ActionRow"
 import { useMobile } from "@/hooks/use-mobile"
@@ -46,6 +47,7 @@ export default function StatusPage() {
     const [showReplyDialog, setShowReplyDialog] = useState(false)
     const [replyTarget, setReplyTarget] = useState<any>(null)
     const [showRetweetDialog, setShowRetweetDialog] = useState(false)
+    const [showShareDialog, setShowShareDialog] = useState(false)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
     const [refreshKey, setRefreshKey] = useState(0)
@@ -142,6 +144,10 @@ export default function StatusPage() {
         e.stopPropagation()
         setLightboxIndex(index)
         setLightboxOpen(true)
+    }
+
+    const handleShare = () => {
+        setShowShareDialog(true)
     }
 
     if (isLoading) {
@@ -310,7 +316,7 @@ export default function StatusPage() {
                             setMessage({ ...message, isStarred: result.data.isStarred })
                         }
                     }}
-                    onShare={undefined}
+                    onShare={handleShare}
                     size="lg"
                     className="px-2"
                 />
@@ -349,6 +355,13 @@ export default function StatusPage() {
                     // Navigate to home to show the new message
                     router.push('/')
                 }}
+            />
+
+            {/* Share Dialog */}
+            <ShareDialog
+                messageId={message.id}
+                open={showShareDialog}
+                onOpenChange={setShowShareDialog}
             />
 
             {/* Delete Dialog */}

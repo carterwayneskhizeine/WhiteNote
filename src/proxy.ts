@@ -13,7 +13,11 @@ export function proxy(request: NextRequest) {
 
   const isApiRoute = request.nextUrl.pathname.startsWith("/api")
 
-  if (isApiRoute) {
+  // 公开路由 - 不需要认证
+  const isPublicRoute = request.nextUrl.pathname.startsWith("/share") ||
+                        request.nextUrl.pathname.startsWith("/api/public")
+
+  if (isApiRoute || isPublicRoute) {
     return NextResponse.next()
   }
 
