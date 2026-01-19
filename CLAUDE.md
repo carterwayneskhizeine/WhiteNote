@@ -112,15 +112,22 @@ src/
 │   │       ├── page.tsx   # 评论详情页 (Comment detail page)
 │   │       └── reply/page.tsx # 移动端评论回复页面 (Mobile comment reply page)
 │   ├── retweet/page.tsx   # 移动端转发页面 (Mobile retweet page)
+│   ├── share/[id]/        # 公开分享页面 (Public share page)
 │   └── [workspace]/       # Workspace-scoped pages
 ├── components/            # React components
 │   ├── InputMachine.tsx   # 主页输入组件 (Main input component with TipTap editor)
 │   ├── ReplyDialog.tsx    # 回复对话框组件 (Reply dialog component)
 │   ├── RetweetDialog.tsx  # 转发对话框组件 (Retweet/quote dialog component)
+│   ├── ShareDialog.tsx    # 分享对话框组件 (Share dialog component)
 │   ├── CompactReplyInput.tsx # 紧凑回复输入组件 (Compact reply input component)
 │   ├── CommentsList.tsx   # 评论列表组件 (Comments list component)
 │   ├── MessageCard.tsx    # 主消息卡片组件 (Main message card component)
 │   ├── QuotedMessageCard.tsx # 引用消息卡片组件 (Quoted message card component)
+│   ├── ActionRow.tsx      # 操作按钮行组件 (Action buttons row component)
+│   ├── TipTapViewer.tsx   # 富文本查看器组件 (Rich text viewer component)
+│   ├── MediaGrid.tsx      # 媒体网格显示组件 (Media grid display component)
+│   ├── ImageLightbox.tsx  # 图片灯箱组件 (Image lightbox component)
+│   ├── GoldieAvatar.tsx   # AI/用户头像组件 (AI/User avatar component)
 │   ├── layout/            # 布局组件 (Layout components)
 │   │   ├── MainLayout.tsx # 主布局组件
 │   │   ├── LeftSidebar.tsx # 左侧边栏 (Desktop left sidebar)
@@ -134,6 +141,8 @@ src/
 │   └── ai/               # RAGFlow and AI service integrations
 ├── store/                # Zustand state management
 ├── hooks/                # Custom React hooks
+│   ├── use-share.ts      # 分享功能 Hook (Share functionality hook)
+│   └── use-mobile.ts     # 移动端检测 Hook (Mobile detection hook)
 └── types/                # TypeScript type definitions
 prisma/
 ├── schema.prisma         # Database schema
