@@ -35,6 +35,7 @@ import { ShareDialog } from "@/components/ShareDialog"
 import { GoldieAvatar } from "@/components/GoldieAvatar"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { useShare } from "@/hooks/useShare"
 import { TipTapViewer } from "@/components/TipTapViewer"
 import { ImageLightbox } from "@/components/ImageLightbox"
 import { MediaGrid } from "@/components/MediaGrid"
@@ -60,7 +61,7 @@ export function MessageCard({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showReplyDialog, setShowReplyDialog] = useState(false)
   const [showRetweetDialog, setShowRetweetDialog] = useState(false)
-  const [showShareDialog, setShowShareDialog] = useState(false)
+  const { showShareDialog, setShowShareDialog, handleShare: openShareDialog } = useShare()
   const [copied, setCopied] = useState(false)
   const router = useRouter()
   const [isExpanded, setIsExpanded] = useState(false)
@@ -184,12 +185,6 @@ export function MessageCard({
     setLightboxOpen(true)
   }
 
-  // Handle share - open share dialog
-  const handleShare = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setShowShareDialog(true)
-  }
-
   // 移动端单击、桌面端双击（1秒内）
   const handleClick = useDoubleClick({
     onDoubleClick: () => router.push(`/status/${message.id}`),
@@ -307,7 +302,10 @@ export function MessageCard({
               onRetweet={handleRetweet}
               starred={isStarred}
               onToggleStar={handleToggleStar}
-              onShare={handleShare}
+              onShare={(e) => {
+                e.stopPropagation()
+                openShareDialog(message.id)
+              }}
               size="md"
               className="mt-3"
             />

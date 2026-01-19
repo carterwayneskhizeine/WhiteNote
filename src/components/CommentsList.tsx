@@ -27,6 +27,7 @@ import { CommentItem } from "@/components/CommentItem"
 import { useMobile } from "@/hooks/use-mobile"
 import { detectAIMention } from "@/lib/utils/ai-detection"
 import { ShareDialog } from "@/components/ShareDialog"
+import { useShare } from "@/hooks/useShare"
 
 interface CommentsListProps {
   messageId: string
@@ -54,8 +55,7 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [commentToDelete, setCommentToDelete] = useState<Comment | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [showShareDialog, setShowShareDialog] = useState(false)
-  const [commentToShare, setCommentToShare] = useState<Comment | null>(null)
+  const { showShareDialog, setShowShareDialog, shareItemId, handleShareWithEvent } = useShare()
 
   // Manage starred state for each comment
   const [starredComments, setStarredComments] = useState<Set<string>>(new Set())
@@ -186,13 +186,6 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
     setCurrentMedias(medias)
     setLightboxIndex(index)
     setLightboxOpen(true)
-  }
-
-  // Handle share comment
-  const handleShare = (comment: Comment, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setCommentToShare(comment)
-    setShowShareDialog(true)
   }
 
   // Post new comment
@@ -374,7 +367,7 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
               onRetweet={(e) => handleRetweet(comment, e)}
               starred={starredComments.has(comment.id)}
               onToggleStar={(e) => handleToggleStar(comment, e)}
-              onShare={(e) => handleShare(comment, e)}
+              onShare={(e) => handleShareWithEvent(comment.id, e)}
               onImageClick={(index, e) => handleImageClick(index, comment.medias, e)}
               size="md"
               actionRowSize="sm"
@@ -441,7 +434,7 @@ export function CommentsList({ messageId, onCommentAdded }: CommentsListProps) {
 
       {/* Share Dialog */}
       <ShareDialog
-        messageId={commentToShare?.id || ""}
+        messageId={shareItemId || ""}
         open={showShareDialog}
         onOpenChange={setShowShareDialog}
         type="comment"

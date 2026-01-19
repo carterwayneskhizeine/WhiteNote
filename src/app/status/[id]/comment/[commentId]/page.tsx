@@ -40,6 +40,7 @@ import { CompactReplyInput } from "@/components/CompactReplyInput"
 import { CommentItem } from "@/components/CommentItem"
 import { useMobile } from "@/hooks/use-mobile"
 import { ShareDialog } from "@/components/ShareDialog"
+import { useShare } from "@/hooks/useShare"
 
 export default function CommentDetailPage() {
   const { id, commentId } = useParams() as { id: string; commentId: string }
@@ -67,7 +68,7 @@ export default function CommentDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [showShareDialog, setShowShareDialog] = useState(false)
+  const { showShareDialog, setShowShareDialog, handleShare, shareItemId } = useShare()
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [currentMedias, setCurrentMedias] = useState<Comment['medias']>([])
@@ -340,19 +341,6 @@ export default function CommentDetailPage() {
     setLightboxOpen(true)
   }
 
-  // Handle share - open share dialog
-  const handleShare = () => {
-    if (!comment) return
-    setShowShareDialog(true)
-  }
-
-  // Handle share for child comments
-  const handleChildShare = (childComment: Comment, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setReplyTarget(childComment)
-    setShowShareDialog(true)
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -513,7 +501,7 @@ export default function CommentDetailPage() {
           onRetweet={handleRetweet}
           starred={starredComments.has(comment.id)}
           onToggleStar={() => handleToggleStar(comment.id)}
-          onShare={handleShare}
+          onShare={() => handleShare(comment.id)}
           size="lg"
           className="px-2"
         />
@@ -579,7 +567,10 @@ export default function CommentDetailPage() {
                 e.stopPropagation()
                 handleToggleStar(childComment.id)
               }}
-              onShare={(e) => handleChildShare(childComment, e)}
+              onShare={(e) => {
+                e.stopPropagation()
+                handleShare(childComment.id)
+              }}
               onImageClick={(index, e) => handleImageClick(index, childComment.medias, e)}
               size="md"
               actionRowSize="sm"
@@ -614,7 +605,7 @@ export default function CommentDetailPage() {
 
       {/* Share Dialog */}
       <ShareDialog
-        messageId={replyTarget?.id || comment.id}
+        messageId={shareItemId || comment.id}
         open={showShareDialog}
         onOpenChange={setShowShareDialog}
         type="comment"
