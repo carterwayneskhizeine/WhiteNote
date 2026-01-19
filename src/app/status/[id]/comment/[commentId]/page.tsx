@@ -39,6 +39,7 @@ import { ActionRow } from "@/components/ActionRow"
 import { CompactReplyInput } from "@/components/CompactReplyInput"
 import { CommentItem } from "@/components/CommentItem"
 import { useMobile } from "@/hooks/use-mobile"
+import { ShareDialog } from "@/components/ShareDialog"
 
 export default function CommentDetailPage() {
   const { id, commentId } = useParams() as { id: string; commentId: string }
@@ -66,6 +67,7 @@ export default function CommentDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [showShareDialog, setShowShareDialog] = useState(false)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [currentMedias, setCurrentMedias] = useState<Comment['medias']>([])
@@ -338,6 +340,12 @@ export default function CommentDetailPage() {
     setLightboxOpen(true)
   }
 
+  // Handle share - open share dialog
+  const handleShare = () => {
+    if (!comment) return
+    setShowShareDialog(true)
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -498,7 +506,7 @@ export default function CommentDetailPage() {
           onRetweet={handleRetweet}
           starred={starredComments.has(comment.id)}
           onToggleStar={() => handleToggleStar(comment.id)}
-          onShare={undefined}
+          onShare={handleShare}
           size="lg"
           className="px-2"
         />
@@ -594,6 +602,14 @@ export default function CommentDetailPage() {
           // Navigate to home to show the new message
           router.push('/')
         }}
+      />
+
+      {/* Share Dialog */}
+      <ShareDialog
+        messageId={comment.id}
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+        type="comment"
       />
 
       {/* Delete Dialog */}

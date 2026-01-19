@@ -14,12 +14,14 @@ interface ShareDialogProps {
     messageId: string
     open: boolean
     onOpenChange: (open: boolean) => void
+    type?: 'message' | 'comment'  // 区分是帖子还是评论
 }
 
 export function ShareDialog({
     messageId,
     open,
     onOpenChange,
+    type = 'message',  // 默认为帖子
 }: ShareDialogProps) {
     const [shareUrl, setShareUrl] = useState("")
     const [copied, setCopied] = useState(false)
@@ -28,11 +30,14 @@ export function ShareDialog({
     // Generate share URL when dialog opens
     useEffect(() => {
         if (open && messageId) {
-            const url = `${window.location.origin}/share/${messageId}`
+            // 根据类型生成不同的URL
+            const url = type === 'comment'
+                ? `${window.location.origin}/share/comment/${messageId}`
+                : `${window.location.origin}/share/${messageId}`
             setShareUrl(url)
             setCopied(false)
         }
-    }, [open, messageId])
+    }, [open, messageId, type])
 
     const handleCopy = async () => {
         try {
@@ -67,7 +72,7 @@ export function ShareDialog({
                             <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
                                 <Share2 className="h-5 w-5 text-primary" />
                             </div>
-                            <DialogTitle className="text-lg">分享帖子</DialogTitle>
+                            <DialogTitle className="text-lg">分享{type === 'comment' ? '评论' : '帖子'}</DialogTitle>
                         </div>
                         <Button
                             variant="ghost"
@@ -83,7 +88,7 @@ export function ShareDialog({
                 <div className="space-y-4 pt-2">
                     {/* Description */}
                     <p className="text-sm text-muted-foreground">
-                        复制下面的链接，分享给其他人查看此帖子
+                        复制下面的链接，分享给其他人查看此{type === 'comment' ? '评论' : '帖子'}
                     </p>
 
                     {/* URL Input Box */}
@@ -145,7 +150,7 @@ export function ShareDialog({
                             💡
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            任何拥有此链接的人都可以查看此帖子，无需登录
+                            任何拥有此链接的人都可以查看此{type === 'comment' ? '评论' : '帖子'}，无需登录
                         </p>
                     </div>
                 </div>
