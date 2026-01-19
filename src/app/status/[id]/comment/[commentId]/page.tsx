@@ -346,6 +346,13 @@ export default function CommentDetailPage() {
     setShowShareDialog(true)
   }
 
+  // Handle share for child comments
+  const handleChildShare = (childComment: Comment, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setReplyTarget(childComment)
+    setShowShareDialog(true)
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -572,6 +579,7 @@ export default function CommentDetailPage() {
                 e.stopPropagation()
                 handleToggleStar(childComment.id)
               }}
+              onShare={(e) => handleChildShare(childComment, e)}
               onImageClick={(index, e) => handleImageClick(index, childComment.medias, e)}
               size="md"
               actionRowSize="sm"
@@ -606,7 +614,7 @@ export default function CommentDetailPage() {
 
       {/* Share Dialog */}
       <ShareDialog
-        messageId={comment.id}
+        messageId={replyTarget?.id || comment.id}
         open={showShareDialog}
         onOpenChange={setShowShareDialog}
         type="comment"

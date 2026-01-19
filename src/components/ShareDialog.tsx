@@ -7,7 +7,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Share2, Link2, Check, X } from "lucide-react"
+import { Share2, Link2, Check } from "lucide-react"
 import { useState, useEffect } from "react"
 
 interface ShareDialogProps {
@@ -67,21 +67,11 @@ export function ShareDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                                <Share2 className="h-5 w-5 text-primary" />
-                            </div>
-                            <DialogTitle className="text-lg">分享{type === 'comment' ? '评论' : '帖子'}</DialogTitle>
+                    <div className="flex items-center gap-2">
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Share2 className="h-5 w-5 text-primary" />
                         </div>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-full"
-                            onClick={() => onOpenChange(false)}
-                        >
-                            <X className="h-4 w-4" />
-                        </Button>
+                        <DialogTitle className="text-lg">分享{type === 'comment' ? '评论' : '帖子'}</DialogTitle>
                     </div>
                 </DialogHeader>
 
@@ -127,7 +117,7 @@ export function ShareDialog({
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex pt-2">
                         <Button
                             variant="outline"
                             className="flex-1 gap-2"
@@ -135,12 +125,6 @@ export function ShareDialog({
                         >
                             <Share2 className="h-4 w-4" />
                             在新窗口打开
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            onClick={() => onOpenChange(false)}
-                        >
-                            关闭
                         </Button>
                     </div>
 
