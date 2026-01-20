@@ -167,6 +167,7 @@ function getCommentFolderPath(workspaceId: string, messageOriginalFilename: stri
 
 /**
  * Parse file path to determine type and IDs
+ * Handles both original filenames (message_xyz.md) and friendly filenames (程序员鱼皮.md)
  */
 export function parseFilePath(filePath: string): {
   workspaceId: string
@@ -189,31 +190,79 @@ export function parseFilePath(filePath: string): {
   if (parts.length === 2 && parts[1].endsWith('.md')) {
     // Direct message file in workspace root
     const fileName = parts[1]
+    const workspaceId = parts[0]
+
+    // First check if it's an original filename (message_xyz.md)
     if (fileName.startsWith('message_')) {
       return {
-        workspaceId: parts[0],
+        workspaceId,
         type: 'message',
         messageId: fileName.replace('message_', '').replace('.md', '')
       }
+    }
+
+    // Otherwise, look up in workspace.json to find the message by currentFilename
+    try {
+      const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+      if (ws.version === 2) {
+        // Find message with matching currentFilename
+        for (const [_originalFilename, message] of Object.entries(ws.messages)) {
+          if (message.currentFilename === fileName) {
+            return {
+              workspaceId,
+              type: 'message',
+              messageId: message.id
+            }
+          }
+        }
+      }
+    } catch {
+      // Fall through to return null
     }
   }
 
   if (parts.length >= 3 && parts[parts.length - 1].endsWith('.md')) {
     // Comment in subfolder
-    const messageFilename = parts[1] // e.g., "message_xyz"
-    const commentFolder = parts[2] // e.g., "great-reply"
-    const commentFilename = parts[parts.length - 1] // e.g., "comment_abc123.md"
+    const workspaceId = parts[0]
+    const folderName = parts[1] // Could be message filename or friendly folder name
+    const commentSubfolder = parts[2] // e.g., "great-reply"
+    const commentFileName = parts[parts.length - 1] // e.g., "comment_abc123.md" or friendly name
 
-    // Extract comment ID from filename
-    const commentId = commentFilename.replace('comment_', '').replace('.md', '')
+    // Look up in workspace.json to find the comment
+    try {
+      const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+      if (ws.version === 2) {
+        // Find comment by matching currentFilename
+        for (const [originalFilename, comment] of Object.entries(ws.comments)) {
+          if (comment.currentFilename === commentFileName && comment.folderName === commentSubfolder) {
+            return {
+              workspaceId,
+              type: 'comment',
+              messageId: comment.messageId,
+              commentId: comment.id,
+              messageFilename: folderName,
+              commentFolder: commentSubfolder,
+              commentFilename: commentFileName
+            }
+          }
+        }
+      }
+    } catch {
+      // Fall through
+    }
 
-    return {
-      workspaceId: parts[0],
-      type: 'comment',
-      messageFilename,
-      commentFolder,
-      commentFilename,
-      commentId
+    // Fallback: try to extract ID from original filename format
+    if (commentFileName.startsWith('comment_')) {
+      const commentId = commentFileName.replace('comment_', '').replace('.md', '')
+      return {
+        workspaceId,
+        type: 'comment',
+        messageId: folderName.replace('message_', '').replace('.md', ''),
+        commentId,
+        messageFilename: folderName,
+        commentFolder: commentSubfolder,
+        commentFilename: commentFileName
+      }
     }
   }
 
