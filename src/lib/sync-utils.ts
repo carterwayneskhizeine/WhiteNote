@@ -128,19 +128,44 @@ export function generateFriendlyName(content: string): string {
  * Get workspace directory path (handles renamed folders)
  */
 function getWorkspaceDir(workspaceId: string): string {
-  // If workspace.json exists, check for currentFolderName
-  const workspaceFile = path.join(SYNC_DIR, workspaceId, ".whitenote", "workspace.json")
-  if (fs.existsSync(workspaceFile)) {
-    try {
-      const data = JSON.parse(fs.readFileSync(workspaceFile, "utf-8"))
-      if (data.version === 2 && data.workspace?.currentFolderName) {
-        return path.join(SYNC_DIR, data.workspace.currentFolderName)
-      }
-    } catch {
-      // Fall through to default
-    }
+  const defaultPath = path.join(SYNC_DIR, workspaceId)
+
+  // If default path exists, use it (folder wasn't renamed)
+  if (fs.existsSync(defaultPath)) {
+    return defaultPath
   }
-  return path.join(SYNC_DIR, workspaceId)
+
+  // Default path doesn't exist, folder might have been manually renamed
+  // Scan all directories to find the one with matching workspace.json
+  if (!fs.existsSync(SYNC_DIR)) {
+    return defaultPath
+  }
+
+  try {
+    const dirs = fs.readdirSync(SYNC_DIR, { withFileTypes: true })
+    const workspaceDirs = dirs.filter(d => d.isDirectory())
+
+    for (const dir of workspaceDirs) {
+      const workspaceFile = path.join(SYNC_DIR, dir.name, ".whitenote", "workspace.json")
+      if (fs.existsSync(workspaceFile)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(workspaceFile, "utf-8"))
+          if (data.version === 2 && data.workspace?.id === workspaceId) {
+            // Found the renamed folder (e.g., MD_SYNC)
+            console.log(`[SyncUtils] Found renamed workspace folder: ${dir.name} for workspaceId: ${workspaceId}`)
+            return path.join(SYNC_DIR, dir.name)
+          }
+        } catch {
+          // Continue searching
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[SyncUtils] Error scanning workspace directories:', error)
+  }
+
+  // Fallback to default path (will be created if it doesn't exist)
+  return defaultPath
 }
 
 /**
@@ -148,21 +173,6 @@ function getWorkspaceDir(workspaceId: string): string {
  */
 function getWorkspaceFile(workspaceId: string): string {
   return path.join(getWorkspaceDir(workspaceId), ".whitenote", "workspace.json")
-}
-
-/**
- * Get comment folder path for a message
- */
-function getCommentFolderPath(workspaceId: string, messageOriginalFilename: string): string {
-  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
-  if (ws.version === 2) {
-    const message = ws.messages[messageOriginalFilename]
-    if (message?.commentFolderName) {
-      return path.join(getWorkspaceDir(workspaceId), message.commentFolderName)
-    }
-  }
-  // Fallback: use message filename without .md extension
-  return path.join(getWorkspaceDir(workspaceId), messageOriginalFilename.replace('.md', ''))
 }
 
 /**
@@ -233,7 +243,7 @@ export function parseFilePath(filePath: string): {
       const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
       if (ws.version === 2) {
         // Find comment by matching currentFilename
-        for (const [originalFilename, comment] of Object.entries(ws.comments)) {
+        for (const [_originalFilename, comment] of Object.entries(ws.comments)) {
           if (comment.currentFilename === commentFileName && comment.folderName === commentSubfolder) {
             return {
               workspaceId,
@@ -495,9 +505,55 @@ export async function exportToLocal(type: "message" | "comment", id: string) {
     // ========== COMMENT EXPORT ==========
     // Get message filename to create comment folder
     const messageFilename = `message_${data.messageId}.md`
-    const commentFolderName = ws.messages[messageFilename]?.commentFolderName || messageFilename.replace('.md', '')
+    let commentFolderName = ws.messages[messageFilename]?.commentFolderName || messageFilename.replace('.md', '')
 
-    // Create comment folder
+    // Check if the folder from workspace.json exists
+    const defaultCommentFolderPath = path.join(workspaceDir, commentFolderName)
+
+    if (!fs.existsSync(defaultCommentFolderPath)) {
+      // Folder was manually renamed, scan for the actual folder
+      console.log(`[SyncUtils] Comment folder '${commentFolderName}' not found, scanning for renamed folder...`)
+
+      try {
+        const dirs = fs.readdirSync(workspaceDir, { withFileTypes: true })
+        const subdirs = dirs.filter(d => d.isDirectory() && d.name !== '.whitenote')
+
+        // Check each subfolder to see if it contains comments for this message
+        for (const subdir of subdirs) {
+          const subdirPath = path.join(workspaceDir, subdir.name)
+
+          // Read files in this subfolder
+          const files = fs.readdirSync(subdirPath)
+          const mdFiles = files.filter(f => f.endsWith('.md'))
+
+          if (mdFiles.length === 0) continue
+
+          // Check if any of these .md files are comments for this message
+          // by looking them up in workspace.json
+          let foundMessageFolder = false
+
+          for (const mdFile of mdFiles) {
+            // Find the comment in workspace.json
+            const commentEntry = Object.values(ws.comments).find(
+              c => c.currentFilename === mdFile
+            )
+
+            if (commentEntry && commentEntry.messageId === data.messageId) {
+              console.log(`[SyncUtils] Found renamed comment folder '${subdir.name}' via file '${mdFile}'`)
+              commentFolderName = subdir.name
+              foundMessageFolder = true
+              break
+            }
+          }
+
+          if (foundMessageFolder) break
+        }
+      } catch (error) {
+        console.error('[SyncUtils] Error scanning for renamed comment folder:', error)
+      }
+    }
+
+    // Create comment folder if it doesn't exist
     const commentFolderPath = path.join(workspaceDir, commentFolderName)
     ensureDirectoryExists(commentFolderPath)
 
