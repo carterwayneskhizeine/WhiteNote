@@ -12,6 +12,56 @@ function ensureDirectoryExists(dirPath: string) {
   }
 }
 
+/**
+ * ============================================================================
+ * VERSION 2 SCHEMA INTERFACES
+ * ============================================================================
+ */
+
+interface MessageMeta {
+  id: string
+  type: "message"
+  originalFilename: string
+  currentFilename: string
+  commentFolderName: string
+  created_at: string
+  updated_at: string
+  author: string
+  authorName: string
+  tags: string
+}
+
+interface CommentMeta {
+  id: string
+  type: "comment"
+  messageId: string
+  parentId: string | null
+  originalFilename: string
+  currentFilename: string
+  folderName: string
+  created_at: string
+  updated_at: string
+  author: string
+  authorName: string
+  tags: string
+}
+
+interface WorkspaceInfoV2 {
+  id: string
+  originalFolderName: string
+  currentFolderName: string
+  name: string
+  lastSyncedAt: string
+}
+
+interface WorkspaceDataV2 {
+  version: 2
+  workspace: WorkspaceInfoV2
+  messages: Record<string, MessageMeta>
+  comments: Record<string, CommentMeta>
+}
+
+// Keep v1 interfaces for backward compatibility during transition
 interface FileMeta {
   type: "message" | "comment"
   id: string
@@ -20,7 +70,7 @@ interface FileMeta {
   author: string
   authorName: string
   tags: string
-  messageId: string | null  // For comments: which message they belong to
+  messageId: string | null
 }
 
 interface WorkspaceInfo {
@@ -32,20 +82,64 @@ interface WorkspaceInfo {
 interface Relations {
   [messageFileKey: string]: {
     type: "message"
-    comments: string[]  // Array of comment file keys
+    comments: string[]
   }
 }
 
-interface WorkspaceData {
+interface WorkspaceDataV1 {
   workspace: WorkspaceInfo
   files: Record<string, FileMeta>
   relations: Relations
 }
 
+type WorkspaceData = WorkspaceDataV2 | WorkspaceDataV1
+
 /**
- * Get workspace directory path for a specific workspace
+ * ============================================================================
+ * HELPER FUNCTIONS
+ * ============================================================================
+ */
+
+/**
+ * Get friendly name from first line of content (excluding tags)
+ */
+export function generateFriendlyName(content: string): string {
+  // Get first non-empty line
+  const lines = content.split('\n').filter(line => line.trim())
+  const firstLine = lines[0] || ""
+
+  // Remove tags from first line
+  const withoutTags = firstLine.replace(/^#[\w\u4e00-\u9fa5]+(\s+)?/g, '').trim()
+
+  // Use sanitized first line, or fallback to content substring
+  let name = withoutTags || content.substring(0, 50).split(/\s+/)[0] || "untitled"
+
+  // Sanitize: remove special chars, replace spaces with hyphens
+  name = name
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .substring(0, 50)
+
+  return name || "untitled"
+}
+
+/**
+ * Get workspace directory path (handles renamed folders)
  */
 function getWorkspaceDir(workspaceId: string): string {
+  // If workspace.json exists, check for currentFolderName
+  const workspaceFile = path.join(SYNC_DIR, workspaceId, ".whitenote", "workspace.json")
+  if (fs.existsSync(workspaceFile)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(workspaceFile, "utf-8"))
+      if (data.version === 2 && data.workspace?.currentFolderName) {
+        return path.join(SYNC_DIR, data.workspace.currentFolderName)
+      }
+    } catch {
+      // Fall through to default
+    }
+  }
   return path.join(SYNC_DIR, workspaceId)
 }
 
@@ -57,35 +151,175 @@ function getWorkspaceFile(workspaceId: string): string {
 }
 
 /**
+ * Get comment folder path for a message
+ */
+function getCommentFolderPath(workspaceId: string, messageOriginalFilename: string): string {
+  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  if (ws.version === 2) {
+    const message = ws.messages[messageOriginalFilename]
+    if (message?.commentFolderName) {
+      return path.join(getWorkspaceDir(workspaceId), message.commentFolderName)
+    }
+  }
+  // Fallback: use message filename without .md extension
+  return path.join(getWorkspaceDir(workspaceId), messageOriginalFilename.replace('.md', ''))
+}
+
+/**
+ * Parse file path to determine type and IDs
+ */
+export function parseFilePath(filePath: string): {
+  workspaceId: string
+  type: 'message' | 'comment'
+  messageId?: string
+  commentId?: string
+  messageFilename?: string
+  commentFolder?: string
+  commentFilename?: string
+} | null {
+  const relativePath = path.relative(SYNC_DIR, filePath)
+  const parts = relativePath.split(path.sep)
+
+  if (parts.length < 2) return null
+
+  // parts[0] = workspace folder (could be renamed)
+  // parts[1] = message file OR message comment folder
+  // parts[2...] = nested comment structure
+
+  if (parts.length === 2 && parts[1].endsWith('.md')) {
+    // Direct message file in workspace root
+    const fileName = parts[1]
+    if (fileName.startsWith('message_')) {
+      return {
+        workspaceId: parts[0],
+        type: 'message',
+        messageId: fileName.replace('message_', '').replace('.md', '')
+      }
+    }
+  }
+
+  if (parts.length >= 3 && parts[parts.length - 1].endsWith('.md')) {
+    // Comment in subfolder
+    const messageFilename = parts[1] // e.g., "message_xyz"
+    const commentFolder = parts[2] // e.g., "great-reply"
+    const commentFilename = parts[parts.length - 1] // e.g., "comment_abc123.md"
+
+    // Extract comment ID from filename
+    const commentId = commentFilename.replace('comment_', '').replace('.md', '')
+
+    return {
+      workspaceId: parts[0],
+      type: 'comment',
+      messageFilename,
+      commentFolder,
+      commentFilename,
+      commentId
+    }
+  }
+
+  return null
+}
+
+/**
+ * ============================================================================
+ * WORKSPACE DATA MANAGEMENT
+ * ============================================================================
+ */
+
+/**
  * Read Workspace JSON for a specific workspace
  */
 export function getWorkspaceData(workspaceId: string): WorkspaceData {
   const workspaceFile = getWorkspaceFile(workspaceId)
   if (!fs.existsSync(workspaceFile)) {
-    // Return default structure
+    // Return default v2 structure
     return {
+      version: 2,
       workspace: {
         id: workspaceId,
+        originalFolderName: workspaceId,
+        currentFolderName: workspaceId,
         name: "",
         lastSyncedAt: new Date().toISOString()
       },
-      files: {},
-      relations: {}
+      messages: {},
+      comments: {}
     }
   }
   try {
-    return JSON.parse(fs.readFileSync(workspaceFile, "utf-8"))
+    const data = JSON.parse(fs.readFileSync(workspaceFile, "utf-8"))
+    // If v1, migrate to v2
+    if (!data.version || data.version < 2) {
+      return migrateV1ToV2(data as WorkspaceDataV1, workspaceId)
+    }
+    return data as WorkspaceDataV2
   } catch {
     return {
+      version: 2,
       workspace: {
         id: workspaceId,
+        originalFolderName: workspaceId,
+        currentFolderName: workspaceId,
         name: "",
         lastSyncedAt: new Date().toISOString()
       },
-      files: {},
-      relations: {}
+      messages: {},
+      comments: {}
     }
   }
+}
+
+/**
+ * Migrate v1 schema to v2
+ */
+function migrateV1ToV2(v1: WorkspaceDataV1, workspaceId: string): WorkspaceDataV2 {
+  const v2: WorkspaceDataV2 = {
+    version: 2,
+    workspace: {
+      id: v1.workspace.id,
+      originalFolderName: workspaceId,
+      currentFolderName: workspaceId,
+      name: v1.workspace.name,
+      lastSyncedAt: v1.workspace.lastSyncedAt
+    },
+    messages: {},
+    comments: {}
+  }
+
+  // Convert files to messages/comments
+  for (const [fileKey, fileMeta] of Object.entries(v1.files)) {
+    if (fileMeta.type === 'message') {
+      v2.messages[fileKey] = {
+        id: fileMeta.id,
+        type: 'message',
+        originalFilename: `${fileKey}.md`,
+        currentFilename: `${fileKey}.md`,
+        commentFolderName: fileKey,
+        created_at: fileMeta.created_at,
+        updated_at: fileMeta.updated_at,
+        author: fileMeta.author,
+        authorName: fileMeta.authorName,
+        tags: fileMeta.tags
+      }
+    } else if (fileMeta.type === 'comment') {
+      v2.comments[fileKey] = {
+        id: fileMeta.id,
+        type: 'comment',
+        messageId: fileMeta.messageId || '',
+        parentId: null,
+        originalFilename: `${fileKey}.md`,
+        currentFilename: `${fileKey}.md`,
+        folderName: fileKey,
+        created_at: fileMeta.created_at,
+        updated_at: fileMeta.updated_at,
+        author: fileMeta.author,
+        authorName: fileMeta.authorName,
+        tags: fileMeta.tags
+      }
+    }
+  }
+
+  return v2
 }
 
 /**
@@ -101,6 +335,12 @@ function saveWorkspaceData(workspaceId: string, data: WorkspaceData) {
   const workspaceFile = getWorkspaceFile(workspaceId)
   fs.writeFileSync(workspaceFile, JSON.stringify(data, null, 2))
 }
+
+/**
+ * ============================================================================
+ * PARSE MD FILE
+ * ============================================================================
+ */
 
 /**
  * Parse MD Content to extract tags and body
@@ -120,7 +360,13 @@ export function parseMdFile(content: string) {
 }
 
 /**
- * EXPORT: DB -> Local File (organized by workspace)
+ * ============================================================================
+ * EXPORT: DB -> Local File
+ * ============================================================================
+ */
+
+/**
+ * Export message or comment to local file
  */
 export async function exportToLocal(type: "message" | "comment", id: string) {
   let data: any
@@ -163,67 +409,116 @@ export async function exportToLocal(type: "message" | "comment", id: string) {
   const workspaceDir = getWorkspaceDir(workspaceId)
   ensureDirectoryExists(workspaceDir)
 
-  const fileName = `${type}_${data.id}.md`
-  const filePath = path.join(workspaceDir, fileName)
+  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
 
-  // Write File
-  fs.writeFileSync(filePath, fileContent)
+  if (type === "message") {
+    // ========== MESSAGE EXPORT ==========
+    const originalFilename = `message_${data.id}.md`
+    const friendlyName = generateFriendlyName(data.content)
+    const currentFilename = `${friendlyName}.md`
 
-  // Update Workspace JSON
-  const ws = getWorkspaceData(workspaceId)
+    const filePath = path.join(workspaceDir, currentFilename)
 
-  // Update workspace info
-  ws.workspace.id = workspaceId
-  ws.workspace.name = type === "message"
-    ? (data.workspace?.name || "")
-    : (data.message?.workspace?.name || "")
-  ws.workspace.lastSyncedAt = new Date().toISOString()
+    // Write file
+    fs.writeFileSync(filePath, fileContent)
 
-  // Add file metadata
-  const fileKey = fileName.replace(".md", "")
-  ws.files[fileKey] = {
-    type,
-    id: data.id,
-    created_at: data.createdAt.toISOString(),
-    updated_at: new Date().toISOString(),
-    author: data.author?.email || "unknown",
-    authorName: data.author?.name || "Unknown",
-    tags: tagString,
-    messageId: type === "comment" ? data.messageId : null
-  }
+    // Update workspace.json
+    ws.workspace.id = workspaceId
+    ws.workspace.name = data.workspace?.name || ""
+    ws.workspace.lastSyncedAt = new Date().toISOString()
 
-  // Update relations for comments
-  if (type === "comment") {
-    const messageFileKey = `message_${data.messageId}`
-    if (!ws.relations[messageFileKey]) {
-      ws.relations[messageFileKey] = {
-        type: "message",
-        comments: []
-      }
+    ws.messages[originalFilename] = {
+      id: data.id,
+      type: "message",
+      originalFilename: originalFilename,
+      currentFilename: currentFilename,
+      commentFolderName: originalFilename.replace('.md', ''),
+      created_at: data.createdAt.toISOString(),
+      updated_at: new Date().toISOString(),
+      author: data.author?.email || "unknown",
+      authorName: data.author?.name || "Unknown",
+      tags: tagString
     }
-    if (!ws.relations[messageFileKey].comments.includes(fileKey)) {
-      ws.relations[messageFileKey].comments.push(fileKey)
+
+    saveWorkspaceData(workspaceId, ws)
+    console.log(`[SyncUtils] Exported message ${id} to ${workspaceId}/${currentFilename}`)
+  } else {
+    // ========== COMMENT EXPORT ==========
+    // Get message filename to create comment folder
+    const messageFilename = `message_${data.messageId}.md`
+    const commentFolderName = ws.messages[messageFilename]?.commentFolderName || messageFilename.replace('.md', '')
+
+    // Create comment folder
+    const commentFolderPath = path.join(workspaceDir, commentFolderName)
+    ensureDirectoryExists(commentFolderPath)
+
+    const originalFilename = `comment_${data.id}.md`
+    const friendlyName = generateFriendlyName(data.content)
+    const currentFilename = `${friendlyName}.md`
+
+    const filePath = path.join(commentFolderPath, currentFilename)
+
+    // Write file
+    fs.writeFileSync(filePath, fileContent)
+
+    // Update workspace.json
+    ws.workspace.id = workspaceId
+    ws.workspace.name = data.message?.workspace?.name || ""
+    ws.workspace.lastSyncedAt = new Date().toISOString()
+
+    ws.comments[originalFilename] = {
+      id: data.id,
+      type: "comment",
+      messageId: data.messageId,
+      parentId: data.parentId,
+      originalFilename: originalFilename,
+      currentFilename: currentFilename,
+      folderName: commentFolderName,
+      created_at: data.createdAt.toISOString(),
+      updated_at: new Date().toISOString(),
+      author: data.author?.email || "unknown",
+      authorName: data.author?.name || "Unknown",
+      tags: tagString
     }
+
+    saveWorkspaceData(workspaceId, ws)
+    console.log(`[SyncUtils] Exported comment ${id} to ${workspaceId}/${commentFolderName}/${currentFilename}`)
   }
-
-  saveWorkspaceData(workspaceId, ws)
-
-  console.log(`[SyncUtils] Exported ${type} ${id} to ${workspaceId}/${fileName}`)
 }
 
 /**
+ * ============================================================================
  * IMPORT: Local File -> DB
+ * ============================================================================
  */
-export async function importFromLocal(workspaceId: string, fileName: string) {
-  const ws = getWorkspaceData(workspaceId)
-  const meta = ws.files[fileName.replace(".md", "")]
-  if (!meta) {
-    console.log(`[SyncUtils] Unknown file ${fileName} in workspace ${workspaceId}, skipping`)
+
+/**
+ * Import from local file to DB
+ */
+export async function importFromLocal(workspaceId: string, filePath: string) {
+  const parsed = parseFilePath(filePath)
+  if (!parsed) {
+    console.log(`[SyncUtils] Could not parse file path ${filePath}, skipping`)
     return
   }
 
-  const workspaceDir = getWorkspaceDir(workspaceId)
-  const filePath = path.join(workspaceDir, fileName)
+  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  let meta: MessageMeta | CommentMeta | undefined
+  let originalFilename: string
+
+  if (parsed.type === 'message') {
+    originalFilename = `message_${parsed.messageId}.md`
+    meta = ws.messages[originalFilename]
+  } else {
+    originalFilename = `comment_${parsed.commentId}.md`
+    meta = ws.comments[originalFilename]
+  }
+
+  if (!meta) {
+    console.log(`[SyncUtils] Unknown file ${filePath} in workspace ${workspaceId}, skipping`)
+    return
+  }
+
   if (!fs.existsSync(filePath)) {
     console.log(`[SyncUtils] File ${filePath} not found, skipping`)
     return
@@ -232,37 +527,34 @@ export async function importFromLocal(workspaceId: string, fileName: string) {
   const stats = fs.statSync(filePath)
   const lastModified = stats.mtime.toISOString()
 
-  // Check if file was actually modified (compare with workspace metadata)
+  // Check if file was actually modified
   if (meta.updated_at === lastModified) {
-    console.log(`[SyncUtils] File ${fileName} not modified, skipping`)
+    console.log(`[SyncUtils] File ${filePath} not modified, skipping`)
     return
   }
 
   const contentRaw = fs.readFileSync(filePath, "utf-8")
   const { tags, content } = parseMdFile(contentRaw)
 
-  // 1. Update DB Content and Tags
+  // Update DB Content and Tags
   const record = await prisma.$transaction(async (tx) => {
     let data: any
-    if (meta.type === "message") {
+    if (meta!.type === "message") {
       data = await tx.message.findUnique({
-        where: { id: meta.id },
+        where: { id: meta!.id },
         include: { author: true }
       })
       if (data) {
-        // Update content
         await tx.message.update({
-          where: { id: meta.id },
+          where: { id: meta!.id },
           data: { content }
         })
 
-        // Always update tags (even if empty - to remove all tags)
         const { batchUpsertTags } = await import("@/lib/tag-utils")
         const tagIds = tags.length > 0 ? await batchUpsertTags(tags) : []
 
-        // Delete existing tags and create new ones (or none if tagIds is empty)
         await tx.message.update({
-          where: { id: meta.id },
+          where: { id: meta!.id },
           data: {
             tags: {
               deleteMany: {},
@@ -273,23 +565,20 @@ export async function importFromLocal(workspaceId: string, fileName: string) {
       }
     } else {
       data = await tx.comment.findUnique({
-        where: { id: meta.id },
+        where: { id: (meta as CommentMeta).id },
         include: { author: true }
       })
       if (data) {
-        // Update content
         await tx.comment.update({
-          where: { id: meta.id },
+          where: { id: (meta as CommentMeta).id },
           data: { content }
         })
 
-        // Always update tags (even if empty - to remove all tags)
         const { batchUpsertTags } = await import("@/lib/tag-utils")
         const tagIds = tags.length > 0 ? await batchUpsertTags(tags) : []
 
-        // Delete existing tags and create new ones (or none if tagIds is empty)
         await tx.comment.update({
-          where: { id: meta.id },
+          where: { id: (meta as CommentMeta).id },
           data: {
             tags: {
               deleteMany: {},
@@ -307,16 +596,15 @@ export async function importFromLocal(workspaceId: string, fileName: string) {
     return
   }
 
-  // 2. Update Workspace JSON with new modified time and tags
+  // Update Workspace JSON with new modified time and tags
   meta.updated_at = lastModified
   meta.tags = tags.map(t => `#${t}`).join(" ")
   ws.workspace.lastSyncedAt = new Date().toISOString()
   saveWorkspaceData(workspaceId, ws)
 
-  console.log(`[SyncUtils] Imported ${fileName} to DB with ${tags.length} tags`)
+  console.log(`[SyncUtils] Imported ${filePath} to DB with ${tags.length} tags`)
 
-  // 3. Trigger RAGFlow Sync
-  // Find workspace associated with this content
+  // Trigger RAGFlow Sync
   let actualWorkspaceId: string | null = null
   if (meta.type === "message") {
     const msg = await prisma.message.findUnique({
@@ -325,9 +613,8 @@ export async function importFromLocal(workspaceId: string, fileName: string) {
     })
     actualWorkspaceId = msg?.workspaceId || null
   } else if (meta.type === "comment") {
-    // Comments need to get workspace through the associated message
     const comment = await prisma.comment.findUnique({
-      where: { id: meta.id },
+      where: { id: (meta as CommentMeta).id },
       select: { message: { select: { workspaceId: true } } }
     })
     actualWorkspaceId = comment?.message?.workspaceId || null
@@ -342,14 +629,19 @@ export async function importFromLocal(workspaceId: string, fileName: string) {
     })
   }
 
-  console.log(`[SyncUtils] Imported ${fileName} to DB and triggered RAGFlow sync`)
+  console.log(`[SyncUtils] Imported ${filePath} to DB and triggered RAGFlow sync`)
 }
 
 /**
- * Export all messages and comments to local files (organized by workspace)
+ * ============================================================================
+ * BULK OPERATIONS
+ * ============================================================================
+ */
+
+/**
+ * Export all messages and comments to local files
  */
 export async function exportAllToLocal(userId: string) {
-  // Get all messages with their workspaces
   const messages = await prisma.message.findMany({
     where: { authorId: userId },
     include: {
@@ -359,7 +651,6 @@ export async function exportAllToLocal(userId: string) {
     }
   })
 
-  // Get all comments with their workspaces
   const comments = await prisma.comment.findMany({
     where: { authorId: userId },
     include: {
@@ -374,12 +665,11 @@ export async function exportAllToLocal(userId: string) {
     }
   })
 
-  // Group by workspace
   const workspaceGroups = new Map<string, { messages: any[], comments: any[] }>()
 
   for (const message of messages) {
     const wsId = message.workspaceId
-    if (!wsId) continue // Skip messages without workspace
+    if (!wsId) continue
     if (!workspaceGroups.has(wsId)) {
       workspaceGroups.set(wsId, { messages: [], comments: [] })
     }
@@ -388,14 +678,13 @@ export async function exportAllToLocal(userId: string) {
 
   for (const comment of comments) {
     const wsId = comment.message.workspaceId
-    if (!wsId) continue // Skip comments without workspace
+    if (!wsId) continue
     if (!workspaceGroups.has(wsId)) {
       workspaceGroups.set(wsId, { messages: [], comments: [] })
     }
     workspaceGroups.get(wsId)!.comments.push(comment)
   }
 
-  // Export to each workspace directory
   let totalMessages = 0
   let totalComments = 0
   const workspacesExported: string[] = []
@@ -422,7 +711,7 @@ export async function exportAllToLocal(userId: string) {
 }
 
 /**
- * Import all modified files from local to DB (all workspaces)
+ * Import all modified files from local to DB
  */
 export async function importAllFromLocal() {
   const results = {
@@ -432,7 +721,6 @@ export async function importAllFromLocal() {
     errors: 0
   }
 
-  // Get all workspace directories
   if (!fs.existsSync(SYNC_DIR)) {
     return results
   }
@@ -449,14 +737,16 @@ export async function importAllFromLocal() {
     }
 
     try {
-      const ws = getWorkspaceData(workspaceId)
+      const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+      if (ws.version !== 2) continue
+
       results.workspacesProcessed.push(workspaceId)
 
-      for (const [fileName, meta] of Object.entries(ws.files)) {
+      // Process message files
+      for (const [originalFilename, meta] of Object.entries(ws.messages)) {
         try {
-          const actualFileName = `${fileName}.md`
           const workspaceDirPath = getWorkspaceDir(workspaceId)
-          const filePath = path.join(workspaceDirPath, actualFileName)
+          const filePath = path.join(workspaceDirPath, meta.currentFilename)
 
           if (!fs.existsSync(filePath)) {
             results.skipped++
@@ -466,15 +756,40 @@ export async function importAllFromLocal() {
           const stats = fs.statSync(filePath)
           const lastModified = stats.mtime.toISOString()
 
-          // Only import if modified
           if (meta.updated_at !== lastModified) {
-            await importFromLocal(workspaceId, actualFileName)
+            await importFromLocal(workspaceId, filePath)
             results.imported++
           } else {
             results.skipped++
           }
         } catch (error) {
-          console.error(`[SyncUtils] Error importing ${fileName}:`, error)
+          console.error(`[SyncUtils] Error importing ${originalFilename}:`, error)
+          results.errors++
+        }
+      }
+
+      // Process comment files
+      for (const [originalFilename, meta] of Object.entries(ws.comments)) {
+        try {
+          const workspaceDirPath = getWorkspaceDir(workspaceId)
+          const filePath = path.join(workspaceDirPath, meta.folderName, meta.currentFilename)
+
+          if (!fs.existsSync(filePath)) {
+            results.skipped++
+            continue
+          }
+
+          const stats = fs.statSync(filePath)
+          const lastModified = stats.mtime.toISOString()
+
+          if (meta.updated_at !== lastModified) {
+            await importFromLocal(workspaceId, filePath)
+            results.imported++
+          } else {
+            results.skipped++
+          }
+        } catch (error) {
+          console.error(`[SyncUtils] Error importing ${originalFilename}:`, error)
           results.errors++
         }
       }
@@ -488,55 +803,193 @@ export async function importAllFromLocal() {
 }
 
 /**
- * Delete local MD file and update workspace.json
+ * ============================================================================
+ * DELETE OPERATIONS
+ * ============================================================================
+ */
+
+/**
+ * Delete local file and update workspace.json
  */
 export async function deleteLocalFile(type: "message" | "comment", id: string, workspaceId: string) {
+  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
   const workspaceDir = getWorkspaceDir(workspaceId)
-  const fileName = `${type}_${id}.md`
-  const filePath = path.join(workspaceDir, fileName)
 
-  // Delete the MD file if it exists
-  if (fs.existsSync(filePath)) {
-    try {
-      fs.unlinkSync(filePath)
-      console.log(`[SyncUtils] Deleted local file: ${workspaceId}/${fileName}`)
-    } catch (error) {
-      console.error(`[SyncUtils] Failed to delete local file ${filePath}:`, error)
-    }
-  }
+  if (type === "message") {
+    const originalFilename = `message_${id}.md`
+    const message = ws.messages[originalFilename]
+    if (!message) return
 
-  // Update workspace.json
-  const ws = getWorkspaceData(workspaceId)
-  const fileKey = fileName.replace('.md', '')
-
-  // Remove from files metadata
-  if (ws.files[fileKey]) {
-    delete ws.files[fileKey]
-  }
-
-  // Remove from relations (for comments)
-  if (type === 'comment') {
-    // Find which message this comment belongs to
-    for (const [messageFileKey, relationData] of Object.entries(ws.relations)) {
-      if (relationData.comments.includes(fileKey)) {
-        relationData.comments = relationData.comments.filter(c => c !== fileKey)
-        // Clean up empty relations
-        if (relationData.comments.length === 0) {
-          delete ws.relations[messageFileKey]
-        }
-        break
+    // Delete message file
+    const filePath = path.join(workspaceDir, message.currentFilename)
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath)
+        console.log(`[SyncUtils] Deleted message file: ${filePath}`)
+      } catch (error) {
+        console.error(`[SyncUtils] Failed to delete ${filePath}:`, error)
       }
     }
-  } else if (type === 'message') {
-    // Remove the message from relations
-    if (ws.relations[fileKey]) {
-      delete ws.relations[fileKey]
+
+    // Delete comment folder if exists
+    const commentFolderPath = path.join(workspaceDir, message.commentFolderName)
+    if (fs.existsSync(commentFolderPath)) {
+      try {
+        fs.rmSync(commentFolderPath, { recursive: true, force: true })
+        console.log(`[SyncUtils] Deleted comment folder: ${commentFolderPath}`)
+      } catch (error) {
+        console.error(`[SyncUtils] Failed to delete ${commentFolderPath}:`, error)
+      }
     }
+
+    // Remove from workspace.json
+    delete ws.messages[originalFilename]
+    saveWorkspaceData(workspaceId, ws)
+    console.log(`[SyncUtils] Updated workspace.json for message ${id}`)
+  } else {
+    const originalFilename = `comment_${id}.md`
+    const comment = ws.comments[originalFilename]
+    if (!comment) return
+
+    // Delete comment file
+    const filePath = path.join(workspaceDir, comment.folderName, comment.currentFilename)
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath)
+        console.log(`[SyncUtils] Deleted comment file: ${filePath}`)
+      } catch (error) {
+        console.error(`[SyncUtils] Failed to delete ${filePath}:`, error)
+      }
+    }
+
+    // Remove from workspace.json
+    delete ws.comments[originalFilename]
+    saveWorkspaceData(workspaceId, ws)
+    console.log(`[SyncUtils] Updated workspace.json for comment ${id}`)
   }
-
-  // Save updated workspace.json
-  saveWorkspaceData(workspaceId, ws)
-
-  console.log(`[SyncUtils] Updated workspace.json for ${workspaceId}`)
 }
 
+/**
+ * ============================================================================
+ * RENAME FUNCTIONS
+ * ============================================================================
+ */
+
+/**
+ * Rename workspace folder
+ */
+export async function renameWorkspaceFolder(
+  workspaceId: string,
+  newFolderName: string
+): Promise<boolean> {
+  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  const oldPath = getWorkspaceDir(workspaceId)
+  const newPath = path.join(SYNC_DIR, newFolderName)
+
+  try {
+    fs.renameSync(oldPath, newPath)
+    ws.workspace.currentFolderName = newFolderName
+    saveWorkspaceData(workspaceId, ws)
+    console.log(`[SyncUtils] Renamed workspace folder: ${oldPath} -> ${newPath}`)
+    return true
+  } catch (error) {
+    console.error(`[SyncUtils] Failed to rename workspace folder:`, error)
+    return false
+  }
+}
+
+/**
+ * Rename message file
+ */
+export async function renameMessageFile(
+  workspaceId: string,
+  messageId: string,
+  newFileName: string
+): Promise<boolean> {
+  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  const originalFilename = `message_${messageId}.md`
+  const message = ws.messages[originalFilename]
+  if (!message) {
+    console.error(`[SyncUtils] Message ${messageId} not found in workspace ${workspaceId}`)
+    return false
+  }
+
+  const workspaceDir = getWorkspaceDir(workspaceId)
+  const oldPath = path.join(workspaceDir, message.currentFilename)
+  const newPath = path.join(workspaceDir, newFileName)
+
+  try {
+    fs.renameSync(oldPath, newPath)
+    message.currentFilename = newFileName
+    saveWorkspaceData(workspaceId, ws)
+    console.log(`[SyncUtils] Renamed message file: ${oldPath} -> ${newPath}`)
+    return true
+  } catch (error) {
+    console.error(`[SyncUtils] Failed to rename message file:`, error)
+    return false
+  }
+}
+
+/**
+ * Rename comment folder
+ */
+export async function renameCommentFolder(
+  workspaceId: string,
+  commentId: string,
+  newFolderName: string
+): Promise<boolean> {
+  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  const originalFilename = `comment_${commentId}.md`
+  const comment = ws.comments[originalFilename]
+  if (!comment) {
+    console.error(`[SyncUtils] Comment ${commentId} not found in workspace ${workspaceId}`)
+    return false
+  }
+
+  const workspaceDir = getWorkspaceDir(workspaceId)
+  const oldPath = path.join(workspaceDir, comment.folderName)
+  const newPath = path.join(workspaceDir, newFolderName)
+
+  try {
+    fs.renameSync(oldPath, newPath)
+    comment.folderName = newFolderName
+    saveWorkspaceData(workspaceId, ws)
+    console.log(`[SyncUtils] Renamed comment folder: ${oldPath} -> ${newPath}`)
+    return true
+  } catch (error) {
+    console.error(`[SyncUtils] Failed to rename comment folder:`, error)
+    return false
+  }
+}
+
+/**
+ * Rename comment file
+ */
+export async function renameCommentFile(
+  workspaceId: string,
+  commentId: string,
+  newFileName: string
+): Promise<boolean> {
+  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  const originalFilename = `comment_${commentId}.md`
+  const comment = ws.comments[originalFilename]
+  if (!comment) {
+    console.error(`[SyncUtils] Comment ${commentId} not found in workspace ${workspaceId}`)
+    return false
+  }
+
+  const workspaceDir = getWorkspaceDir(workspaceId)
+  const oldPath = path.join(workspaceDir, comment.folderName, comment.currentFilename)
+  const newPath = path.join(workspaceDir, comment.folderName, newFileName)
+
+  try {
+    fs.renameSync(oldPath, newPath)
+    comment.currentFilename = newFileName
+    saveWorkspaceData(workspaceId, ws)
+    console.log(`[SyncUtils] Renamed comment file: ${oldPath} -> ${newPath}`)
+    return true
+  } catch (error) {
+    console.error(`[SyncUtils] Failed to rename comment file:`, error)
+    return false
+  }
+}

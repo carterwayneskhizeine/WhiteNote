@@ -3,7 +3,7 @@ import { Server as HTTPServer } from "http"
 import { parse } from "cookie"
 import { verifySessionToken } from "./auth"
 import chokidar from "chokidar"
-import { importFromLocal } from "@/lib/sync-utils"
+import { importFromLocal, parseFilePath } from "@/lib/sync-utils"
 
 interface SocketData {
   userId: string
@@ -138,7 +138,7 @@ export function initSocketServer(httpServer: HTTPServer) {
   let watcher: ReturnType<typeof chokidar.watch> | null = null
 
   // Queue for serializing file imports to prevent database transaction timeout
-  const importQueue: Array<{ workspaceId: string, fileName: string }> = []
+  const importQueue: Array<{ filePath: string }> = []
   let isProcessingQueue = false
 
   async function processImportQueue() {
@@ -152,10 +152,14 @@ export function initSocketServer(httpServer: HTTPServer) {
       const item = importQueue.shift()
       if (item) {
         try {
-          console.log(`[FileWatcher] Processing ${item.workspaceId}/${item.fileName}`)
-          await importFromLocal(item.workspaceId, item.fileName)
+          // Parse the file path to extract workspaceId
+          const parsed = parseFilePath(item.filePath)
+          if (parsed) {
+            console.log(`[FileWatcher] Processing ${item.filePath}`)
+            await importFromLocal(parsed.workspaceId, item.filePath)
+          }
         } catch (error) {
-          console.error(`[FileWatcher] Error importing ${item.workspaceId}/${item.fileName}:`, error)
+          console.error(`[FileWatcher] Error importing ${item.filePath}:`, error)
         }
       }
       // Small delay between imports to avoid overwhelming the database
@@ -184,20 +188,19 @@ export function initSocketServer(httpServer: HTTPServer) {
 
       console.log(`[FileWatcher] File changed: ${filePath}`)
 
-      // Extract workspace ID and filename from path
-      // Path format: SYNC_DIR/workspaceId/filename.md
-      const pathParts = filePath.split(/[/\\]/)
-      const fileName = pathParts.pop() // Get filename (handle both / and \)
-      const workspaceId = pathParts.pop() // Get workspace ID
-
-      if (fileName && workspaceId) {
-        // Add to queue instead of processing immediately
-        importQueue.push({ workspaceId, fileName })
-        console.log(`[FileWatcher] Queued ${workspaceId}/${fileName} (queue size: ${importQueue.length})`)
-
-        // Start processing the queue
-        processImportQueue()
+      // Parse the file path to determine if it's a message or comment
+      const parsed = parseFilePath(filePath)
+      if (!parsed) {
+        console.log(`[FileWatcher] Could not parse file path ${filePath}, skipping`)
+        return
       }
+
+      // Add to queue instead of processing immediately
+      importQueue.push({ filePath })
+      console.log(`[FileWatcher] Queued ${filePath} (queue size: ${importQueue.length})`)
+
+      // Start processing the queue
+      processImportQueue()
     })
 
     watcher.on('error', error => console.error(`[FileWatcher] Error: ${error}`))
