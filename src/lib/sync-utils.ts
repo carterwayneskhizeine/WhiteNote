@@ -207,7 +207,8 @@ export function parseFilePath(filePath: string): {
       return {
         workspaceId,
         type: 'message',
-        messageId: fileName.replace('message_', '').replace('.md', '')
+        messageId: fileName.replace('message_', '').replace('.md', ''),
+        messageFilename: fileName
       }
     }
 
@@ -221,9 +222,26 @@ export function parseFilePath(filePath: string): {
             return {
               workspaceId,
               type: 'message',
-              messageId: message.id
+              messageId: message.id,
+              messageFilename: fileName
             }
           }
+        }
+
+        // Fallback: If only one message exists in workspace, assume it was manually renamed
+        // This handles the case where user manually renames a message file
+        const messageEntries = Object.values(ws.messages)
+        if (messageEntries.length === 1) {
+          const message = messageEntries[0]
+          console.log(`[parseFilePath] Assuming manually renamed message: '${message.currentFilename}' -> '${fileName}'`)
+          return {
+            workspaceId,
+            type: 'message',
+            messageId: message.id,
+            messageFilename: fileName
+          }
+        } else if (messageEntries.length > 1) {
+          console.log(`[parseFilePath] Multiple messages exist, cannot identify renamed file: ${fileName}`)
         }
       }
     } catch {
@@ -912,34 +930,57 @@ export async function importAllFromLocal() {
 
       results.workspacesProcessed.push(workspaceId)
 
-      // Process message files
-      for (const [originalFilename, meta] of Object.entries(ws.messages)) {
-        try {
-          const workspaceDirPath = getWorkspaceDir(workspaceId)
-          const filePath = path.join(workspaceDirPath, meta.currentFilename)
+      // Process message files by scanning actual directory
+      const workspaceDirPath = getWorkspaceDir(workspaceId)
+      const processedMessages = new Set<string>()
 
-          if (!fs.existsSync(filePath)) {
+      try {
+        const files = fs.readdirSync(workspaceDirPath)
+        const mdFiles = files.filter(f => f.endsWith('.md'))
+
+        for (const mdFile of mdFiles) {
+          const filePath = path.join(workspaceDirPath, mdFile)
+
+          // Check if this file is in workspace.json
+          let messageEntry = Object.values(ws.messages).find(
+            m => m.currentFilename === mdFile
+          )
+
+          // Fallback: if not found, try to find by first message (handles manually renamed files)
+          if (!messageEntry && Object.values(ws.messages).length === 1) {
+            messageEntry = Object.values(ws.messages)[0]
+            console.log(`[SyncUtils] Found message '${mdFile}' by fallback (only one message exists), assuming manual rename from '${messageEntry.currentFilename}'`)
+          }
+
+          if (!messageEntry) {
+            // Unknown file, skip
             results.skipped++
             continue
           }
 
-          const stats = fs.statSync(filePath)
-          const lastModified = stats.mtime.toISOString()
+          // Mark this message as processed
+          processedMessages.add(messageEntry.id)
 
-          if (meta.updated_at !== lastModified) {
-            await importFromLocal(workspaceId, filePath)
-            results.imported++
-          } else {
-            results.skipped++
+          try {
+            const stats = fs.statSync(filePath)
+            const lastModified = stats.mtime.toISOString()
+
+            if (messageEntry.updated_at !== lastModified) {
+              await importFromLocal(workspaceId, filePath)
+              results.imported++
+            } else {
+              results.skipped++
+            }
+          } catch (error) {
+            console.error(`[SyncUtils] Error importing ${mdFile}:`, error)
+            results.errors++
           }
-        } catch (error) {
-          console.error(`[SyncUtils] Error importing ${originalFilename}:`, error)
-          results.errors++
         }
+      } catch (error) {
+        console.error(`[SyncUtils] Error reading workspace directory:`, error)
       }
 
       // Process comment files by scanning actual directories
-      const workspaceDirPath = getWorkspaceDir(workspaceId)
       const dirs = fs.readdirSync(workspaceDirPath, { withFileTypes: true })
       const commentFolders = dirs.filter(d => d.isDirectory() && d.name !== '.whitenote')
       const processedComments = new Set<string>()
