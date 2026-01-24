@@ -2,7 +2,14 @@ import { Queue } from "bullmq"
 import redis from "@/lib/redis"
 
 // 任务类型
-export type JobType = "auto-tag" | "auto-tag-comment" | "sync-ragflow" | "daily-briefing" | "sync-to-local"
+export type JobType =
+  | "auto-tag"
+  | "auto-tag-comment"
+  | "sync-ragflow"
+  | "daily-briefing"
+  | "sync-to-local"
+  | "create-workspace-from-folder"
+  | "create-message-from-file"
 
 // 队列名称
 const QUEUE_NAME = "whitenote-tasks"

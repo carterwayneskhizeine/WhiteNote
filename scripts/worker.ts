@@ -1,12 +1,21 @@
 import "dotenv/config"
 import { startWorker } from "@/lib/queue/worker"
 import { addCronTask } from "@/lib/queue"
+import { startFileWatcher, stopFileWatcher } from "@/lib/file-watcher"
 
 async function main() {
   console.log("Starting WhiteNote Worker...")
 
   // 启动 Worker
   const worker = startWorker()
+
+  // 启动文件监听器
+  if (process.env.FILE_WATCHER_ENABLED !== "false") {
+    startFileWatcher()
+    console.log("File watcher started")
+  } else {
+    console.log("File watcher disabled (set FILE_WATCHER_ENABLED=true to enable)")
+  }
 
   // 注册每日晨报定时任务 (每天早上 8:00)
   await addCronTask("daily-briefing", {}, "0 8 * * *")
@@ -16,6 +25,7 @@ async function main() {
   process.on("SIGTERM", async () => {
     console.log("Shutting down worker...")
     await worker.close()
+    stopFileWatcher()
     process.exit(0)
   })
 

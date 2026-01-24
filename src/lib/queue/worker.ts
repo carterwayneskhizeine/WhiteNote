@@ -5,6 +5,8 @@ import { processAutoTagExtended } from "./processors/auto-tag-extended"
 import { processSyncRAGFlow } from "./processors/sync-ragflow"
 import { processDailyBriefing } from "./processors/daily-briefing"
 import { processSyncToLocal } from "./processors/sync-to-local"
+import { processCreateWorkspaceFromFolder } from "./processors/create-workspace-from-folder"
+import { processCreateMessageFromFile } from "./processors/create-message-from-file"
 
 const QUEUE_NAME = "whitenote-tasks"
 
@@ -32,6 +34,12 @@ export function startWorker() {
           break
         case "sync-to-local":
           await processSyncToLocal(job)
+          break
+        case "create-workspace-from-folder":
+          await processCreateWorkspaceFromFolder(job)
+          break
+        case "create-message-from-file":
+          await processCreateMessageFromFile(job)
           break
         default:
           console.warn(`[Worker] Unknown job type: ${job.name}`)
