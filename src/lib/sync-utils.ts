@@ -6,8 +6,7 @@ import {
   getWorkspaceDir,
   getWorkspaceMetadataPath,
   readWorkspaceMetadata,
-  getWorkspaceIdByFolderName,
-  clearWorkspaceCache
+  getWorkspaceIdByFolderName
 } from "@/lib/workspace-discovery"
 
 const SYNC_DIR = "D:\\Code\\whitenote-data\\link_md"
@@ -68,38 +67,7 @@ interface WorkspaceDataV2 {
   comments: Record<string, CommentMeta>
 }
 
-// Keep v1 interfaces for backward compatibility during transition
-interface FileMeta {
-  type: "message" | "comment"
-  id: string
-  created_at: string
-  updated_at: string
-  author: string
-  authorName: string
-  tags: string
-  messageId: string | null
-}
-
-interface WorkspaceInfo {
-  id: string
-  name: string
-  lastSyncedAt: string
-}
-
-interface Relations {
-  [messageFileKey: string]: {
-    type: "message"
-    comments: string[]
-  }
-}
-
-interface WorkspaceDataV1 {
-  workspace: WorkspaceInfo
-  files: Record<string, FileMeta>
-  relations: Relations
-}
-
-type WorkspaceData = WorkspaceDataV2 | WorkspaceDataV1
+type WorkspaceData = WorkspaceDataV2
 
 /**
  * ============================================================================
@@ -189,35 +157,33 @@ export function parseFilePath(filePath: string): {
 
     // Otherwise, look up in workspace.json to find the message by currentFilename
     try {
-      const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
-      if (ws.version === 2) {
-        // Find message with matching currentFilename
-        for (const [_originalFilename, message] of Object.entries(ws.messages)) {
-          if (message.currentFilename === fileName) {
-            return {
-              workspaceId,
-              type: 'message',
-              messageId: message.id,
-              messageFilename: fileName
-            }
-          }
-        }
-
-        // Fallback: If only one message exists in workspace, assume it was manually renamed
-        // This handles the case where user manually renames a message file
-        const messageEntries = Object.values(ws.messages)
-        if (messageEntries.length === 1) {
-          const message = messageEntries[0]
-          console.log(`[parseFilePath] Assuming manually renamed message: '${message.currentFilename}' -> '${fileName}'`)
+      const ws = getWorkspaceData(workspaceId)
+      // Find message with matching currentFilename
+      for (const [_originalFilename, message] of Object.entries(ws.messages)) {
+        if (message.currentFilename === fileName) {
           return {
             workspaceId,
             type: 'message',
             messageId: message.id,
             messageFilename: fileName
           }
-        } else if (messageEntries.length > 1) {
-          console.log(`[parseFilePath] Multiple messages exist, cannot identify renamed file: ${fileName}`)
         }
+      }
+
+      // Fallback: If only one message exists in workspace, assume it was manually renamed
+      // This handles the case where user manually renames a message file
+      const messageEntries = Object.values(ws.messages)
+      if (messageEntries.length === 1) {
+        const message = messageEntries[0]
+        console.log(`[parseFilePath] Assuming manually renamed message: '${message.currentFilename}' -> '${fileName}'`)
+        return {
+          workspaceId,
+          type: 'message',
+          messageId: message.id,
+          messageFilename: fileName
+        }
+      } else if (messageEntries.length > 1) {
+        console.log(`[parseFilePath] Multiple messages exist, cannot identify renamed file: ${fileName}`)
       }
     } catch {
       // Fall through to return null
@@ -240,20 +206,18 @@ export function parseFilePath(filePath: string): {
 
     // Look up in workspace.json to find the comment
     try {
-      const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
-      if (ws.version === 2) {
-        // Find comment by matching currentFilename
-        for (const [_originalFilename, comment] of Object.entries(ws.comments)) {
-          if (comment.currentFilename === commentFileName && comment.folderName === commentSubfolder) {
-            return {
-              workspaceId,
-              type: 'comment',
-              messageId: comment.messageId,
-              commentId: comment.id,
-              messageFilename: messageFolder,
-              commentFolder: commentSubfolder,
-              commentFilename: commentFileName
-            }
+      const ws = getWorkspaceData(workspaceId)
+      // Find comment by matching currentFilename
+      for (const [_originalFilename, comment] of Object.entries(ws.comments)) {
+        if (comment.currentFilename === commentFileName && comment.folderName === commentSubfolder) {
+          return {
+            workspaceId,
+            type: 'comment',
+            messageId: comment.messageId,
+            commentId: comment.id,
+            messageFilename: messageFolder,
+            commentFolder: commentSubfolder,
+            commentFilename: commentFileName
           }
         }
       }
@@ -282,21 +246,19 @@ export function parseFilePath(filePath: string): {
       const commentFileName = parts[2] // e.g., "test_yupi_04.md"
 
       try {
-        const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
-        if (ws.version === 2) {
-          // Find any comment with this folderName
-          for (const [_originalFilename, comment] of Object.entries(ws.comments)) {
-            if (comment.folderName === commentSubfolder) {
-              console.log(`[parseFilePath] Found comment via folder name: ${commentSubfolder}, assuming file rename: ${commentFileName}`)
-              return {
-                workspaceId,
-                type: 'comment',
-                messageId: comment.messageId,
-                commentId: comment.id,
-                messageFilename: messageFolder,
-                commentFolder: commentSubfolder,
-                commentFilename: commentFileName
-              }
+        const ws = getWorkspaceData(workspaceId)
+        // Find any comment with this folderName
+        for (const [_originalFilename, comment] of Object.entries(ws.comments)) {
+          if (comment.folderName === commentSubfolder) {
+            console.log(`[parseFilePath] Found comment via folder name: ${commentSubfolder}, assuming file rename: ${commentFileName}`)
+            return {
+              workspaceId,
+              type: 'comment',
+              messageId: comment.messageId,
+              commentId: comment.id,
+              messageFilename: messageFolder,
+              commentFolder: commentSubfolder,
+              commentFilename: commentFileName
             }
           }
         }
@@ -318,8 +280,9 @@ export function parseFilePath(filePath: string): {
 /**
  * Read Workspace JSON for a specific workspace
  * Uses workspace-discovery utility for better performance
+ * Only supports V2 schema
  */
-export function getWorkspaceData(workspaceId: string): WorkspaceData {
+export function getWorkspaceData(workspaceId: string): WorkspaceDataV2 {
   const data = readWorkspaceMetadata(workspaceId)
 
   if (!data) {
@@ -338,65 +301,12 @@ export function getWorkspaceData(workspaceId: string): WorkspaceData {
     }
   }
 
-  // If v1, migrate to v2
-  if (!data.version || data.version < 2) {
-    return migrateV1ToV2(data as WorkspaceDataV1, workspaceId)
+  // Only support V2 schema
+  if (data.version !== 2) {
+    throw new Error(`Unsupported workspace.json version: ${data.version}. Expected version 2.`)
   }
 
-  return data as WorkspaceDataV2
-}
-
-/**
- * Migrate v1 schema to v2
- */
-function migrateV1ToV2(v1: WorkspaceDataV1, workspaceId: string): WorkspaceDataV2 {
-  const v2: WorkspaceDataV2 = {
-    version: 2,
-    workspace: {
-      id: v1.workspace.id,
-      originalFolderName: workspaceId,
-      currentFolderName: workspaceId,
-      name: v1.workspace.name,
-      lastSyncedAt: v1.workspace.lastSyncedAt
-    },
-    messages: {},
-    comments: {}
-  }
-
-  // Convert files to messages/comments
-  for (const [fileKey, fileMeta] of Object.entries(v1.files)) {
-    if (fileMeta.type === 'message') {
-      v2.messages[fileKey] = {
-        id: fileMeta.id,
-        type: 'message',
-        originalFilename: `${fileKey}.md`,
-        currentFilename: `${fileKey}.md`,
-        commentFolderName: fileKey,
-        created_at: fileMeta.created_at,
-        updated_at: fileMeta.updated_at,
-        author: fileMeta.author,
-        authorName: fileMeta.authorName,
-        tags: fileMeta.tags
-      }
-    } else if (fileMeta.type === 'comment') {
-      v2.comments[fileKey] = {
-        id: fileMeta.id,
-        type: 'comment',
-        messageId: fileMeta.messageId || '',
-        parentId: null,
-        originalFilename: `${fileKey}.md`,
-        currentFilename: `${fileKey}.md`,
-        folderName: fileKey,
-        created_at: fileMeta.created_at,
-        updated_at: fileMeta.updated_at,
-        author: fileMeta.author,
-        authorName: fileMeta.authorName,
-        tags: fileMeta.tags
-      }
-    }
-  }
-
-  return v2
+  return data
 }
 
 /**
@@ -490,7 +400,7 @@ export async function exportToLocal(type: "message" | "comment", id: string) {
   const workspaceDir = getWorkspaceDir(workspaceId)
   ensureDirectoryExists(workspaceDir)
 
-  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  const ws = getWorkspaceData(workspaceId)
 
   if (type === "message") {
     // ========== MESSAGE EXPORT ==========
@@ -645,7 +555,7 @@ export async function importFromLocal(workspaceId: string, filePath: string) {
     return
   }
 
-  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  const ws = getWorkspaceData(workspaceId)
   let meta: MessageMeta | CommentMeta | undefined
   let originalFilename: string
 
@@ -899,7 +809,7 @@ export async function importAllFromLocal() {
     }
 
     try {
-      const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+      const ws = getWorkspaceData(workspaceId)
       if (ws.version !== 2) continue
 
       results.workspacesProcessed.push(workspaceId)
@@ -1030,7 +940,7 @@ export async function importAllFromLocal() {
  * Delete local file and update workspace.json
  */
 export async function deleteLocalFile(type: "message" | "comment", id: string, workspaceId: string) {
-  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  const ws = getWorkspaceData(workspaceId)
   const workspaceDir = getWorkspaceDir(workspaceId)
 
   if (type === "message") {
@@ -1100,7 +1010,7 @@ export async function renameWorkspaceFolder(
   workspaceId: string,
   newFolderName: string
 ): Promise<boolean> {
-  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  const ws = getWorkspaceData(workspaceId)
   const oldPath = getWorkspaceDir(workspaceId)
   const newPath = path.join(SYNC_DIR, newFolderName)
 
@@ -1124,7 +1034,7 @@ export async function renameMessageFile(
   messageId: string,
   newFileName: string
 ): Promise<boolean> {
-  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  const ws = getWorkspaceData(workspaceId)
   const originalFilename = `message_${messageId}.md`
   const message = ws.messages[originalFilename]
   if (!message) {
@@ -1156,7 +1066,7 @@ export async function renameCommentFolder(
   commentId: string,
   newFolderName: string
 ): Promise<boolean> {
-  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  const ws = getWorkspaceData(workspaceId)
   const originalFilename = `comment_${commentId}.md`
   const comment = ws.comments[originalFilename]
   if (!comment) {
@@ -1188,7 +1098,7 @@ export async function renameCommentFile(
   commentId: string,
   newFileName: string
 ): Promise<boolean> {
-  const ws = getWorkspaceData(workspaceId) as WorkspaceDataV2
+  const ws = getWorkspaceData(workspaceId)
   const originalFilename = `comment_${commentId}.md`
   const comment = ws.comments[originalFilename]
   if (!comment) {
