@@ -405,8 +405,22 @@ export async function exportToLocal(type: "message" | "comment", id: string) {
   if (type === "message") {
     // ========== MESSAGE EXPORT ==========
     const originalFilename = `message_${data.id}.md`
-    const friendlyName = generateFriendlyName(data.content)
-    const currentFilename = `${friendlyName}.md`
+
+    // Check if this message already has a filename in workspace.json
+    // If yes, use the existing filename to avoid creating new files on edit
+    const existingMessageMeta = ws.messages[originalFilename]
+    let currentFilename: string
+
+    if (existingMessageMeta?.currentFilename) {
+      // Use existing filename to preserve file on edit
+      currentFilename = existingMessageMeta.currentFilename
+      console.log(`[SyncUtils] Using existing filename for message ${id}: ${currentFilename}`)
+    } else {
+      // Generate new friendly filename for first-time export
+      const friendlyName = generateFriendlyName(data.content)
+      currentFilename = `${friendlyName}.md`
+      console.log(`[SyncUtils] Generated new filename for message ${id}: ${currentFilename}`)
+    }
 
     const filePath = path.join(workspaceDir, currentFilename)
 
@@ -506,8 +520,22 @@ export async function exportToLocal(type: "message" | "comment", id: string) {
     ensureDirectoryExists(commentFolderPath)
 
     const originalFilename = `comment_${data.id}.md`
-    const friendlyName = generateFriendlyName(data.content)
-    const currentFilename = `${friendlyName}.md`
+
+    // Check if this comment already has a filename in workspace.json
+    // If yes, use the existing filename to avoid creating new files on edit
+    const existingCommentMeta = ws.comments[originalFilename]
+    let currentFilename: string
+
+    if (existingCommentMeta?.currentFilename) {
+      // Use existing filename to preserve file on edit
+      currentFilename = existingCommentMeta.currentFilename
+      console.log(`[SyncUtils] Using existing filename for comment ${id}: ${currentFilename}`)
+    } else {
+      // Generate new friendly filename for first-time export
+      const friendlyName = generateFriendlyName(data.content)
+      currentFilename = `${friendlyName}.md`
+      console.log(`[SyncUtils] Generated new filename for comment ${id}: ${currentFilename}`)
+    }
 
     const filePath = path.join(commentFolderPath, currentFilename)
 

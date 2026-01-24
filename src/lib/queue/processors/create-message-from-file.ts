@@ -46,7 +46,64 @@ export async function processCreateMessageFromFile(
     throw new Error(`Workspace not found: ${workspaceId}`)
   }
 
-  // Check if message already exists (by matching content)
+  // 🔥 FIX 1: Check if this file is already tracked in workspace.json
+  const workspaceFile = getWorkspaceMetadataPath(workspaceId)
+  let isAlreadyTracked = false
+  let existingMessageId: string | null = null
+
+  try {
+    const ws = JSON.parse(fs.readFileSync(workspaceFile, "utf-8"))
+    if (ws.version === 2 && ws.messages) {
+      // Check if any message has this filename as currentFilename
+      for (const [key, msg] of Object.entries(ws.messages)) {
+        if (msg.currentFilename === filename) {
+          isAlreadyTracked = true
+          existingMessageId = msg.id
+          console.log(`[CreateMessage] File ${filename} already tracked in workspace.json, message ID: ${msg.id}`)
+          break
+        }
+      }
+    }
+  } catch (error) {
+    console.warn(`[CreateMessage] Failed to read workspace.json:`, error)
+  }
+
+  // 🔥 FIX 2: If already tracked, update existing message instead of creating new one
+  if (isAlreadyTracked && existingMessageId) {
+    const existingMessage = await prisma.message.findUnique({
+      where: { id: existingMessageId },
+      include: { tags: true }
+    })
+
+    if (existingMessage) {
+      // Check if content actually changed
+      if (existingMessage.content === content) {
+        console.log(`[CreateMessage] Content unchanged, skipping update for message ${existingMessageId}`)
+        return existingMessage
+      }
+
+      // Update existing message
+      console.log(`[CreateMessage] Updating existing message ${existingMessageId} instead of creating new one`)
+      const tagIds = tags.length > 0 ? await batchUpsertTags(tags) : []
+
+      const updated = await prisma.message.update({
+        where: { id: existingMessageId },
+        data: {
+          content,
+          tags: {
+            deleteMany: {},
+            create: tagIds.map((tagId) => ({ tagId }))
+          }
+        }
+      })
+
+      // Update workspace metadata
+      await updateWorkspaceMetadata(workspaceId, existingMessageId, filename, workspace.user.id)
+      return updated
+    }
+  }
+
+  // Check if message already exists (by matching content) - fallback method
   const existingMessage = await prisma.message.findFirst({
     where: {
       workspaceId,
@@ -56,7 +113,7 @@ export async function processCreateMessageFromFile(
   })
 
   if (existingMessage) {
-    console.log(`[CreateMessage] Message already exists, updating metadata`)
+    console.log(`[CreateMessage] Message already exists (by content match), updating metadata`)
     // Update workspace.json to mark as tracked
     await updateWorkspaceMetadata(workspaceId, existingMessage.id, filename, workspace.user.id)
     return existingMessage
