@@ -17,6 +17,19 @@ interface CreateMessageFromFileJobData {
   filename: string
 }
 
+interface WorkspaceMessage {
+  id: string
+  type: string
+  originalFilename: string
+  currentFilename: string
+  commentFolderName: string
+  created_at: string
+  updated_at: string
+  author: string
+  authorName: string
+  tags: string
+}
+
 export async function processCreateMessageFromFile(
   job: Job<CreateMessageFromFileJobData>
 ) {
@@ -56,10 +69,11 @@ export async function processCreateMessageFromFile(
     if (ws.version === 2 && ws.messages) {
       // Check if any message has this filename as currentFilename
       for (const [key, msg] of Object.entries(ws.messages)) {
-        if (msg.currentFilename === filename) {
+        const message = msg as WorkspaceMessage
+        if (message.currentFilename === filename) {
           isAlreadyTracked = true
-          existingMessageId = msg.id
-          console.log(`[CreateMessage] File ${filename} already tracked in workspace.json, message ID: ${msg.id}`)
+          existingMessageId = message.id
+          console.log(`[CreateMessage] File ${filename} already tracked in workspace.json, message ID: ${message.id}`)
           break
         }
       }
