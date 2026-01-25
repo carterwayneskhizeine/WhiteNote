@@ -118,6 +118,8 @@ export async function updateAiConfig(userId: string, data: Partial<{
   aiPersonality: string
   aiExpertise: string | null
   enableLinkSuggestion: boolean
+  enableMdSync: boolean
+  mdSyncDir: string | null
   asrApiKey: string
   asrApiUrl: string
 }>) {
