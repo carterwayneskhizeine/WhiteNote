@@ -164,14 +164,21 @@ export function readWorkspaceMetadata(workspaceId: string): any | null {
 
 /**
  * Write workspace.json data and clear cache
+ * Creates necessary directories and initializes cache if needed
  */
 export function writeWorkspaceMetadata(workspaceId: string, data: any): boolean {
-  const metadataPath = getWorkspaceMetadataPath(workspaceId)
-  const meta = getWorkspaceMeta(workspaceId)
+  // First, try to get the metadata path (this will use cache if available)
+  let metadataPath: string
+  let meta = getWorkspaceMeta(workspaceId)
 
-  if (!meta) {
-    console.warn(`[WorkspaceDiscovery] Workspace ${workspaceId} not found, cannot write metadata`)
-    return false
+  if (meta) {
+    // Workspace is in cache, use the cached path
+    metadataPath = meta.metadataPath
+  } else {
+    // Workspace not in cache (first-time export or cache miss)
+    // Use default path and ensure it's created
+    metadataPath = path.join(SYNC_DIR, workspaceId, ".whitenote", "workspace.json")
+    console.log(`[WorkspaceDiscovery] Workspace ${workspaceId} not in cache, using default path: ${metadataPath}`)
   }
 
   try {
@@ -186,7 +193,7 @@ export function writeWorkspaceMetadata(workspaceId: string, data: any): boolean 
     // Clear cache to ensure fresh reads
     clearWorkspaceCache()
 
-    console.log(`[WorkspaceDiscovery] Updated workspace metadata: ${workspaceId}`)
+    console.log(`[WorkspaceDiscovery] Wrote workspace metadata: ${workspaceId}`)
     return true
   } catch (error) {
     console.error(`[WorkspaceDiscovery] Failed to write workspace metadata:`, error)
