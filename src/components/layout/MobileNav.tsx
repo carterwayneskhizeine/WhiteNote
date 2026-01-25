@@ -322,18 +322,23 @@ export function MobileNav() {
 
       </div>
 
-      {/* Floating Action Button (FAB) */}
-      <div className={cn(
-        "desktop:hidden fixed bottom-[70px] right-4 z-50 transition-all duration-300",
-        isVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-20 scale-0 opacity-0"
-      )}>
-        <Button
-          size="icon"
-          className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-white"
+      {/* Floating Action Button (FAB) - Only show on home page */}
+      {pathname === "/" && (
+        <Link
+          href="/compose"
+          className={cn(
+            "desktop:hidden fixed bottom-[70px] right-4 z-50 transition-all duration-300",
+            isVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-20 scale-0 opacity-0"
+          )}
         >
-          <PenLine className="h-6 w-6" />
-        </Button>
-      </div>
+          <Button
+            size="icon"
+            className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-white"
+          >
+            <PenLine className="h-6 w-6" />
+          </Button>
+        </Link>
+      )}
 
       {/* Bottom Navigation Bar */}
       <div className={cn(
