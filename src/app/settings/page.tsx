@@ -257,14 +257,15 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* 
-        Desktop View 
+      {/*
+        Desktop View
         Two columns: Sidebar (Nav) | Content
+        Fixed layout with independent scrolling
       */}
-      <div className="hidden xl:flex w-full max-w-7xl">
-        {/* Left Sidebar */}
-        <div className="w-[300px] border-r border-border shrink-0">
-          <div className="py-2 px-4">
+      <div className="hidden xl:flex w-full max-w-7xl h-screen overflow-hidden">
+        {/* Left Sidebar - Fixed, no scroll */}
+        <div className="w-[300px] border-r border-border shrink-0 h-full overflow-y-auto">
+          <div className="py-2 px-4 sticky top-0 bg-background">
             <h2 className="text-xl font-bold py-3 px-3">设置</h2>
           </div>
           <nav className="flex flex-col">
@@ -277,8 +278,8 @@ export default function SettingsPage() {
                   href={`/settings/${item.id}`}
                   className={cn(
                     "flex items-center justify-between px-6 py-4 transition-colors hover:bg-muted/50 border-r-2",
-                    isActive 
-                      ? "border-primary bg-muted/30" 
+                    isActive
+                      ? "border-primary bg-muted/30"
                       : "border-transparent"
                   )}
                 >
@@ -301,8 +302,8 @@ export default function SettingsPage() {
           </nav>
         </div>
 
-        {/* Right Content */}
-        <div className="flex-1 min-w-0">
+        {/* Right Content - Independent scroll */}
+        <div className="flex-1 min-w-0 h-full overflow-y-auto">
           <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
             <div className="px-6 h-14 flex items-center">
               <h2 className="text-xl font-bold">{activeItem.label}</h2>
