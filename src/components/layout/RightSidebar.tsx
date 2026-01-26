@@ -337,7 +337,6 @@ export function RightSidebar() {
         <a href="#" className="hover:underline">服务条款</a>
         <a href="#" className="hover:underline">隐私政策</a>
         <a href="#" className="hover:underline">Cookie 政策</a>
-        <a href="#" className="hover:underline">无障碍</a>
         <span>© 2026 WhiteNote</span>
       </div>
     </aside>
