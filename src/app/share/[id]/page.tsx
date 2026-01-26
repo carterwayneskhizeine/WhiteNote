@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Message } from "@/lib/api/messages"
 import { Button } from "@/components/ui/button"
-import { Link2, Loader2, ArrowLeft, Share2, Calendar } from "lucide-react"
+import { Link2, Loader2, ArrowLeft, Share2, Calendar, Copy, Check } from "lucide-react"
 import { format } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { TipTapViewer } from "@/components/TipTapViewer"
@@ -23,6 +23,7 @@ export default function SharePage() {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [copied, setCopied] = useState(false)
+    const [contentCopied, setContentCopied] = useState(false)
     const [lightboxOpen, setLightboxOpen] = useState(false)
     const [lightboxIndex, setLightboxIndex] = useState(0)
     const [isExpanded, setIsExpanded] = useState(false)
@@ -85,6 +86,27 @@ export default function SharePage() {
         }
     }
 
+    const handleCopyContent = async () => {
+        if (!message) return
+        try {
+            // 构建完整内容，包括作者信息、时间、标签和正文
+            const authorName = message.author?.name || "GoldieRill"
+            const authorHandle = getHandle(message.author?.email || null, !!message.author)
+            const time = format(new Date(message.createdAt), "yyyy'年'M'月'd'日' HH:mm", { locale: zhCN })
+            const tags = message.tags.length > 0
+                ? '\n' + message.tags.map(({ tag }) => `#${tag.name}`).join(' ')
+                : ''
+
+            const fullContent = `${authorName} (@${authorHandle})\n${time}${tags}\n\n${message.content}`
+
+            await navigator.clipboard.writeText(fullContent)
+            setContentCopied(true)
+            setTimeout(() => setContentCopied(false), 2000)
+        } catch (error) {
+            console.error("Failed to copy content:", error)
+        }
+    }
+
     const handleImageClick = (index: number, e: React.MouseEvent) => {
         e.stopPropagation()
         setLightboxIndex(index)
@@ -135,15 +157,35 @@ export default function SharePage() {
                             <h1 className="text-lg font-bold">分享帖子</h1>
                         </div>
                     </div>
-                    <Button
-                        variant={copied ? "default" : "outline"}
-                        size="sm"
-                        onClick={handleCopyLink}
-                        className="gap-2"
-                    >
-                        <Link2 className="h-4 w-4" />
-                        {copied ? "已复制" : "复制链接"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant={copied ? "default" : "outline"}
+                            size="sm"
+                            onClick={handleCopyLink}
+                            className="gap-2"
+                        >
+                            <Link2 className="h-4 w-4" />
+                            {copied ? "已复制" : "复制链接"}
+                        </Button>
+                        <Button
+                            variant={contentCopied ? "default" : "outline"}
+                            size="sm"
+                            onClick={handleCopyContent}
+                            className="gap-2"
+                        >
+                            {contentCopied ? (
+                                <>
+                                    <Check className="h-4 w-4" />
+                                    已复制内容
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="h-4 w-4" />
+                                    复制内容
+                                </>
+                            )}
+                        </Button>
+                    </div>
                 </div>
             </div>
 
