@@ -112,4 +112,21 @@ export const workspacesApi = {
       return { error: "Failed to sync workspace to RAGFlow" }
     }
   },
+
+  /**
+   * 重置工作区的 RAGFlow 资源
+   * 删除旧的 Dataset 和 Chat，然后创建新的
+   */
+  async resetRAGFlow(id: string): Promise<{ data?: Workspace; message?: string; error?: string }> {
+    try {
+      const response = await fetch(`/api/workspaces/${id}/reset-ragflow`, {
+        method: "POST",
+      })
+      const data = await response.json()
+      return data
+    } catch (error) {
+      console.error("[Workspaces API] Error resetting RAGFlow:", error)
+      return { error: "Failed to reset RAGFlow resources" }
+    }
+  },
 }

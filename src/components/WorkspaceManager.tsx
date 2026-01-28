@@ -18,6 +18,7 @@ export function WorkspaceManager() {
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const [isInitializingRAG, setIsInitializingRAG] = useState<string | null>(null)
   const [isSyncingRAG, setIsSyncingRAG] = useState<string | null>(null)
+  const [isResettingRAG, setIsResettingRAG] = useState<string | null>(null)
   const [newName, setNewName] = useState("")
   const [newDescription, setNewDescription] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -148,6 +149,27 @@ export function WorkspaceManager() {
       alert("同步到 RAGFlow 失败")
     } finally {
       setIsSyncingRAG(null)
+    }
+  }
+
+  const handleResetRAG = async (id: string) => {
+    const workspace = workspaces.find((w) => w.id === id)
+    if (!workspace) return
+    if (!confirm(`重置工作区 "${workspace.name}" 的 RAGFlow 资源？\n\n这将删除现有的 RAGFlow Dataset 和 Chat，然后创建新的资源。所有现有的向量数据将被清空，需要重新同步。`)) return
+    setIsResettingRAG(id)
+    try {
+      const result = await workspacesApi.resetRAGFlow(id)
+      if (result.data) {
+        setWorkspaces(workspaces.map((w) => (w.id === id ? result.data! : w)))
+      }
+      if (result.message) {
+        alert(result.message)
+      }
+    } catch (error) {
+      console.error(error)
+      alert("重置 RAGFlow 失败")
+    } finally {
+      setIsResettingRAG(null)
     }
   }
 
@@ -316,16 +338,18 @@ export function WorkspaceManager() {
                         disabled={isSyncingRAG === ws.id}
                       >
                         {isSyncingRAG === ws.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
-                        重新以 DB 为准
+                        SYNC DB RAGFlow
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-full h-8 w-8 text-muted-foreground"
-                        onClick={() => handleInitializeRAG(ws.id)}
-                        title="重置 RAGFlow"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full h-8 text-orange-600 border-orange-200 hover:bg-orange-50"
+                        onClick={() => handleResetRAG(ws.id)}
+                        disabled={isResettingRAG === ws.id}
+                        title="删除旧的 RAGFlow 资源并重新创建"
                       >
-                        <Database className="h-4 w-4" />
+                        {isResettingRAG === ws.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Database className="h-3 w-3 mr-1" />}
+                        Reset RAGFlow
                       </Button>
                     </>
                   )}
