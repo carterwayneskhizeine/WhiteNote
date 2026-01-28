@@ -1,3 +1,13 @@
+# Environment Configuration
+# Set NODE_ENV to 'development' for dev mode or 'production' for production mode
+# DEVELOPMENT: pnpm build + pnpm dev
+# PRODUCTION: pnpm start
+x-app-environment: &app-env
+  NODE_ENV: ${NODE_ENV:-production}
+  DATABASE_URL: postgresql://myuser:mypassword@postgres:5432/whitenote
+  REDIS_URL: redis://redis:6379
+  UPLOAD_DIR: /app/data/uploads
+
 services:
   postgres:
     image: postgres:16
@@ -11,6 +21,11 @@ services:
       - "5925:5432"
     volumes:
       - pg16_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d whitenote"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -41,6 +56,68 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+
+  # Next.js Application Server
+  # Usage:
+  #   Development mode: NODE_ENV=development docker-compose up app
+  #   Production mode: NODE_ENV=production docker-compose up app
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whitenote-app
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    ports:
+      - "3005:3005"
+    volumes:
+      # Mount source code for development (hot reload)
+      - .:/app
+      - /app/node_modules
+      # Mount file watcher directory
+      - D:\Code\whitenote-data\link_md:/app/data/link_md
+      # Mount uploads directory for persistent media storage
+      - D:\Code\whitenote-data\uploads:/app/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c '
+        if [ "$$NODE_ENV" = "development" ]; then
+          echo "Starting in DEVELOPMENT mode..." &&
+          pnpm dev
+        else
+          echo "Starting in PRODUCTION mode..." &&
+          pnpm start
+        fi
+      '
+
+  # Background Worker Service
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whitenote-worker
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    volumes:
+      # Mount source code for development
+      - .:/app
+      - /app/node_modules
+      # Mount file watcher directory
+      - D:\Code\whitenote-data\link_md:/app/data/link_md
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+    command: pnpm worker
 
 volumes:
   pg16_data:

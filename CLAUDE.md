@@ -2,62 +2,105 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ 开发环境要求
+
+**本项目使用 Docker Compose 进行开发和部署。**
+
+- ✅ **使用方式**：通过 Docker Compose 启动所有服务
+- ❌ **不支持**：本地直接使用 `pnpm dev` 或 `pnpm worker`
+- 📖 **详细指南**：参见 [DOCKER.md](d:\Code\whitenote\DOCKER.md)
+
+快速启动：
+```bash
+cp .env.dev.example .env
+NODE_ENV=development docker compose up app worker
+```
+
 ## Project Overview
 
 WhiteNote is a collaborative social media platform with AI-enhanced features, combining Twitter/X-style microblogging with workspace organization and real-time collaboration. The application uses a multi-service architecture with Next.js (App Router), PostgreSQL with Prisma, Socket.IO for real-time updates, and RAGFlow integration for AI capabilities.
 
 ## Development Commands
 
-### Starting Development (requires 3 terminals)
+**重要：本项目使用 Docker 进行开发和部署，不再支持本地 pnpm 直接运行。**
+
+### Starting Development (Docker)
 
 ```bash
-# Terminal 1 - Build Next.js (required first)
-pnpm build
+# 复制环境变量配置
+cp .env.dev.example .env
 
-# Terminal 2 - Start development server on http://localhost:3005
-pnpm dev
+# 启动开发环境（带热重载）
+NODE_ENV=development docker compose up app worker
 
-# Terminal 3 - Start background worker for scheduled tasks
-pnpm worker
+# 或者后台运行
+NODE_ENV=development docker compose up -d app worker
 ```
 
-### Production
+### Starting Production (Docker)
 
 ```bash
-pnpm start          # Start production server (NODE_ENV=production)
+# 启动生产环境（优化构建）
+NODE_ENV=production docker compose up -d app worker
 ```
 
-### Database Operations
+### Database Operations (Docker)
 
 ```bash
-pnpm prisma db push         # Push schema changes to database
-pnpm prisma db seed         # Run seed script (creates built-in templates and AI commands)
-pnpm prisma studio          # Open Prisma Studio database UI
-pnpm prisma generate        # Generate Prisma client (usually automatic)
+# 推送 schema 变更
+docker compose exec app pnpm prisma db push
 
-# Reset database completely (deletes all data)
-docker exec pg16 psql -U myuser -d postgres -c "DROP DATABASE IF EXISTS whitenote;"
-docker exec pg16 psql -U myuser -d postgres -c "CREATE DATABASE whitenote;"
-pnpm prisma db push
-pnpm prisma db seed
+# 运行种子数据脚本（创建内置模板和 AI 命令）
+docker compose exec app pnpm prisma db seed
+
+# 打开 Prisma Studio 数据库 UI
+docker compose exec app pnpm prisma studio
+
+# 生成 Prisma Client（通常自动运行）
+docker compose exec app pnpm prisma generate
+
+# 完全重置数据库（删除所有数据）
+docker compose exec postgres psql -U myuser -d postgres -c "DROP DATABASE IF EXISTS whitenote;"
+docker compose exec postgres psql -U myuser -d postgres -c "CREATE DATABASE whitenote;"
+docker compose exec app pnpm prisma db push
+docker compose exec app pnpm prisma db seed
 ```
 
-### Other Commands
+### Other Commands (Docker)
 
 ```bash
-pnpm seed:ai-commands      # Seed AI commands only
-pnpm lint                  # Run ESLint
+# 仅种子 AI 命令
+docker compose exec app pnpm seed:ai-commands
+
+# 运行 ESLint
+docker compose exec app pnpm lint
+
+# 查看日志
+docker compose logs -f app
+docker compose logs -f worker
+
+# 进入容器
+docker compose exec app sh
+
+# 重启服务
+docker compose restart app worker
 ```
 
 ## Architecture
 
 ### Multi-Service Structure
 
-The application consists of three main services:
+The application runs on Docker Compose with the following services:
 
-1. **Next.js App** (`server.ts`): Main web server with App Router architecture
-2. **Background Worker** (`scripts/worker.ts`): Handles scheduled tasks and background jobs
-3. **Socket.IO Server**: Integrated into the main server for real-time messaging
+1. **app**: Next.js main web server (port 3005)
+   - Development mode: `pnpm build` + `pnpm dev` (with hot reload)
+   - Production mode: `pnpm start`
+2. **worker**: Background job processor (`scripts/worker.ts`)
+   - Handles scheduled tasks and background jobs
+3. **postgres**: PostgreSQL 16 database (port 5925)
+4. **redis**: Redis cache and queue (port 4338)
+5. **pgadmin**: PostgreSQL management UI (port 5050)
+6. **Socket.IO Server**: Integrated into the app service for real-time messaging
 
 ### Workspace-Centric Design
 
@@ -163,7 +206,8 @@ HttpAPIRAGFlow/           # RAGFlow API automation scripts and documentation
 
 ## Important Constraints
 
-- All three services (dev server, worker, database) must be running for full functionality
-- Build step required before running dev server (`pnpm build && pnpm dev`)
-- Database must be seeded for AI commands to work
-- RAGFlow integration requires external service configuration per workspace
+- **Docker 必需**：本项目使用 Docker Compose 进行开发和部署，不支持本地 pnpm 直接运行
+- 所有服务（app、worker、postgres、redis）通过 Docker Compose 管理
+- 数据库必须运行种子脚本才能使用 AI 命令功能
+- RAGFlow 集成需要为每个 workspace 配置外部服务
+- 详见 [DOCKER.md](d:\Code\whitenote\DOCKER.md) 了解完整的 Docker 使用指南

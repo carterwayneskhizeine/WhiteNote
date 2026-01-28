@@ -166,10 +166,10 @@ importers:
         version: 5.0.9(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))
     devDependencies:
       '@tailwindcss/postcss':
-        specifier: ^4
+        specifier: ^4.1.18
         version: 4.1.18
       '@tailwindcss/typography':
-        specifier: ^0.5.19
+        specifier: ~0.5.19
         version: 0.5.19(tailwindcss@4.1.18)
       '@types/bcryptjs':
         specifier: ^3.0.0
@@ -211,7 +211,7 @@ importers:
         specifier: 16.1.1
         version: 16.1.1(@typescript-eslint/parser@8.51.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
       tailwindcss:
-        specifier: ^4
+        specifier: ^4.1.18
         version: 4.1.18
       tsx:
         specifier: ^4.21.0

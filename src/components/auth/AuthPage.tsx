@@ -117,7 +117,8 @@ export function AuthPage() {
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     required
-                    placeholder="手机号码、邮件地址或用户名"
+                    placeholder="邮件地址"
+                    autoComplete="off"
                     className="h-12 bg-black border-gray-700 text-white placeholder:text-gray-500 focus:border-white"
                   />
                 </div>
@@ -129,6 +130,7 @@ export function AuthPage() {
                     onChange={(e) => setLoginPassword(e.target.value)}
                     required
                     placeholder="密码"
+                    autoComplete="off"
                     className="h-12 bg-black border-gray-700 text-white placeholder:text-gray-500 focus:border-white"
                   />
                 </div>
