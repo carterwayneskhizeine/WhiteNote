@@ -7,10 +7,11 @@ import { getAiConfig } from "@/lib/ai/config"
 /**
  * POST /api/sync/sync-workspace-ragflow/[workspaceId]
  * Sync all messages and comments from a single workspace to RAGFlow knowledge base
+ * Only syncs user messages (excludes AI system messages where authorId is null)
  * Useful for resyncing a specific workspace after configuration changes
  */
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
@@ -60,10 +61,11 @@ export async function POST(
     const errors: string[] = []
 
     try {
-      // Get all messages in this workspace
+      // Get all messages in this workspace (only user messages, not AI system messages)
       const messages = await prisma.message.findMany({
         where: {
           workspaceId: workspace.id,
+          authorId: { not: null },  // Only sync user messages, exclude AI system messages (authorId is null)
         },
         select: {
           id: true,
@@ -114,12 +116,14 @@ export async function POST(
         }
       }
 
-      // Get all comments in this workspace
+      // Get all comments in this workspace (only user comments, not AI bot comments)
       const comments = await prisma.comment.findMany({
         where: {
           message: {
             workspaceId: workspace.id,
           },
+          authorId: { not: null },  // Only sync user comments, exclude AI bot comments
+          isAIBot: false,            // Also exclude comments marked as AI bot
         },
         select: {
           id: true,
