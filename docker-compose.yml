@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16
     container_name: pg16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: mypassword
@@ -14,6 +15,7 @@ services:
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: pgadmin4
+    restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@whitenote.com
       PGADMIN_DEFAULT_PASSWORD: admin
@@ -28,6 +30,7 @@ services:
   redis:
     image: redis:latest
     container_name: redis
+    restart: unless-stopped
     command: redis-server --appendonly yes
     ports:
       - "4338:6379"
