@@ -95,4 +95,21 @@ export const workspacesApi = {
       return { error: "Failed to initialize RAGFlow resources" }
     }
   },
+
+  /**
+   * 同步工作区到 RAGFlow（以 DB 为准）
+   * 将工作区中的所有消息和评论同步到 RAGFlow 知识库
+   */
+  async syncToRAGFlow(id: string): Promise<{ data?: { workspaceId: string; workspaceName: string; messagesSynced: number; commentsSynced: number; errors?: string[] }; message?: string; error?: string }> {
+    try {
+      const response = await fetch(`/api/sync/sync-workspace-ragflow/${id}`, {
+        method: "POST",
+      })
+      const data = await response.json()
+      return data
+    } catch (error) {
+      console.error("[Workspaces API] Error syncing to RAGFlow:", error)
+      return { error: "Failed to sync workspace to RAGFlow" }
+    }
+  },
 }

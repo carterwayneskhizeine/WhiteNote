@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { workspacesApi } from "@/lib/api/workspaces"
 import type { Workspace, UpdateWorkspaceInput } from "@/types/api"
-import { Loader2, Trash2, Edit2, Check, X, Plus, Layers, Database, MoreHorizontal, Settings2 } from "lucide-react"
+import { Loader2, Trash2, Edit2, Check, X, Plus, Layers, Database, MoreHorizontal, Settings2, RefreshCw } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
@@ -17,6 +17,7 @@ export function WorkspaceManager() {
   const [isCreating, setIsCreating] = useState(false)
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const [isInitializingRAG, setIsInitializingRAG] = useState<string | null>(null)
+  const [isSyncingRAG, setIsSyncingRAG] = useState<string | null>(null)
   const [newName, setNewName] = useState("")
   const [newDescription, setNewDescription] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -129,6 +130,24 @@ export function WorkspaceManager() {
       console.error(error)
     } finally {
       setIsInitializingRAG(null)
+    }
+  }
+
+  const handleSyncToRAG = async (id: string) => {
+    const workspace = workspaces.find((w) => w.id === id)
+    if (!workspace) return
+    if (!confirm(`重新以 DB 为准同步工作区 "${workspace.name}" 到 RAGFlow？\n\n这将把数据库中的所有消息和评论重新同步到 RAGFlow 知识库。`)) return
+    setIsSyncingRAG(id)
+    try {
+      const result = await workspacesApi.syncToRAGFlow(id)
+      if (result.message) {
+        alert(result.message)
+      }
+    } catch (error) {
+      console.error(error)
+      alert("同步到 RAGFlow 失败")
+    } finally {
+      setIsSyncingRAG(null)
     }
   }
 
@@ -288,15 +307,27 @@ export function WorkspaceManager() {
                       初始化
                     </Button>
                   ) : (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full h-8 w-8 text-muted-foreground"
-                      onClick={() => handleInitializeRAG(ws.id)}
-                      title="重置 RAGFlow"
-                    >
-                      <Database className="h-4 w-4" />
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+                        onClick={() => handleSyncToRAG(ws.id)}
+                        disabled={isSyncingRAG === ws.id}
+                      >
+                        {isSyncingRAG === ws.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                        重新以 DB 为准
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full h-8 w-8 text-muted-foreground"
+                        onClick={() => handleInitializeRAG(ws.id)}
+                        title="重置 RAGFlow"
+                      >
+                        <Database className="h-4 w-4" />
+                      </Button>
+                    </>
                   )}
                   <Button
                     variant="ghost"
